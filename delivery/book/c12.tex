@@ -33,14 +33,25 @@
 
 \begin{proposition}[第二输入方向]
 \label{prop:pulse}
-线性化后，仅 \(\delta T_\infty\) 时输入矩阵为单列。若 \(q_{\mathrm{lat}}\) 能独立于 \(T_\infty\) 变号，则输入矩阵增加一列。紧接着只改变 \(R_{\mathrm{ext}}\) 的气流段之后，\((R_{\mathrm{ext}},R_{\mathrm{int}})\) 的灵敏度列线性无关。
+线性化后，仅 \(\delta T_\infty\) 时输入矩阵为单列。在 \eqref{eq:twonode} 里 \(q_{\mathrm{lat}}\) 与 \(T_\infty\) 都只进入第一式，两列输入共线，变号不增加输入矩阵的秩。可分开的是参数列：离开平衡之后，只改变 \(R_{\mathrm{ext}}\) 的气流段使 \((R_{\mathrm{ext}},R_{\mathrm{int}})\) 的灵敏度列线性无关。
 \end{proposition}
 
 \begin{proof}
-把 \eqref{eq:twonode} 在某一轨迹上线性化，状态 \((\delta T_1,\delta T_2)\)。\(T_\infty\) 只通过第一式的 \((T_\infty-T_1)/R_{\mathrm{ext}}\) 进入，输入向量的第二个分量为 0。\(q_{\mathrm{lat}}\) 加在第一式，不经过 \(R_{\mathrm{ext}}\)。它若能在 \(T_\infty\) 保持不变时变号，则存在一段输入，其方向不是 \(T_\infty\) 那一列的标量倍。
+把 \eqref{eq:twonode} 在某一轨迹上线性化，状态 \((\delta T_1,\delta T_2)\)。\(T_\infty\) 的输入列是 \((1/(C_1 R_{\mathrm{ext}}),\,0)\)。\(q_{\mathrm{lat}}\) 的输入列是 \((1/C_1,\,0)\)。第二分量都是 0，所以第二列是第一列的正倍数 \(R_{\mathrm{ext}}\)。潜热变号只改变这个倍数的符号，输入矩阵的秩仍是 1。
 
-气流段把 \(R_{\mathrm{ext}}\) 改为另一个正数，\(q_{\mathrm{lat}}\) 回到蒸发一侧。这一段对 \(R_{\mathrm{ext}}\) 的偏导数含有 \(-(T_\infty-T_1)/R_{\mathrm{ext}}^2\)，对 \(R_{\mathrm{int}}\) 的偏导数含有两节点温差。冷凝段对 \(R_{\mathrm{ext}}\) 的偏导数不包含潜热本身。因此气流段的灵敏度列含有一个冷凝段列空间里没有的分量，两列线性无关。单独冷凝不能产生这个分量。
+气流段把 \(R_{\mathrm{ext}}\) 改为另一个正数，\(q_{\mathrm{lat}}\) 回到蒸发一侧。这一段对 \(R_{\mathrm{ext}}\) 的偏导数含有 \(-(T_\infty-T_1)/R_{\mathrm{ext}}^2\)，对 \(R_{\mathrm{int}}\) 的偏导数含有两节点温差。冷凝段对 \(R_{\mathrm{ext}}\) 的偏导数不包含潜热本身。因此气流段的灵敏度列含有一个冷凝段列空间里没有的分量，两列线性无关。单独冷凝不能产生这个分量。输入列共线，并不推出灵敏度列共线。
 \end{proof}
+
+\subsection{平衡点上灵敏度方程的右端}
+
+记参数 \(\theta=R_{\mathrm{int}}\)，灵敏度 \(\vect{\sigma}=\partial(T_1,T_2)/\partial\theta\)。它满足
+\begin{equation}
+\label{eq:sigma}
+\dot{\vect{\sigma}}=\vect{A}\vect{\sigma}+\frac{\partial\vect{A}}{\partial\theta}\begin{pmatrix}T_1\\ T_2\end{pmatrix}.
+\end{equation}
+平衡且 \(T_1=T_2\) 时，\(\partial\vect{A}/\partial\theta\) 的两行互为相反数，乘上 \((T,T)\) 得到零向量。于是 \(\vect{\sigma}=0\) 是平衡解，Fisher 矩阵里这一列贡献为零。这是命题 \ref{prop:steady} 的同一件事，写成微分方程之后可以看到：离开平衡、温差不为零时，右端不再是零。
+
+下面一组数只用来核对这条微分方程，不是十六控制体的参数，也不是断言函数里的常数。取 \(C_1=C_2=2000\,\mathrm{J/K}\)，\(R_{\mathrm{ext}}=0.05\,\mathrm{K/W}\)，\(R_{\mathrm{int}}=0.15\,\mathrm{K/W}\)，腔温阶跃 \(1\,\mathrm{K}\)，步长 \(0.05\,\mathrm{s}\) 积到 40 s。温度偏差是 \((0.311,\,0.022)\,\mathrm{K}\)。\(\partial T_1/\partial R_{\mathrm{int}}=0.115\)，\(\partial T_2/\partial R_{\mathrm{int}}=-0.132\)，单位是开尔文每（开尔文每瓦）。同一点的中心差分与这两数之差在 \(2\times 10^{-4}\) 以内。平衡向量 \((1,1)\) 代进 \(\partial\vect{A}/\partial R_{\mathrm{int}}\) 得到 \((0,0)\)。断言报告的 40.846 与 38.912 是另一组常数上的滞后，不能和这四个数放进同一张表。
 
 若数值上两列相关，先检查相变是否真的变号，再检查两段是否短到互相重叠。不通过时缩小适用区，只保留界面相变可观测的湿度范围，不把失败样本从统计里删掉。
 

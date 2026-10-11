@@ -84,14 +84,14 @@ L_j=\epsilon(\varepsilon_{l,s},S_s)\,\sigma T(\vect{r}_j)^4
 \section{动态可辨识性}
 
 \paragraph{要判定的量}
-相变项是否给输入矩阵增加一个与 \(T_\infty\) 线性无关的方向。
+相变项是否给输入矩阵增加一个与 \(T_\infty\) 线性无关的方向。对 \eqref{eq:twonode}，两列都只进入表面节点，方向共线；要分开的是 \(R_{\mathrm{ext}}\) 与 \(R_{\mathrm{int}}\) 的灵敏度列。
 
 \paragraph{继承的文献层与不继承的层}
 灵敏度方程和 Fisher 信息是局部可辨识性的标准构造。不继承本次已经算出了 Fisher 矩阵的特征值。该矩阵没有在日志里计算。
 
 把 \eqref{eq:twonode} 在无相变工作点线性化，状态 \((\delta T_1,\delta T_2)\)，输入 \((\delta T_\infty,\delta v)\)。风速只进入 \(R_{\mathrm{ext}}\)。对输出 \(y=T_1\)，可观测矩阵的秩为 2，内部状态在结构上可观测，但 Gram 矩阵的条件数随 \(R_{\mathrm{int}}/R_{\mathrm{ext}}\) 增大而变坏。厚、干、结壳的食品，表面温度对冷点的响应又慢又弱。
 
-相变项把输入从“只改 \(T_\infty\)”扩展为“改 \(T_\infty\) 与 \(q_{\mathrm{lat}}\)”。短蒸汽脉冲使 \(q_{\mathrm{lat}}\) 变号，表面节点出现一个不经过 \(R_{\mathrm{ext}}\) 的跃迁。灵敏度满足
+相变项与腔温都写在表面节点的能量平衡上，输入列共线。短蒸汽脉冲仍然改变表面通量的大小，并且不经过 \(R_{\mathrm{ext}}\) 这个系数。参数灵敏度满足
 \begin{equation}
 \label{eq:sens}
 \frac{\mathrm{d}}{\mathrm{d}t}\frac{\partial \vect{s}}{\partial\theta_i}

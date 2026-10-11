@@ -125,7 +125,7 @@ T_i^{k+1}=T_i^k+\alpha_i\Delta t\,\frac{T_{i+1}^k-2T_i^k+T_{i-1}^k}{(\Delta x)^2
 \quad\Rightarrow\quad
 \Delta t<\frac{(\Delta x)^2}{2\alpha}.
 \end{equation}
-代入三档厚度，上界分别是 2.20 s、8.79 s、24.41 s。战役步长是 2 s。15 mm 用到上界的大约 0.91。边界控制体还要加上对流项 \(\alpha\Delta t\, h/(k\Delta x)\)，对角更负，限制更严。网格减半的比较没有运行，所以这里不声明截断误差已经低于某一阈值。
+代入三档厚度，上界分别是 2.20 s、8.79 s、24.41 s。战役步长是 2 s。15 mm 用到上界的大约 0.91。这个上界来自内部三点模板：自系数是 \(-2\alpha/(\Delta x)^2\)。表面上的模板少一个邻居，自系数是 \(-\alpha/(\Delta x)^2-h/((\rho c)\Delta x)\)。风机 0.4、\(h=34\) 时，15 mm 边界允许的步长约 8.4 s，30 mm 约 32 s，50 mm 约 84 s，都松于内部上界。把这一步写成矩阵，15 mm、\(h=34\)、\(\Delta t=2\,\mathrm{s}\) 的谱半径是 0.9989，最负实部是 \(-0.803\)；风机升到 1.3 时最负实部仍是 \(-0.803\)，前四位小数不变。最负的那个模态来自内部差分，边界对流没有把它推出单位圆。30 mm 和 50 mm 的谱半径分别是 0.9996 和 0.9998，最负实部已经是正的。网格减半的比较没有运行，所以这里不声明截断误差已经低于某一阈值。
 
 串联热阻可以核对夹层的量级。均匀时十六段各为 \(\Delta x/k\)。把一段改为 \(\Delta x/(0.45k)\)，多出来的部分是
 \begin{equation}
@@ -134,8 +134,25 @@ T_i^{k+1}=T_i^k+\alpha_i\Delta t\,\frac{T_{i+1}^k-2T_i^k+T_{i-1}^k}{(\Delta x)^2
 \end{equation}
 夹层使总导热热阻增加约 7.6\%。这是一维串联的算术，不是一块脂肪几何的有效导热率。
 
+\subsection{表面失水到不了褐变门限}
+
+褐变增量和结壳增量都写成表面含水的门限。褐变要求 \(m_0<0.55\) 且 \(T_0>110^\circ\mathrm{C}\)。结壳要求 \(m_0<0.45\)。S1 的初始含水不低于 0.64。要看的是这一步能不能把表面含水降过这两条线。
+
+含水的内部扩散系数是 \(D=2\times 10^{-9}(1+3m)\,\mathrm{m}^2/\mathrm{s}\)。表面控制体上的失水先写成一个无量纲强度
+\begin{equation}
+\label{eq:mloss}
+\ell=1.6\times 10^{-4}\max(a_w-0.4,0)\,(0.3+u_v)\,(1-u_{\mathrm{st}}),
+\end{equation}
+再除以 \(\Delta x/L=1/16\)，最后乘 \(D\)。场还均匀时，相邻控制体的差分为零，表面含水的变化率只剩
+\[
+\dot m_0=-16\,D\,\ell.
+\]
+种子 7 的第一步，\(m=0.72\)，肉糜活度被裁到 0.99，风机 0.4，蒸汽为 0：\(\ell=6.61\times 10^{-5}\)，\(D=6.32\times 10^{-9}\)，\(\dot m_0=-6.7\times 10^{-12}\,\mathrm{s}^{-1}\)。乘上 3300 s，下降约 \(2\times 10^{-8}\)。S1 上更干、风更大的一格（含水 0.64、风机 1.3、无蒸汽）也只有 \(1.4\times 10^{-11}\,\mathrm{s}^{-1}\)。内部扩散只在控制体之间搬运水，不增加离开表面的净损失。因此 19440 行的终点 \(\alpha_b\) 都是精确的 0，结壳变量也停在 0。路径 C 里“结壳改变导热”的那一支没有进入这次积分；\(r_{\mathrm{proxy}}\) 里的 \(2.5S\) 同样是 0。
+
+种子 7 的平均含水从第一行到最后一行都打印成 0.72，与这个量级一致。活度在三档战役含水上已经饱和，食材之间的差别还要再小一层：含水根本没有移动，活度曲线的形状没有机会被积分读到。
+
 \paragraph{本节不能推出的结论}
-\eqref{eq:energy} 不能用本次核的温度曲线来核对，因为核没有单独的 \(\dot m_{\mathrm{phase}}\) 场。核对 \eqref{eq:energy} 需要带压力和蒸汽分数的真值积分，本次没有运行。\eqref{eq:fv-fo} 只约束这一次选用的步长，不证明 15 mm 的结果对网格无关。
+\eqref{eq:energy} 不能用本次核的温度曲线来核对，因为核没有单独的 \(\dot m_{\mathrm{phase}}\) 场。核对 \eqref{eq:energy} 需要带压力和蒸汽分数的真值积分，本次没有运行。\eqref{eq:fv-fo} 只约束这一次选用的步长，不证明 15 mm 的结果对网格无关。失水率的量级也不能推出真实肌肉在 55 min 内不干燥：\(1.6\times 10^{-4}\) 是这条格式的系数，不是测量到的传质系数。
 
 \section{界面：腔体如何进入食品}
 
@@ -412,7 +429,7 @@ q_{\mathrm{rad}}=F_{h,s}\epsilon_s\sigma(T_h^4-T_s^4)+F_{w,s}\epsilon_s\sigma(T_
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.88\textwidth]{paper/P_dt.png}
-\caption{内部显式格式的步长上界。15 mm 处上界略高于战役使用的 2 s。边界控制体的限制更严，没有画在这条曲线上。}
+\caption{内部显式格式的步长上界。15 mm 处上界略高于战役使用的 2 s。边界对流项的上界更松，谱半径由内部差分决定。}
 \end{figure}
 
 \begin{figure}[ht]
@@ -421,5 +438,45 @@ q_{\mathrm{rad}}=F_{h,s}\epsilon_s\sigma(T_h^4-T_s^4)+F_{w,s}\epsilon_s\sigma(T_
 \caption{满功率加热器常微分方程从 \(40^\circ\mathrm{C}\) 出发，平衡在 \(196.5^\circ\mathrm{C}\)。削减阈值 \(230^\circ\mathrm{C}\) 在这条解上没有交点。}
 \end{figure}
 
+\subsection{常物性平板的本征根}
+
+把核里的 \(\alpha\) 和 \(h\) 放进一块常物性、常换热、无潜热的平板，只为了给出线性对照。对照不是十六条格式的解。坐标从绝热面量到加热面，厚度仍是 \(L\)。无量纲温度 \(\theta\) 满足
+\begin{equation}
+\label{eq:slab}
+\partial_{\mathrm{Fo}}\theta=\partial_{\xi\xi}\theta,
+\qquad
+\partial_\xi\theta\big|_{\xi=0}=0,
+\qquad
+\partial_\xi\theta\big|_{\xi=1}=-\mathrm{Bi}\,\theta(1).
+\end{equation}
+\(\xi=x/L\)，\(\mathrm{Fo}=\alpha t/L^2\)，\(\mathrm{Bi}=hL/k\)。分离变量 \(\theta=\cos(\zeta\xi)\,\mathrm{e}^{-\zeta^2\mathrm{Fo}}\) 放进加热面的边界条件，得到
+\begin{equation}
+\label{eq:slab-root}
+\zeta\tan\zeta=\mathrm{Bi}.
+\end{equation}
+根落在 \((n\pi,\,n\pi+\pi/2)\)。均匀初温的系数由本征函数在 \([0,1]\) 上的权 \(\cos^2(\zeta\xi)\) 归一，第一项是
+\begin{equation}
+\label{eq:slab-A}
+A_1=\frac{4\sin\zeta_1}{2\zeta_1+\sin 2\zeta_1}.
+\end{equation}
+第一项单独衰减的时间是 \(L^2/(\alpha\zeta_1^2)\)。下表的根用二分法求到 \(10^{-12}\) 量级，再四舍五入。
+
+\begin{table}[ht]
+\centering
+\caption{常物性平板的前三个根。线性对照，不是核的轨迹。}
+\begin{tabular}{lrrrr}
+\toprule
+条件 & \(\mathrm{Bi}\) & \(\zeta_1\) & \(\zeta_2\) & \(\zeta_3\) \\
+\midrule
+15 mm，风机 0.4 & 0.75 & 0.771 & 3.361 & 6.400 \\
+30 mm，风机 0.4 & 1.50 & 0.988 & 3.542 & 6.510 \\
+50 mm，风机 0.4 & 2.50 & 1.142 & 3.732 & 6.643 \\
+30 mm，探针风机 1.3 & 3.68 & 1.245 & 3.899 & 6.781 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+对应的 \(A_1\) 是 1.097、1.154、1.197、1.224。第一项的时间：Bi \(=1.50\) 时，15 mm、30 mm、50 mm 分别是 1152 s、4608 s、12799 s。菜单终点的 Fourier 数是 0.80、0.26、0.12，都短于“第一项降到 \(1/\mathrm{e}\)”所需的 Fourier 数 1.02。六项截断下，中心剩余温差在探针窗口 \(\mathrm{Fo}=8.9\times 10^{-3}\)、Bi \(=1.50\) 时仍是 0.9997，表面剩余是 0.858。菜单终点上，15 mm（Bi \(=0.75\)，Fo \(=0.80\)）的中心剩余是 0.681，30 mm（Bi \(=1.50\)，Fo \(=0.26\)）是 0.887，50 mm（Bi \(=2.50\)，Fo \(=0.12\)）是 0.974。厚件在菜单时间上，常物性中心几乎还没动。这和交叉表里厚件开环停在进度下沿的方向相同。相同只说明尺度，因为核的腔温随加热指令从 \(90^\circ\mathrm{C}\) 变到 \(185^\circ\mathrm{C}\)，还有潜热项，初温也不必均匀。
+
 \paragraph{本节不能推出的结论}
-无量纲估计不能代替第 \ref{ch:sim} 章的策略比较。尺度使用的 \(\alpha\) 是设定值。更换 \(\alpha\) 之后的排序没有运行。
+无量纲估计不能代替第 \ref{ch:sim} 章的策略比较。尺度使用的 \(\alpha\) 是设定值。更换 \(\alpha\) 之后的排序没有运行。本征根表不能读成种子 7 的剖面：那条轨迹的表面在 160 s 已经到 \(80^\circ\mathrm{C}\)，冷点仍在 \(8^\circ\mathrm{C}\)，驱动是随时间变化的通量，不是一次常 Bi 的阶跃。
