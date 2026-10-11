@@ -1,0 +1,61 @@
+% !TeX program = xelatex
+\documentclass[a4paper,11pt,openany]{ctexbook}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.6cm,bottom=2.6cm,headheight=14pt}
+\usepackage{amsmath,amssymb,amsthm,bm,mathtools}
+\usepackage{booktabs,longtable,tabularx,multirow,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!60!black,
+  pdftitle={ACTS-MCDT 技术文档},
+  pdfauthor={ACTS-MCDT}
+}
+\setstretch{1.28}
+\setlist[itemize]{itemsep=0.2em,topsep=0.35em}
+\setlist[enumerate]{itemsep=0.2em,topsep=0.35em}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small ACTS-MCDT}
+\fancyhead[R]{\small 非均质食品热加工自主认知系统}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\newtheorem{definition}{定义}[chapter]
+\newtheorem{proposition}{命题}[chapter]
+\newtheorem{theorem}{定理}[chapter]
+\newtheorem{lemma}{引理}[chapter]
+\newtheorem{assumption}{假设}[chapter]
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cU}{\mathcal{U}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\vect}[1]{\bm{#1}}
+\numberwithin{equation}{chapter}
+\allowdisplaybreaks
+\graphicspath{{../../results/figures/}}
+\setcounter{tocdepth}{1}
+\title{\bfseries 面向非均质食品热加工过程的自主认知系统\\[0.45em]
+\large ACTS-MCDT\\[0.3em]
+\normalsize 多尺度界面物理、对偶信息控制、因果路径与测量隔离的安全执行}
+\author{技术文档}
+\date{}

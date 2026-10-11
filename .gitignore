@@ -1,0 +1,8 @@
+demo/node_modules/
+demo/dist/
+**/__pycache__/
+*.pyc
+delivery/book/*.aux
+delivery/book/*.log
+delivery/book/*.out
+delivery/book/*.toc

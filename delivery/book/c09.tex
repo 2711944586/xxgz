@@ -1,0 +1,166 @@
+\chapter{安全认知控制}
+\label{ch:safe}
+
+本章要判定的量是：品质模型给出的参考动作，在进入执行器之前被什么约束改写，以及该约束的自变量里有没有品质估计。认知层可以建议激进的加热。执行层只接受投影后的动作。
+
+\section{品质泛函}
+
+\paragraph{要判定的量}
+代价是否同时惩罚未达到的热力进度、表面偏离、不均匀和能量，以及安全进度的权重能否被置零。
+
+\paragraph{继承的文献层与不继承的层}
+有限时域代价的结构继承预测控制 \cite{rawlings2017}。进度本身继承 \cite{holdsworth1997,vanboekel2008}。不继承一组已经标定的权重，本次没有标定。
+
+\begin{equation}
+\label{eq:J}
+\begin{aligned}
+J={}&\E\Big[
+w_m(1-\alpha_m(t_f))_+^2
++w_b(\alpha_b(t_f)-\alpha_b^\star)^2
++w_M(\varepsilon_{l,s}(t_f)-\varepsilon^\star)^2\\
+&\quad+w_U\sigma_T^2
++w_E\sum P_j\Delta t
++w_t\,t_f
+\Big].
+\end{aligned}
+\end{equation}
+\(w_m\) 有下限，禁止把安全进度权置零。期望对集合成员取平均。约束用进度的下分位数，不用均值，因此“平均看起来熟了”不能通过。
+
+本次加热律不是这个泛函的最小化。它是
+\begin{equation}
+u_{\mathrm{req}}=\mathrm{clip}\big(0.35+(75+\mu-\hat T_c)/30,\,0.15,\,1\big),
+\end{equation}
+裕量 \(\mu=6+10\sqrt{\mathrm{Var}}\,(L/0.03)\)。式子只看见估计温度、方差和厚度。表面褐变、表面含水、温度离散和能量都不在式中。能量仍然被记录，但只作为结果列，不是优化目标。
+
+\paragraph{本节不能推出的结论}
+不能把中位能量的差别写成 \(w_E\) 的最优权衡。权重不存在。
+
+\section{机会约束 MPC}
+
+\begin{equation}
+\label{eq:mpc}
+\begin{aligned}
+\min_{\vect{u}\in\cU}\quad & J(\vect{u})\\
+\mathrm{s.t.}\quad
+&\vect{z}_{j+1}=\mathcal{G}(\vect{z}_j,\vect{u}_j,\vect{\theta}^{(i)}),\\
+&\Prob\big(\alpha_m(t_f)\ge\alpha_{\mathrm{safe}}\big)\ge 1-\delta,\\
+&\Prob\big(T_s(t)\le T_{\mathrm{char}}\big)\ge 1-\delta_T.
+\end{aligned}
+\end{equation}
+探针占用区间内，输入等于已经发布的探针。概率用集合成员的经验频率近似。\(\delta\) 是设计值，不是微生物认证限。求解器规格为 CasADi/IPOPT。实时形式把概率约束替换为最坏尾部成员的硬约束。两种形式的停止时刻之差作为保守性指标。
+
+名义控制周期 5 s。预测时域覆盖剩余过程，控制时域只优化前 60 s，其后跟随基准轨迹。这避免在长时域上假装算子仍然准确。
+
+本次没有调用该求解器，没有集合成员，没有 \(\delta\)。名为无探针和对偶的两支都是上一节的饱和线性律。对偶只在固定窗内覆盖蒸汽和风机。停机条件是估计温度越过 \(75+\mu\) 且时刻超过 240 s；对偶在厚件上还有方差否决。这不是机会约束。交叉表里无探针的提前比例 \(0.944\)、对偶 \(0.902\)，说明估计温度经常先于真值进度越过阈值。主语是跟踪器的偏差，不是 \(\delta\) 的标定失败。
+
+\paragraph{本节不能推出的结论}
+不能报告 IPOPT 的迭代次数、不可行率或尾部约束与机会约束的时刻差。
+
+\section{控制屏障}
+
+\paragraph{要判定的量}
+可行域是否随后验改变。
+
+品质优化的输出记为 \(\vect{u}_{\mathrm{AI}}\)。安全层求解
+\begin{equation}
+\label{eq:cbf}
+\begin{aligned}
+\vect{u}={}&\argmin_{\vect{u}}\;\|\vect{u}-\vect{u}_{\mathrm{AI}}\|_W^2\\
+\mathrm{s.t.}\quad
+&\dot h_j+\gamma_j h_j\ge 0.
+\end{aligned}
+\end{equation}
+\(h_j\ge 0\) 表示安全集内部。自变量只含漏电、加热器温度、水位或空烧温升、腔压、门状态和执行器电流。它不含 \(\alpha_m\)。屏障在估计器崩溃时仍然成立。
+
+第一版
+\begin{align}
+h_{\mathrm{leak}}&=I_{\mathrm{leak,max}}-I_{\mathrm{leak}},\\
+h_{\mathrm{dry}}&=H_{\mathrm{water}}-H_{\min},\\
+h_{T}&=T_{\mathrm{heater,max}}-T_{\mathrm{heater}},\\
+h_{p}&=p_{\mathrm{cav,max}}-p_{\mathrm{cav}},\\
+h_{\mathrm{door}}&=\mathbf{1}_{\{\mathrm{door\ closed}\}}.
+\end{align}
+漏电与干烧另有独立断电回路，不读取品质后验，也不经过产生参考动作的处理器。投影负责提前限制，断电负责投影失效后的切断。置信度低于阈值时，送入投影的参考改为预先存储的低功率保持，不保持学习模块的最后一次输出。
+
+\paragraph{两个阈值}
+断言的测试函数在加热器超过 \(210^\circ\mathrm{C}\) 时把请求剪到 \(0.25\)，并且删除后验参数，两个不同后验得到同一个剪裁。物理步进的削减是
+\begin{equation}
+u\leftarrow u\big(1-0.75\,\mathrm{clip}((T_h-230)/40,0,1)\big),
+\end{equation}
+从 \(230^\circ\mathrm{C}\) 开始，最多削减 75\%。加热器 ODE 的满功率平衡是 \(196.5^\circ\mathrm{C}\)，见附录 \ref{app:scales}。因此这次战役里 \(230^\circ\mathrm{C}\) 削减不会动作，\(210^\circ\mathrm{C}\) 的测试函数也不会被这条 ODE 的输出触发。两条规则都与后验无关。它们的阈值不同，都不能用来声称“贴近屏障的轨迹已经在主表里”。
+
+\paragraph{本节不能推出的结论}
+测试函数通过，不能写成二次规划已经求解，也不能写成 \cite{iec60335,gb4706} 的条款已经满足。本次没有漏电、水位、腔压和门的采样。
+
+\section{模式与信息赤字的调度}
+
+\paragraph{要判定的量}
+蒸、烤、组合三个模式改变的是终端目标，还是估计器和屏障。
+
+规格规定模式只改变 \eqref{eq:J} 里的终端含水、褐变目标和基准轨迹。估计器、探针库和屏障不变。组合模式的切换由进度下分位越过中间阈值触发，同时表面含水仍高于干耗线。按时钟切换不能响应这一次的冷点后验。
+
+\begin{table}[ht]
+\centering
+\caption{模式对终端目标的改变}
+\begin{tabularx}{\textwidth}{lXXX}
+\toprule
+模式 & 含水目标 & 褐变目标 & 执行器偏置 \\
+\midrule
+蒸 & 表面保持湿 & 抑制褐变 & 蒸汽可用，风速低 \\
+烤 & 表面进入干壳区 & 跟踪褐变目标 & 排汽可用，辐射为主 \\
+组合 & 先湿后干，由进度分位切换 & 后段才放开 & 先蒸汽后热风 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+信息赤字高时，有限时域目标加入第 \ref{ch:ati} 章的信息项，允许在未来 60 s 内插入一个探针。插入仍受损伤预算约束。
+
+本次核没有三个模式。开环对非肉糜在菜单前 45\% 的时间给蒸汽 0.8，这是按时钟的偏置，不是按进度分位切换。对偶的蒸汽只出现在固定窗。终端含水和褐变目标没有进入停止规则。
+
+\paragraph{本节不能推出的结论}
+不能把开环的蒸汽时段写成组合模式已经实现。时钟不是分位。
+
+\section{降级阶梯}
+
+\begin{enumerate}
+\item 全功能：集合估计、探针、因果解释、预测控制、屏障。
+\item 估计失配：关闭解释文本，改为尾部硬约束，增加探针间隔。
+\item 算子超时或残差越界：两节点或一维物理模型加屏障，探针库保留。
+\item 质量或热像失效：只保留腔温湿度和安全测量，输出宽区间的保温，并声明不能保证冷点。
+\item 安全测量失效或硬件阈值触发：断电，软件不参与。
+\end{enumerate}
+
+每一级的进入条件用可测残差书写。降级之后只显示进度区间，宽度与当前协方差一致，不保留降级前的点状剩余时间。降级只向更少依赖估计的方向移动。
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, align=center, font=\small, inner sep=2pt, minimum width=26mm},
+  arr/.style={-{Stealth}}
+]
+\node[box] (l1) {全功能};
+\node[box, right=5mm of l1] (l2) {尾部约束\\关闭解释};
+\node[box, right=5mm of l2] (l3) {物理降阶\\保留探针};
+\node[box, right=5mm of l3] (l4) {宽区间保温};
+\node[box, below=6mm of l4] (l5) {硬件断电};
+\draw[arr] (l1)--(l2);
+\draw[arr] (l2)--(l3);
+\draw[arr] (l3)--(l4);
+\draw[arr] (l4)--(l5);
+\end{tikzpicture}
+\caption{降级方向的依存关系图，不是某次运行的状态机记录。本次战役没有在这些级别之间切换。}
+\end{figure}
+
+本次战役的模式整数只有品质、探针和保持。保持是停机后的低功率，不是第 4 级的“通道失效”。没有从全功能逐级下降的时间线，因此停留时间的数据图没有日志。
+
+\paragraph{本节不能推出的结论}
+不能报告各级停留时间，也不能声称状态机已经被触发。
+
+\section{电气与热安全的感知点}
+
+安全观测与品质观测分开布设。规格要求：加热器与蒸汽发生器支路的剩余电流检测，硬件切断；加热管壳体温度与空烧温升速率，用于在水位传感器粘滞时仍能发现干烧；腔体压力与温度冗余，压力失效时用温升速率限制蒸汽功率；门封温度；门开关作为互锁，开门时蒸汽与风机进入屏障定义的安全值。
+
+这些读数只与阈值和屏障不等式比较，不进入品质网络的特征。本次步进里与安全有关的状态只有加热器温度。它的平衡点低于削减阈值。空烧温升、剩余电流、腔压和门都没有变量。
+
+\paragraph{本节不能推出的结论}
+加热器 ODE 存在，不能写成干烧保护已经被检验。检验需要水位粘滞或空烧的注入，那属于未运行的 S2。

@@ -1,0 +1,86 @@
+\chapter{一条轨迹的抽样}
+\label{app:trace}
+
+本章只读 \texttt{demo\_seed7\_dual.csv}。条件是肉糜、厚度 30 mm、初温 \(8^\circ\mathrm{C}\)、初始含水 0.72、均匀、种子 7、对偶策略、时域 55 min。记录间隔 8 s。它不是中位数，也不代替交叉表。
+
+\section{探针前后}
+
+方差在 192 s 从 0.64 降到 0.224，比值 \(0.224/0.64=0.35\)，与“更接近参照时把方差乘 0.35”一致。蒸汽指令只在 152 s、160 s、168 s 三个记录点为 1。冷点在这 40 s 里从 \(8.01^\circ\mathrm{C}\) 到 \(8.05^\circ\mathrm{C}\)。表面从 \(80.1^\circ\mathrm{C}\) 到 \(88.6^\circ\mathrm{C}\)。短窗口没有推动冷点，这是这一条轨迹上的事实，不是厚度定律。
+
+估计冷点在第一个记录点是 \(-7.92^\circ\mathrm{C}\)。先验 \(\hat r=5\) 时，滞后上限从表面读数减去 \(4\times(5-1)=16\,\mathrm{K}\)。初温附近的表面读数减去 16 K 就是负值。负值表示“还不能把表面当成冷点”，不是传感器测到了零下。
+
+\begin{table}[ht]
+\centering
+\caption{种子 7、对偶、肉糜 30 mm 的抽样（摄氏度）}
+\begin{tabular}{rrrrrrrr}
+\toprule
+\(t/\mathrm{s}\) & 表面 & 冷点 & 估计 & \(\alpha_m\) & \(\mathrm{Var}\) & 加热 & 模式 \\
+\midrule
+0 & 11.36 & 8.00 & \(-7.92\) & 0 & 0.640 & 1.00 & 品质 \\
+152 & 80.10 & 8.01 & \(-1.45\) & 0 & 0.640 & 1.00 & 探针 \\
+168 & 87.12 & 8.02 & \(-0.49\) & 0 & 0.640 & 1.00 & 探针 \\
+192 & 88.60 & 8.05 & 0.99 & 0 & 0.224 & 1.00 & 品质 \\
+600 & 132.22 & 16.22 & 25.76 & \(\approx 0\) & 0.224 & 1.00 & 品质 \\
+1200 & 163.97 & 46.72 & 63.76 & 0.003 & 0.224 & 1.00 & 品质 \\
+1496 & 148.76 & 63.31 & 79.57 & 0.131 & 0.224 & 0.56 & 品质 \\
+1680 & 128.12 & 73.00 & 85.85 & 0.755 & 0.224 & 0.15 & 保持 \\
+1800 & 110.28 & 78.50 & 88.07 & 0.996 & 0.224 & 0.15 & 保持 \\
+3298 & 80.84 & 80.85 & 61.05 & 1.000 & 0.224 & 0.15 & 保持 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+1680 s 这一行是模式从品质切到保持的记录点。估计 \(85.85^\circ\mathrm{C}\)，冷点 \(73.00^\circ\mathrm{C}\)，\(\alpha_m=0.755\)。相对设计线，\(e_{\alpha}=0.755-0.85=-0.095\)。停机判据看的是估计温度越过 \(75\) 加裕量，不是真值进度已经越过 0.85。此后加热请求降到 0.15，真值进度仍继续升到 1。终点进度不能代替停机进度。
+
+1200 s 时估计 \(63.8^\circ\mathrm{C}\) 高于冷点 \(46.7^\circ\mathrm{C}\)。滞后上限没有在整条轨迹上保持估计低于冷点。原因是上限用表面读数减一项只依赖 \(\hat r\) 的常数，表面已经远高于冷点之后，估计仍可以停在冷点之上。这一条轨迹说明：已实现的跟踪器不是冷点的下置信界。交叉表里中等厚度对偶的中位误差接近零、厚件仍然为负，要放在这个观测器的偏差结构上看，不能写成无偏停止。
+
+\section{同一格式重放的内部场}
+
+CSV 只保存表面、冷点最小值和估计。十六条控制体的剖面不在文件里。用附录 \ref{app:discrete} 的离散格式，以同一初值、同一策略和同一噪声重放，表面、冷点和估计与 CSV 的最大差都低于 \(5\times 10^{-6}\,\mathrm{K}\)。差来自写文件时保留五位小数。对齐之后，重放的内部场可以和这条轨迹放在一起读。它仍然是一条轨迹，不是 4860 条的中位剖面。
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{paper/P_seed7_panels.png}
+\caption{种子 7 的四层记录。阴影是 150--190 s。加热器曲线用记录间隔 8 s 积分同一条加热指令，平衡仍是 \(196.5^\circ\mathrm{C}\)，不到 \(230^\circ\mathrm{C}\)。蒸汽脉冲在这张时间轴上只占很窄的一段。}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\textwidth]{paper/P_probe.png}
+\caption{探针窗口附近。冷点保持在初温附近，表面已经升过 \(80^\circ\mathrm{C}\)。}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\textwidth]{paper/P_gap.png}
+\caption{表面与冷点的温差，以及估计与冷点的温差。后一条曲线在中段为正，估计高于冷点。}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{paper/P_field_xt.png}
+\caption{重放得到的温度。纵轴是距表面的距离。高温区先出现在表面，冷点在深处，停机之后全厚度回落。这不是二维烤箱的切片。}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.88\textwidth]{paper/P_field_3d.png}
+\caption{把同一条一维剖面沿时间立起来。深度轴上没有横向梯度，因为离散格式只有一个空间方向。}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{paper/P_profiles.png}
+\caption{0、2.5、10、28、55 min 的厚度剖面。2.5 min 时梯度集中在靠近表面的几个控制体。}
+\end{figure}
+
+\input{trace_full.tex}
+
+\section{这条轨迹不能支持的句子}
+
+\begin{itemize}
+\item 不能把 \(e_{\alpha}=-0.095\) 写成全部 30 mm 对偶轨迹的中位数。中位数在交叉表里。
+\item 不能把终点 \(\alpha_m=1\) 写成停机时已经越过设计线。
+\item 不能把方差从 0.64 到 0.224 写成信息增益的奈特数。它是规则里的乘子。
+\item 不能把表面 \(164^\circ\mathrm{C}\) 写成可食用的表面工艺。温度被夹在 \(220^\circ\mathrm{C}\) 以下，界面通量是工程系数，不是测定的辐射边界。
+\end{itemize}

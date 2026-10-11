@@ -1,0 +1,114 @@
+\chapter{因果数字孪生}
+\label{ch:causal}
+
+本章要判定的量是：同一次蒸汽改变品质时，效应经过哪几条路径，以及这个效应是干预还是相关。预测器只回答“加大蒸汽后冷点更快”。解释器还要回答路径在什么厚度上会反过来损伤表面。
+
+\section{结构方程}
+
+\paragraph{要判定的量}
+父节点是由机理指定，还是由一次烹饪的短序列估计出来。
+
+\paragraph{继承的文献层与不继承的层}
+干预语义继承结构因果模型 \cite{pearl2009}。方程骨架继承第 \ref{ch:physics} 章。不继承在短序列上用独立性检验重新发现能量守恒。学习阶段只允许调整函数的参数和少数事先声明的可选边。
+
+\begin{equation}
+\label{eq:scm}
+Z_i=f_i(\mathrm{Pa}_i,U_i),\qquad i=1,\ldots,n_z.
+\end{equation}
+\(U_i\) 是外生噪声。
+
+\begin{table}[ht]
+\centering
+\caption{因果骨架}
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+子节点 & 父节点 & 物理内容 \\
+\midrule
+界面蒸汽压 & 蒸汽流、排汽、腔温 & 腔体水分平衡 \\
+表面温度 & 蒸汽压、腔温、风速、加热、内部温度 & \eqref{eq:twonode} 第一式 \\
+内部温度 & 表面温度、内部热阻、内部热容 & \eqref{eq:twonode} 第二式 \\
+表面含水 & 蒸汽压、表面温度、传质系数 & 蒸发与冷凝 \\
+冷点进度 & 内部温度的历史 & \eqref{eq:F} \\
+表面褐变 & 表面温度、表面含水 & \eqref{eq:kinetics} \\
+结壳 & 蛋白进度、表面含水 & \eqref{eq:structure} \\
+内部热阻 & 结壳、厚度 & 结构到传递 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+内部热阻既是参数也是子节点，因为结壳会增大它。把这条边写进结构，是为了给“表面越来越热、冷点却落后”一个位置。本次核的结壳只进入热阻参照，不改导热，所以这条边没有在积分里闭合。
+
+\paragraph{本节不能推出的结论}
+骨架固定，不能推出每条边的偏导数已经从日志里估计出来。
+
+\section{干预与相关的区分}
+
+\paragraph{要判定的量}
+\(p(\alpha_m\mid \dot m_{\mathrm{st}})\) 与 \(p(\alpha_m\mid\mathrm{do}(\dot m_{\mathrm{st}}=m^\star))\) 是否被当成同一个对象。
+
+观测条件里，蒸汽流量可能是控制器对当前低温的反应。相关因此混有“因为没熟所以多喷蒸汽”。干预分布把决定蒸汽流量的控制策略从结构方程中删去，只保留蒸汽到界面蒸汽压的物理边。孪生的积分实现干预：替换执行器轨迹后再积分。
+
+三个计算依次为：
+
+\begin{enumerate}
+\item 预测。保持当前策略，积分未来的决策状态。
+\item 干预。将某一执行器替换为候选值，其余结构不变，重新积分。
+\item 反事实。先用已经发生的观测反推外生噪声，再在同一噪声下替换执行器，得到“这一块如果当时少喷一段时间”的轨迹。
+\end{enumerate}
+
+反事实使用当前后验的噪声点估计，并同时给出抽样带。解释文本必须带区间。符号在抽样中保持稳定才生成语句，否则界面只保留预测区间。本次没有反事实抽样，界面也不应生成“因为蒸汽过高”这类句子。
+
+\paragraph{本节不能推出的结论}
+S1 的四个策略是四条不同的闭环，不是在同一噪声下的 do 算子。策略之间的 \(e_{\alpha}\) 差不能写成路径偏效应。
+
+\section{两条路径的符号}
+
+\paragraph{要判定的量}
+蒸汽对品质的导数能否分成冷点项、表面项和慢热阻项。大纲这一节的标题保留“两条”，正文必须把慢路径写成第三条，否则结壳后期没有项。
+
+\begin{align}
+\text{路径 A: }& \dot m_{\mathrm{st}}\to p_v\to q_{\mathrm{lat}}\to T_2\to\alpha_m\to Q,\\
+\text{路径 B: }& \dot m_{\mathrm{st}}\to p_v\to\varepsilon_{l,s}\to(\alpha_b,\,m_{\mathrm{loss}})\to Q,\\
+\text{路径 C: }& \dot m_{\mathrm{st}}\to\varepsilon_{l,s}\to S\to R_{\mathrm{int}}\to T_2\to\alpha_m\to Q.
+\end{align}
+
+路径 A 在冷点落后时为正。路径 B 在表面已经湿、且后续需要烤色时为负。路径 C 是慢路径：短探针窗口内增量是 \(O(\tau/\tau_S)\)，全时域必须保留。总效应
+\begin{equation}
+\label{eq:path}
+\frac{\mathrm{d}Q}{\mathrm{d}m_{\mathrm{st}}}
+=\underbrace{\frac{\partial Q}{\partial\alpha_m}\frac{\partial\alpha_m}{\partial m_{\mathrm{st}}}\Big|_{\!S}}_{\text{A}}
++\underbrace{\frac{\partial Q}{\partial\varepsilon_{l,s}}\frac{\partial\varepsilon_{l,s}}{\partial m_{\mathrm{st}}}}_{\text{B}}
++\underbrace{\frac{\partial Q}{\partial\alpha_m}\frac{\partial\alpha_m}{\partial R_{\mathrm{int}}}\frac{\partial R_{\mathrm{int}}}{\partial m_{\mathrm{st}}}}_{\text{C}}.
+\end{equation}
+厚度增大使 A 变小。结壳使 B 更负，并使 C 在烤制段为负。解释输出的是这三项的数值与区间，不是一个重要度分数。命题 \ref{prop:path} 说明在所述依赖下三者相加恰好等于全导数。
+
+本次核没有计算这三项。浏览器侧栏若用蒸汽指令和方差拼出三根条，那是显示公式，不是 \eqref{eq:path}。种子 7 的探针窗内冷点几乎不动，只能作为“短窗内 A 与 C 的温度增量很小”的一条抽样，不能给出三项的符号。
+
+\paragraph{本节不能推出的结论}
+不能报告“蒸汽 \(+10\%\) 时路径 A 为正”的厚度曲线。那张图没有日志。
+
+\section{混杂与不可识别边}
+
+\paragraph{要判定的量}
+哪些因素会同时影响蒸汽用量和最终品质，因而必须出现在结构里。
+
+厚度与初始温度进入热容和初值。开门扰动腔温和蒸汽压。加热管老化带来的功率增益由功率读数和腔温响应估计。这些量若不出现，干预会被污染。
+
+结构中不出现、也不从数据里补上的边，包括调味到风味分子的转化，以及微生物初始数量的绝对值。热力进度只作为等效时间。解释语句的词表只能引用已经积分的路径。
+
+S1 把厚度、初温、含水、非均质和种子放进因子，而不是让策略根据它们去选择蒸汽。这避免了一部分混杂，但四个策略仍然是不同的反馈律。比较它们不等于做了 do 运算。
+
+\paragraph{本节不能推出的结论}
+不可识别清单不是“这些现象不重要”。它是这些现象没有进入本次状态，解释语句不允许提及它们。
+
+\section{与黑箱剩余时间模型的对照实验}
+
+\paragraph{要判定的量}
+在观测分布上误差更低的模型，是否在干预位移上仍然更低。
+
+规格并列三个预测器：结构因果孪生；以相同输入回归剩余时间的黑箱；去掉 \(S\to R_{\mathrm{int}}\) 的消融。评价不只看剩余时间的均方误差，还必须报告在蒸汽干预上，哪个模型的位移与真值积分一致。黑箱可以在观测分布上更准，同时在干预上失败。该失败才是采用结构方程的实验理由。
+
+这次三个预测器都没有训练，也没有干预测试集。因此本章没有均方误差，没有位移误差，也不声明结构方程已经赢得对照。
+
+\paragraph{本节不能推出的结论}
+没有对照结果时，采用结构方程的理由只停留在第 \ref{ch:lit} 章的继承关系上，不停留在“实验已经证明黑箱失败”上。

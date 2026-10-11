@@ -1,0 +1,26 @@
+{
+  "open": {
+    "n": 4860,
+    "median_e_alpha": -0.8425,
+    "frac_under": 0.6667,
+    "median_energy": 1170.0
+  },
+  "pid": {
+    "n": 4860,
+    "median_e_alpha": 0.15,
+    "frac_under": 0.2222,
+    "median_energy": 3310.0
+  },
+  "mpc": {
+    "n": 4860,
+    "median_e_alpha": -0.4666,
+    "frac_under": 0.9444,
+    "median_energy": 1655.2
+  },
+  "dual": {
+    "n": 4860,
+    "median_e_alpha": -0.3127,
+    "frac_under": 0.9019,
+    "median_energy": 1729.7
+  }
+}

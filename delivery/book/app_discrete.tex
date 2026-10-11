@@ -1,0 +1,107 @@
+\chapter{一维工程核的离散格式}
+\label{app:discrete}
+
+本章把已经运行的步进写成可核对的离散方程。它不是 \eqref{eq:energy}--\eqref{eq:vapor} 的忠实离散。气相压力、蒸汽质量分数和有限速率相变源项没有各自的场。界面上的冷凝与蒸发被收成一个由蒸汽指令和活度决定的热通量。保留这个差别，是为了不把工程核的排序说成多孔介质方程的结论。
+
+\section{控制体}
+
+厚度 \(L\) 分成 \(n=16\) 个控制体，\(\Delta x=L/16\)。下标 0 在界面一侧，下标 15 在对称面。温度 \(T_{i}\) 与含水 \(m_{i}\) 放在控制体中心。时间步 \(\Delta t=2\,\mathrm{s}\)。扩散用显式差分。步长是否满足网格减半的 S0 判据，本次没有单独运行，因此本附录不声明格式误差已低于某阈值。
+
+基准导热 \(k=\alpha\rho c\)，\(\alpha=2.0\times 10^{-7}\,\mathrm{m}^2/\mathrm{s}\)，\(\rho c=3.4\times 10^{6}\,\mathrm{J}/(\mathrm{m}^3\mathrm{K})\)，所以 \(k=0.68\,\mathrm{W}/(\mathrm{m\cdot K})\)。非均质档 2 把下标为 5 的控制体导热改为 \(0.45k\)，其余控制体不变。这是一块低导热夹层，不是连续的脂肪几何。非均质档 1 只改初始温度：沿厚度从 \(-4^\circ\mathrm{C}\) 到 \(+4^\circ\mathrm{C}\)，不改导热。
+
+\section{活度}
+
+活度是含水的单调饱和函数，不是 \eqref{eq:gab} 的反函数。记原型编号 \(p\in\{0,1,2\}\) 对应肉糜、土豆、面团。
+\begin{equation}
+a_w=1-\mathrm{e}^{-m/s_p}\,(1-0.15\,k_p),
+\end{equation}
+并夹到 \([0.02,0.99]\)。尺度 \((s_p,k_p)\) 为肉糜 \((0.10,0.70)\)、土豆 \((0.055,0.80)\)、面团 \((0.08,0.75)\)。土豆的尺度较小，同一含水下活度更高，用来反映公开等温线里淀粉曲线更陡的方向。肉糜的尺度是宽而弱的信息，因为 \cite{sorption2026} 没有肉类曲线。这个映射不随温度改变，所以它不能代表 \(60^\circ\mathrm{C}\) 以上的吸附热修正。
+
+\section{四条策略的执行量}
+
+开环按厚度给出菜单时间
+\begin{equation}
+t_{\mathrm{menu}}=900+18000\,(L-0.015)\ \mathrm{s}.
+\end{equation}
+15 mm、30 mm、50 mm 分别是 900 s、1170 s、1530 s。加热请求在该时刻之前为 1，之后为 0。蒸汽请求在菜单前 45\% 的时间里、且原型不是肉糜时为 0.8。风机固定 0.3。
+
+腔温比例策略只看带噪腔温 \(y_c\)：
+\begin{equation}
+u_{\mathrm{req}}=\mathrm{clip}\big(0.04\,(160-y_c)+0.6,\,0,\,1\big).
+\end{equation}
+它不估计冷点，也不停机，所以能量停在时域终点。中位 \(e_{\alpha}=+0.150\) 是进度饱和到 1 之后相对 0.85 的上沿，不能写成推荐策略的成功。
+
+被动估计与对偶估计共用冷点跟踪。内部时间尺度
+\begin{equation}
+\tau=\mathrm{clip}(\hat r,0.8,8)\,(L/0.03)^2\,280\ \mathrm{s}.
+\end{equation}
+估计冷点
+\begin{align}
+\hat T_c &\leftarrow \hat T_c+\Delta t\,(y_T-\hat T_c)/\tau,\\
+\hat T_c &\leftarrow \min\big(\hat T_c,\, y_T-4\max(\hat r-1,0.2)\big).
+\end{align}
+第二式阻止估计器把表面温度当成冷点。裕量和请求
+\begin{align}
+\mu &= 6+10\sqrt{\mathrm{Var}(r)}\,(L/0.03),\\
+u_{\mathrm{req}} &= \mathrm{clip}\big(0.35+(75+\mu-\hat T_c)/30,\,0.15,\,1\big).
+\end{align}
+停机要求 \(\hat T_c>75+\mu\) 且时刻已经超过 240 s。对偶策略还有一条否决：方差仍大于 0.45 且 \(L>0.04\,\mathrm{m}\) 时不允许停。停机后请求降到 0.15，模式记为保持。
+
+对偶策略的探针不是优化 \eqref{eq:astar} 的结果。时刻落在 \([150,190)\)、方差大于 0.25 且尚未锁定时，170 s 之前蒸汽指令为 1，其后风机为 1.3。190 s 之后若仍未探测，
+\begin{equation}
+r_{\mathrm{new}}=\mathrm{clip}\big(1.4+1.1\,\ell+1.2\,(L/0.03),\,0.8,\,7\big),
+\end{equation}
+其中 \(\ell=\mathrm{clip}((y_T-\hat T_c)/6,0,3)\)。只有 \(r_{\mathrm{new}}\) 比当前 \(\hat r\) 更接近内部代理 \(r_{\mathrm{proxy}}\) 时才写入，并把方差乘 0.35。否则方差保持。\(r_{\mathrm{proxy}}=\mathrm{clip}(\Delta T/8+1.2+2.5 S,\,0.8,\,8)\)，\(\Delta T\) 是表面与冷点温差、下限 0.3 K，\(S\) 是结壳变量。这个代理用了真值温差，所以它是评分用的参照，不是传感器。写入条件使用了这个参照，因此该次更新不是一个只靠观测的滤波器。正文在引用方差下降时必须带上这一句。
+
+\section{加热器与界面}
+
+加热器温度是唯一进入削减的硬测量：
+\begin{equation}
+T_h\leftarrow T_h+\Delta t\Big(0.015\,u\,(280-T_h)-0.008\,(T_h-40)\Big).
+\end{equation}
+满功率平衡点满足 \(0.015(280-T_h)=0.008(T_h-40)\)，解得 \(T_h=196.5^\circ\mathrm{C}\)。削减
+\begin{equation}
+u\leftarrow u\,\big(1-0.75\,\mathrm{clip}((T_h-230)/40,\,0,\,1)\big)
+\end{equation}
+因此在这条平衡上不会被触发。命题测试函数是另一段代码：加热器超过 \(210^\circ\mathrm{C}\) 时把请求剪到 0.25，并且不读取后验。两段代码说明的是同一件事的两个层次：安全规则不随后验变形。它们的阈值并不相同，日志也不能用来声称 \(230^\circ\mathrm{C}\) 削减已经在战役里动作。
+
+界面换热系数 \(h=12+55\,u_{\mathrm{fan}}\)，环境温度 \(T_\infty=90+95\,u\)。潜热项
+\begin{equation}
+q_{\mathrm{lat}}=18000\,u_{\mathrm{st}}(1-a_w)-9000\,(1-u_{\mathrm{st}})\max(a_w-0.35,0)\,u_{\mathrm{fan}}.
+\end{equation}
+进入第一控制体的通量是 \(h(T_\infty-T_0)+q_{\mathrm{lat}}+7000\,u\)。内部用二阶差分，对称面用一侧差分。更新后温度夹到 \([0,220]^\circ\mathrm{C}\)。
+
+含水的扩散系数 \(D=2\times 10^{-9}(1+3m)\,\mathrm{m}^2/\mathrm{s}\)。表面损失与蒸汽增益只加在第一控制体。含水夹到 \([0.02,0.95]\)。
+
+\section{进度}
+
+冷点取十六个控制体的最低温度。等效时间以分钟计，
+\begin{equation}
+F\leftarrow F+\Delta t\cdot 10^{(T_{\mathrm{cold}}-70)/10}/60.
+\end{equation}
+\begin{equation}
+\alpha_m=1-\mathrm{e}^{-F/2}.
+\end{equation}
+\(\alpha_m=0.85\) 对应 \(F=-2\ln(0.15)\approx 3.79\,\mathrm{min}\)。这是设计线。表面褐变
+\begin{equation}
+\alpha_b\leftarrow\mathrm{clip}\Big(\alpha_b+\Delta t\cdot 2\times 10^{-4}\max(T_0-110,0)\max(0.55-m_0,0),\,0,\,1.5\Big).
+\end{equation}
+结壳只在表面含水低于 0.45 时增长，速率 \(1.5\times 10^{-4}\,\mathrm{s}^{-1}\)，上限 1。它进入 \(r_{\mathrm{proxy}}\)，从而只影响“更新是否更接近参照”，不直接改导热场。规格里的路径 C 在这个核中没有完整的 \(S\to k_{\mathrm{eff}}\) 反馈，只有参照里的一项。
+
+\section{噪声与能量}
+
+第 \(s\) 步的单位噪声是
+\begin{equation}
+\xi=\mathrm{frac}\big(\sin(\sigma\cdot 12.9898+s\cdot 78.233)\cdot 43758.5453\big)\cdot 2-1,
+\end{equation}
+\(\sigma\) 为种子加策略编号的偏移。表面温度加 \(0.4\xi\)，含水加 \(0.004\xi\)。同一进程重复运行得到同一轨迹。能量是记录序列上加热指令之和乘以记录间隔，不是电功率对时间的积分。比较策略时只能比较这个定义下的数值。
+
+\section{本格式不能支持的句子}
+
+\begin{itemize}
+\item 不能把 19440 行写成 19440 次烹饪实验。它们是同一格式在因子格子上的样本。
+\item 不能把方差乘 0.35 写成 Fisher 信息的特征值。
+\item 不能把 \(196.5^\circ\mathrm{C}\) 的加热器平衡写成已经检验过 \(230^\circ\mathrm{C}\) 削减。
+\item 不能把肉糜活度写成 \cite{sorption2026} 的测定。
+\item 不能用本格式的中位数代替未运行的二维脂肪几何、腔体边界库和神经算子。
+\end{itemize}

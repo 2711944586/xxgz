@@ -1,0 +1,22 @@
+{
+  "steady": {
+    "spread": 0.0,
+    "passed": true
+  },
+  "pulse": {
+    "lag_p4": 40.84561628894236,
+    "lag_steam": 38.91231973380923,
+    "passed": true
+  },
+  "budget": {
+    "bound": 1.2000000000000002,
+    "realized": 1.1428567898353856,
+    "passed": true
+  },
+  "shield": {
+    "clipped": 0.25,
+    "same": true,
+    "open": 1.0,
+    "passed": true
+  }
+}

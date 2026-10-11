@@ -1,0 +1,139 @@
+\chapter{符号、单位与日志字段}
+\label{app:symbols}
+
+本章固定全文一个符号只指一个量。规格方程里的符号与已经运行的数值核里的符号分开列出。二者同名时，以本节的“规格”或“数值核”定语区分，不把数值核的常数说成多孔介质方程的测定值。
+
+\section{规格场}
+
+\begin{longtable}{llp{8.2cm}}
+\caption{连续介质与决策状态}\\
+\toprule
+符号 & 单位 & 含义 \\
+\midrule
+\endfirsthead
+\toprule
+符号 & 单位 & 含义 \\
+\midrule
+\endhead
+\(\Omega_f\) & \(\mathrm{m}^3\) & 食品区域 \\
+\(\Omega_c\) & \(\mathrm{m}^3\) & 腔体气体区域，不并进食品场 \\
+\(\Gamma\) & \(\mathrm{m}^2\) & 食品与腔体的交界面 \\
+\(T\) & \(^\circ\mathrm{C}\) 或 \(\mathrm{K}\) & 温度。动力学指数里与参考温度同单位；辐射项必须用开尔文 \\
+\(p_g\) & \(\mathrm{Pa}\) & 气相压力 \\
+\(\varepsilon_s,\varepsilon_l,\varepsilon_g\) & 1 & 固、液、气体积分数，三者之和为 1 \\
+\(\omega_v\) & 1 & 气相中水蒸气质量分数 \\
+\(S\) & 1 & 结构变量，综合收缩、孔隙闭合与结壳 \\
+\(\alpha_p,\alpha_g,\alpha_b,\alpha_m\) & 1 & 蛋白变性、淀粉糊化、表面褐变、热力致死当量 \\
+\(\vect{z}\) & 混合 & 决策状态，见 \eqref{eq:z} \\
+\(\vect{X}\) & 混合 & 全场，见 \eqref{eq:state} \\
+\(\Phi\) & — & 全场到决策状态的映射 \\
+\(a_w\) & 1 & 水分活度 \\
+\(M,M_0,X_m\) & 干基 & GAB 等温线的含水与单层容量 \\
+\(C,K\) & 1 & GAB 能量参数与多层校正 \\
+\(k_{\mathrm{eff}}\) & \(\mathrm{W}/(\mathrm{m\cdot K})\) & 有效导热系数，可各向异性 \\
+\((\rho c)_{\mathrm{eff}}\) & \(\mathrm{J}/(\mathrm{m}^3\mathrm{K})\) & 有效容积热容 \\
+\(\Delta h_{\mathrm{vap}}\) & \(\mathrm{J}/\mathrm{kg}\) & 汽化潜热 \\
+\(h\) & \(\mathrm{W}/(\mathrm{m}^2\mathrm{K})\) & 界面对流换热系数 \\
+\(R_{\mathrm{ext}},R_{\mathrm{int}}\) & \(\mathrm{K}/\mathrm{W}\) & 外部与内部热阻。数值核中的 \(r\) 是无量纲代理，不是这两个量 \\
+\(C_1,C_2\) & \(\mathrm{J}/\mathrm{K}\) & 两节点热容 \\
+\(F\) & \(\mathrm{min}\) & 以参考温度计的等效加热时间 \\
+\(z\) & \(\mathrm{K}\) & 热力值的温度宽度。与决策状态 \(\vect{z}\) 不是同一个符号 \\
+\(\mathrm{Fo},\mathrm{Bi},\mathrm{Ko}\) & 1 & Fourier、Biot、Kossovich 数 \\
+\bottomrule
+\end{longtable}
+
+\section{估计、探针与执行}
+
+\begin{longtable}{lp{10cm}}
+\caption{信息与安全符号}\\
+\toprule
+符号 & 含义 \\
+\midrule
+\endfirsthead
+\toprule
+符号 & 含义 \\
+\midrule
+\endhead
+\(\vect{y}\) & 可安装观测。安全侧测量不进入品质滤波 \\
+\(\vect{v}\) & 观测噪声。数值核用确定性散列，不从高斯抽样 \\
+\(\vect{\theta}\) & 在线更新的传递与边界参数 \\
+\(\vect{\Sigma}\) & 决策状态或参数的协方差 \\
+\(\vect{\mathcal{I}}\) & Fisher 信息。规格用它比较探针；本次日志没有计算该矩阵 \\
+\(G(a)\) & 探针 \(a\) 的预测信息增益 \\
+\(C(a)\) & 探针的预测损伤与能量 \\
+\(\lambda_I\) & 对偶目标中信息项的权重。赤字消失时为零 \\
+\(a^\star\) & 探针库上的最优探针 \\
+\(J\) & 品质泛函 \\
+\(h_j\) & 控制屏障。自变量只有硬测量 \\
+\(\vect{u}_{\mathrm{AI}}\) & 品质层给出的参考执行量，进入投影之前不是指令 \\
+\(e_{\alpha}\) & 真值进度在停机时刻相对设计线 \(0.85\) 的差 \\
+\(N_{\mathrm{viol}}\) & 安全不等式被违反的次数。本次核没有单独的越界计数器 \\
+\bottomrule
+\end{longtable}
+
+\section{数值核里实际出现的量}
+
+下列常数只属于一维工程核。它们的数量级参照瘦组织导热、水的潜热和家用腔体换热，不是一次测定的回归结果。
+
+\begin{longtable}{lllp{6.5cm}}
+\caption{数值核常数}\\
+\toprule
+符号 & 数值 & 单位 & 在代码中的作用 \\
+\midrule
+\endfirsthead
+\toprule
+符号 & 数值 & 单位 & 在代码中的作用 \\
+\midrule
+\endhead
+\(\alpha\) & \(2.0\times 10^{-7}\) & \(\mathrm{m}^2/\mathrm{s}\) & 热扩散率尺度 \\
+\(\rho c\) & \(3.4\times 10^{6}\) & \(\mathrm{J}/(\mathrm{m}^3\mathrm{K})\) & 容积热容，与 \(\alpha\) 相乘得基准导热 \\
+\(k\) & \(0.68\) & \(\mathrm{W}/(\mathrm{m\cdot K})\) & \(\alpha\rho c\)。脂肪控制体乘 \(0.45\) \\
+\(\Delta h\) & \(2.3\times 10^{6}\) & \(\mathrm{J}/\mathrm{kg}\) & 写入界面潜热项的数量级来源；界面项本身用 \(1.8\times 10^{4}\) 与 \(9\times 10^{3}\) 的工程系数 \\
+\(n\) & 16 & 1 & 厚度方向控制体个数 \\
+\(\Delta t\) & 2 & \(\mathrm{s}\) & 战役时间步 \\
+\(t_f\) & 55 & \(\mathrm{min}\) & 战役时域。未停机的轨迹停在该时域终点 \\
+\(r\) 的先验 & 5.0 & 1 & 故意偏离的内部热阻代理 \\
+\(\mathrm{Var}(r)\) 先验 & 0.64 & 1 & 探针前的方差 \\
+探针窗 & \([150,190)\) & \(\mathrm{s}\) & 只在对偶策略、方差仍大于 \(0.25\) 且未锁定时进入 \\
+停止线 & 75 & \(^\circ\mathrm{C}\) & 估计冷点要越过的温度，另加裕量 \\
+设计进度 & 0.85 & 1 & \(e_{\alpha}\) 的零点。进度用 \(1-\mathrm{e}^{-F/2}\) \\
+噪声幅度 & 0.4 与 0.004 & \(^\circ\mathrm{C}\)，1 & 表面温度与平均含水。由正弦散列生成 \\
+\bottomrule
+\end{longtable}
+
+\section{日志列}
+
+\texttt{s1\_summary.json} 的每一行是一条轨迹的停机摘要，不是一个时间序列。
+
+\begin{longtable}{lp{10cm}}
+\caption{摘要日志的列}\\
+\toprule
+列 & 含义 \\
+\midrule
+\endfirsthead
+\toprule
+列 & 含义 \\
+\midrule
+\endhead
+\texttt{suite} & 恒为 S1 \\
+\texttt{case} & 组合编号，从 0 到 4859 \\
+\texttt{food} & mince、potato、dough \\
+\texttt{length\_mm} & 15、30 或 50 \\
+\texttt{t0} & 5 或 20，单位 \(^\circ\mathrm{C}\) \\
+\texttt{m0} & 0.64、0.72 或 0.80 \\
+\texttt{hetero} & 0 均匀，1 初始温度沿厚度 \(\pm 4^\circ\mathrm{C}\)，2 一个控制体导热乘 0.45 \\
+\texttt{seed} & 0 到 29。进入噪声的整数是 \(1000+\texttt{seed}+17\times\) 原型编号 \\
+\texttt{policy} & open、pid、mpc、dual \\
+\texttt{stop\_s} & 策略自己决定的停机时刻，单位秒 \\
+\texttt{e\_alpha} & 该时刻真值 \(\alpha_m-0.85\) \\
+\texttt{energy} & 加热指令沿记录点求和再乘记录间隔 \\
+\texttt{var\_r} & 轨迹终点的方差，不是探针刚结束的方差 \\
+\texttt{alpha\_b} & 终点表面褐变进度 \\
+\texttt{augmented} & 恒为 false。这些行不是扩充教师 \\
+\texttt{source} & 恒为 simulation \\
+\bottomrule
+\end{longtable}
+
+组合数是 \(3\times 3\times 2\times 3\times 3\times 30=4860\)。四个策略各 4860 行，合计 19440 行。较早的乘积 1620 少乘了非均质的 3 个水平。日志与含非均质的乘积一致，不把 1620 写成日志条数。
+
+\texttt{demo\_seed7\_dual.csv} 是肉糜、厚度 30 mm、初温 \(8^\circ\mathrm{C}\)、初始含水 0.72、种子 7、对偶策略的时间序列。它用来核对一条轨迹的形状，不进入策略中位数。

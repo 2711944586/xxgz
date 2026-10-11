@@ -1,0 +1,162 @@
+\chapter{隐藏状态估计：观测算子、可辨识性与滤波}
+\label{ch:est}
+
+本章要判定的量是：被动观测对内部热阻的信息在什么条件下为零，以及在线估计器输出的是一个温度点还是决策状态的后验。规格中的估计器是分层的集合滤波。本次日志里的估计器是一个标量跟踪器。二者必须分开写。
+
+\section{可安装观测}
+
+\paragraph{要判定的量}
+哪一些通道允许进入品质滤波，哪一些只进入安全约束。
+
+\paragraph{继承的文献层与不继承的层}
+观测算子的病态性继承 \cite{ozisik2000}。红外亮度里的发射与反射必须分开，否则加热管的辐射会被当成食品表面温度。不继承某一热像器件的样本噪声作为系统精度。
+
+\begin{table}[ht]
+\centering
+\caption{进入品质估计器的观测}
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+通道 & 符号 & 与隐藏状态的关系 \\
+\midrule
+腔体空气温度 & \(y_T\) & 靠近 \(T_\infty\)，受加热器辐射污染 \\
+腔体相对湿度 & \(y_\varphi\) & \(p_v/p_{\mathrm{sat}}(T_\infty)\)，饱和时丢失分辨率 \\
+食品质量 & \(y_m\) & 累计蒸发的积分，不定位冷点 \\
+表面热像 & \(\vect{y}_{\mathrm{IR}}\) & 发射率未知的辐射亮度 \\
+电功率 & \(y_P\) & 已知输入，写入边界，不当作食品状态 \\
+排气温度 & \(y_{T,e}\) & 冷凝与漏汽的积分证据 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{definition}[观测方程]
+\begin{equation}
+\label{eq:obs}
+\vect{y}_k=h\big(\Phi(\vect{X}(t_k)),\vect{\theta}\big)+\vect{v}_k.
+\end{equation}
+红外通道
+\begin{equation}
+\label{eq:ir}
+L_j=\epsilon(\varepsilon_{l,s},S_s)\,\sigma T(\vect{r}_j)^4
++\big(1-\epsilon(\varepsilon_{l,s},S_s)\big)L_j^{\mathrm{refl}}.
+\end{equation}
+\end{definition}
+
+发射率随表面变干下降。系统精度取发射率区间两端分别滤波后的分位包络，不取器件标称精度。本次核没有热像，也没有质量。进入跟踪器的是表面温度加 \(0.4^\circ\mathrm{C}\) 的确定性散列，以及平均含水加 \(0.004\) 的散列。噪声不是高斯抽样，重复运行得到同一轨迹。
+
+\paragraph{本节不能推出的结论}
+表中的通道是规格。没有采样的通道，不能在结果里出现“去掉该通道后误差上升”这一句。
+
+\section{逆问题的病态结构}
+
+\paragraph{要判定的量}
+只加密表面像素，能否稳定恢复冷点。
+
+\paragraph{继承的文献层与不继承的层}
+线性化热方程在厚度方向上，对高频边界噪声的放大随 \(\mathrm{e}^{kL}\) 增长 \cite{ozisik2000}。不继承某一个正则化参数作为物理常数。
+
+由此得到四条限制。只加密表面红外像素，不能稳定恢复冷点。必须有一个穿透时间尺度上的动态激励，或一个对内部热阻敏感的积分量。质量损失对累计蒸发敏感，对冷点位置不敏感。先验把解限制在决策流形附近，正则化来自物理，而不是一个随意的光滑惩罚。
+
+\begin{proposition}[静态观测不足以分离内外热阻]
+在 \eqref{eq:twonode} 中令三个导数为零且无相变。则 \(T_1=T_2=T_\infty\)，\(R_{\mathrm{int}}\)、\(C_1\)、\(C_2\) 全部从代数方程中消失。
+\end{proposition}
+
+完整证明在命题 \ref{prop:steady}。断言在 \(R\in\{1,3,6\}\)、\(T_\infty=100\) 上积分到平衡，温差极差为 0。这是“到时按菜单停机”失败的数学形式：菜单在稳态配方上标定，这一次的内部热阻从未被观察。
+
+\subsection{可观测矩阵的行列式}
+
+沿用 \eqref{eq:fv-obsv} 的两节点线性化。输出只取表面温度，
+\[
+\mathcal{O}=\begin{pmatrix}\vect{C}\\ \vect{C}\vect{A}\end{pmatrix}
+=\begin{pmatrix}1&0\\ -a-b& b\end{pmatrix}.
+\]
+\[
+\det\mathcal{O}=b=\frac{1}{C_1 R_{\mathrm{int}}}.
+\]
+\(C_1>0\) 且 \(R_{\mathrm{int}}\) 有限时，行列式不为零，两个温度状态可观测。\(R_{\mathrm{int}}\to\infty\) 时行列式趋于零，表面温度不再携带内部节点的信息。厚件在菜单终点的 Fourier 数远小于 1，对应的就是这个方向：不是秩突然消失，而是短时间内灵敏度很小。
+
+平衡点上的参数灵敏度是另一件事。命题 \ref{prop:steady} 已经说明三个温度对 \(R_{\mathrm{int}}\) 的导数为零。把零列放进 \eqref{eq:fisher}，该项贡献是零。因此“状态可观测”不能写成“内部热阻已经可辨识”。探针的作用是离开平衡，让灵敏度列不再是零。
+
+已实现的跟踪器没有组装 \(\mathcal{O}\)，也没有组装 Fisher 矩阵。它用一个标量时间常数跟随表面，再用 \(\hat r\) 把估计压低。方差只在 190 s 之后、而且新的 \(\hat r\) 更接近真值温差参照时，乘一次 0.35。这个参照用了表面与冷点的真值差，所以方差下降不是 \eqref{eq:fisher} 的特征值。
+
+\paragraph{本节不能推出的结论}
+病态性不意味着估计不可能。它意味着估计依赖激励和先验。没有激励时增加采样频率无效。
+
+\section{动态可辨识性}
+
+\paragraph{要判定的量}
+相变项是否给输入矩阵增加一个与 \(T_\infty\) 线性无关的方向。
+
+\paragraph{继承的文献层与不继承的层}
+灵敏度方程和 Fisher 信息是局部可辨识性的标准构造。不继承本次已经算出了 Fisher 矩阵的特征值。该矩阵没有在日志里计算。
+
+把 \eqref{eq:twonode} 在无相变工作点线性化，状态 \((\delta T_1,\delta T_2)\)，输入 \((\delta T_\infty,\delta v)\)。风速只进入 \(R_{\mathrm{ext}}\)。对输出 \(y=T_1\)，可观测矩阵的秩为 2，内部状态在结构上可观测，但 Gram 矩阵的条件数随 \(R_{\mathrm{int}}/R_{\mathrm{ext}}\) 增大而变坏。厚、干、结壳的食品，表面温度对冷点的响应又慢又弱。
+
+相变项把输入从“只改 \(T_\infty\)”扩展为“改 \(T_\infty\) 与 \(q_{\mathrm{lat}}\)”。短蒸汽脉冲使 \(q_{\mathrm{lat}}\) 变号，表面节点出现一个不经过 \(R_{\mathrm{ext}}\) 的跃迁。灵敏度满足
+\begin{equation}
+\label{eq:sens}
+\frac{\mathrm{d}}{\mathrm{d}t}\frac{\partial \vect{s}}{\partial\theta_i}
+=\vect{A}(\vect{\theta})\frac{\partial \vect{s}}{\partial\theta_i}
++\frac{\partial \vect{A}}{\partial\theta_i}\vect{s}
++\frac{\partial \vect{B}}{\partial\theta_i}\vect{u},
+\end{equation}
+其中 \(\vect{s}=(T_1,T_2,m)\)。Fisher 信息
+\begin{equation}
+\label{eq:fisher}
+\vect{\mathcal{I}}(\vect{\theta};\vect{u}_{0:K})
+=\sum_{k=0}^{K}
+\Big(\frac{\partial h}{\partial \vect{s}}\frac{\partial \vect{s}_k}{\partial\vect{\theta}}\Big)^{\!\top}
+\vect{R}_k^{-1}
+\Big(\frac{\partial h}{\partial \vect{s}}\frac{\partial \vect{s}_k}{\partial\vect{\theta}}\Big).
+\end{equation}
+探针设计在规格上最大化 \(\log\det\vect{\mathcal{I}}\) 的增量。断言没有组装这个矩阵。它只比较了两段脉冲与单独蒸汽的表面—内部滞后：\(40.846\) 与 \(38.912\)，判据是差值大于 1。差值大于 1 说明第二段改变了滞后，不说明 Fisher 矩阵的最小特征值已经上升。
+
+\paragraph{本节不能推出的结论}
+可观测秩为 2 是线性化结构的结论。它不给出厚件上的估计误差。厚件误差见交叉表，而且那个误差来自标量跟踪器，不是来自 \eqref{eq:fisher} 的实现。
+
+\section{贝叶斯估计器}
+
+\paragraph{要判定的量}
+在线更新的是哪一层参数，控制器读的是均值还是分位数。
+
+\paragraph{继承的文献层与不继承的层}
+集合卡尔曼滤波的预测—分析结构继承 \cite{evensen2003}。不继承本次已经用 32 个成员跑完了主表。没有这次运行。
+
+规格分三层。
+
+\begin{enumerate}
+\item 参数层。\(\vect{\theta}=(C_1,C_2,R_{\mathrm{int}},R_{\mathrm{ext}},k_m,K_{\mathrm{ev}})\)。先验按类别读取。过程噪声只加在会漂移的项上，例如结壳使 \(R_{\mathrm{int}}\) 随 \(S\) 增大。
+\item 场层。一维径向降阶模型的模态系数用集合卡尔曼滤波更新。集合成员共享当前参数后验的抽样。实时集合规模 32，离线对照 128。预测协方差加膨胀因子，空间局部化用 Gaspari--Cohn 函数，半径取一至两个节点。
+\item 决策层。每个成员计算 \(\vect{z}^{(i)}=\Phi(\vect{X}^{(i)})\)。控制器使用分位数，不使用集合均值一个数。
+\end{enumerate}
+
+湿度通道在读数超过 0.98 时增大对应的观测方差，表示饱和段几乎没有信息。红外似然使用 \eqref{eq:ir}，发射率与表面结壳绑定，作为慢变参数。
+
+\paragraph{已运行的跟踪器}
+本次没有集合，没有膨胀，没有局部化。状态是三个标量：\(\hat r\) 初值 5，方差初值 0.64，\(\hat T_c\) 以时间常数
+\begin{equation}
+\tau=\mathrm{clip}(\hat r,0.8,8)\,(L/0.03)^2\cdot 280\ \mathrm{s}
+\end{equation}
+跟踪表面温度，并被截到表面读数减去 \(4\max(\hat r-1,0.2)\)。对偶策略在 190 s 之后按附录 \ref{app:discrete} 的规则更新 \(\hat r\)，只有更接近真值参照时才把方差乘 0.35。这个参照使用了真值温差，所以分析步不是集合卡尔曼的分析步。
+
+30 mm、\(\hat r=5\) 时 \(\tau=1400\,\mathrm{s}\)。表面温度在几分钟内可以到 \(100^\circ\mathrm{C}\) 以上，估计冷点以约 23 min 的时间常数去追它，同时被滞后上限压住。种子 7 在 1200 s 时估计已经高于冷点，说明上限没有构成下置信界。交叉表里厚件仍然提前停止，与这个跟踪器的结构一致：厚度使 \(\tau\) 按 \(L^2\) 增大，但滞后上限只按 \(\hat r\) 给一个常数，表面远高于冷点之后估计仍可越过阈值。
+
+\paragraph{本节不能推出的结论}
+不能报告集合规模 32 与 128 的方差比。不能把方差乘 0.35 写成后验熵的奈特数。
+
+\section{可观测性失效时的行为}
+
+\paragraph{要判定的量}
+估计器在什么条件下失去输出点预测停机的权利。
+
+三条规格条件：Fisher 矩阵的最小特征值低于类别阈值；质量通道与湿度通道的残差超过三倍标准差并持续一个热时间常数；集合成员的 \(\alpha_m\) 分位区间同时覆盖“未达安全”和“已经过熟”。第三条必须由探针或低功率保温来压缩区间，不能靠把阈值调低来选择一边。
+
+本次核没有特征值，没有质量通道，也没有集合成员。退化后的行为只有一条：对偶策略在 \(L>40\,\mathrm{mm}\) 且方差仍大于 0.45 时否决停止。否决之后请求可以继续，但停止时刻不因该次探针而提前。这条规则没有覆盖“分位区间同时覆盖两种决策”的情形，因为根本没有分位区间。
+
+\paragraph{本节不能推出的结论}
+失效条件写出来，不等于失效已经被注入并计数。遮挡、通道缺失和噪声倍数属于尚未运行的 S2。
+
+\section{本章与前后章的接口}
+
+本章的规格产出是 \(p(\vect{z},\vect{\theta}\mid\vect{y}_{0:k})\) 与 Fisher 信息。第 \ref{ch:ati} 章读取它们决定要不要探针。第 \ref{ch:causal} 章读取结构方程的当前参数。第 \ref{ch:safe} 章读取分位数做机会约束。任何下游模块若只接收均值，视作违反第 \ref{ch:arch} 章的合同。
+
+本次实际交出的是 \((\hat T_c,\hat r,\mathrm{Var}(r))\)。下游策略把 \(\hat T_c\) 放进一个饱和线性律。这个接口比合同窄。窄接口上的策略比较仍然可以做，但结论的主语是这个跟踪器，不是集合滤波。

@@ -1,0 +1,1 @@
+ok=True n=414 surf=4.999699e-06 core=4.992815e-06 hat=4.998035e-06 heater_max=196.522 qlat_max=180.000
