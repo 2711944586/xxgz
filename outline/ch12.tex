@@ -1,0 +1,80 @@
+\chapter{命题、证明义务与图件}
+\label{ch:proof}
+
+本章固定那些必须被证明或被仿真否定的陈述，以及每张图要画的坐标。证明只依赖已经写出的方程。图在对应仿真完成前保持为坐标说明，不预填曲线。
+
+\section{稳态不可辨识}
+
+\begin{proposition}[平衡点不含内部参数]
+\label{prop:steady}
+设 \eqref{eq:twonode} 中 $\dot m=0$、$q_{\mathrm{lat}}=0$，且存在平衡点。则 $T_1=T_2=T_\infty$，$(R_{\mathrm{int}},C_1,C_2)$ 不进入该代数方程，平衡观测对三者的灵敏度为零。
+\end{proposition}
+
+证明只做三步：第二式迫使两节点温度相等；第一式在 $R_{\mathrm{ext}}>0$ 时迫使该温度等于腔温；对三个参数求导后右端仍为零。推论是：恒温段再密的腔温采样也不更新内部热阻。信息动作必须离开平衡。
+
+\section{两段脉冲的秩}
+
+\begin{proposition}[第二输入方向]
+\label{prop:pulse}
+线性化后，仅 $\delta T_\infty$ 时输入矩阵为单列。若 $q_{\mathrm{lat}}$ 能独立于 $T_\infty$ 变号，则输入矩阵增加一列。紧接着只改变 $R_{\mathrm{ext}}$ 的气流段之后，$(R_{\mathrm{ext}},R_{\mathrm{int}})$ 的灵敏度列线性无关。
+\end{proposition}
+
+证明比较两段特解：冷凝项进入表面节点时不经过 $R_{\mathrm{ext}}$；气流段只改 $R_{\mathrm{ext}}$。后一段对 $R_{\mathrm{int}}$ 的特解不能写成前一段的标量倍。因此单独喷蒸汽不够，P4 的顺序是秩条件，不是经验搭配。
+
+若仿真中两列相关，先检查相变是否真的变号，再检查两段是否短到互相重叠。不通过时缩小命题的适用区：只保留界面相变可观测的湿度范围。
+
+\section{探针窗口内的冷点上界}
+
+\begin{proposition}[冷点增量]
+\label{prop:budget}
+记 $\tau_2=R_{\mathrm{int}}C_2$。当 $\tau\le\tau_2/10$ 且表面温度增量不超过 $\Delta T_s$ 时，
+\[
+|\Delta T_2|\le\frac{\tau}{\tau_2}\Delta T_s,
+\]
+\[
+|\Delta F|\le\tau\,10^{(T_2(0)+\Delta T_2-T_{\mathrm{ref}})/z}.
+\]
+\end{proposition}
+
+第二节点是时间常数 $\tau_2$ 的线性滤波器，积分即得温度上界。$F$ 的被积函数对温度单调，用区间右端放大。损伤预算因此写在 $\alpha_b$ 与 $\varepsilon_{l,s}$ 上。用冷点温度否决探针，会放过表面已经越界的情况。
+
+\section{无效探针与安全域}
+
+\begin{proposition}[分位滞回]
+\label{prop:invalid}
+停止规则只看 $\alpha_m$ 的下 $\delta$ 分位是否越过 $\alpha_{\mathrm{safe}}$ 加滞回带 $\epsilon$。一次动作后若该分位的变化小于 $\epsilon$，停止判定与动作前相同。
+\end{proposition}
+
+实现把“协方差下降未达预定比例”定义成分位不更新。无效探针在规则上不能移动停止时刻。
+
+\begin{proposition}[可行域与后验分离]
+\label{prop:shield}
+若 $h_j$ 的自变量只有漏电、水位或空烧温升、加热器温度、腔压和门状态，则 $p(\vect{z},\vect{\theta}\mid\vect{y})$ 的改变不改变 \eqref{eq:cbf} 的可行域。后验只通过参考点 $\vect{u}_{\mathrm{AI}}$ 进入目标。
+\end{proposition}
+
+品质模型错误时参考点可以错，安全集的形状不错。硬件断电不读取该后验，与这一可行域串联。
+
+\section{三路径的链式分解}
+
+\begin{proposition}[路径可加]
+\label{prop:path}
+设 $Q=Q(\alpha_m,\varepsilon_{l,s})$，$\alpha_m$ 只通过 $T_2$ 依赖蒸汽，$T_2$ 对蒸汽的依赖分成 $R_{\mathrm{int}}$ 固定与 $R_{\mathrm{int}}(S(\varepsilon_{l,s}))$ 两部分。则 $\mathrm{d}Q/\mathrm{d}m_{\mathrm{st}}$ 恰好分成 \eqref{eq:path} 的 A、B、C 三项。
+\end{proposition}
+
+少掉 C，结壳后期的热阻没有项。解释输出至少这三项；短探针窗口内 C 为 $O(\tau/\tau_S)$，全时域积分必须保留。
+
+\section{这些命题划定的边界}
+
+命题成立的范围：
+
+\begin{itemize}
+\item 决策量限于 $\vect{z}$。风味分子与微生物初始数量不在状态里。
+\item 可辨识的是传递与边界参数。蒸汽表、潜热和反应活化能的数量级保持锁定。
+\item 信息动作的贡献要用无探针优化作对照，不用开环作唯一对照。
+\item 两节点上的命题通过，只说明判据方向正确。主结果仍要求真值模型含 GAB 等温线、各向异性导热、脂肪夹层和收缩渗透率。
+\item 安全命题不产生食品安全限值。$\alpha_{\mathrm{safe}}$ 与 $\delta$ 是设计量。
+\end{itemize}
+
+任一命题在指定仿真中失败，收缩的是适用区（厚度、湿度、通道缺失），不是把失败样本移出统计。
+
+图的编号、坐标和禁用的画法集中在第 \ref{ch:figures} 章。本章的六条命题分别对应 Q1--Q6。数据点只进入 D 图，且只来自同一次试验日志。

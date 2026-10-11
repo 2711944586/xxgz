@@ -1,6 +1,6 @@
 # ACTS-MCDT
 
-面向非均质食品热加工过程的自主认知系统。正文是一篇技术专著，源文件在 `delivery/book/`。PDF 由 XeLaTeX 生成，公式编号以 PDF 为准。
+面向非均质食品热加工过程的自主认知系统。仓库按规划、正文、数值核、结果、演示分开。
 
 ## 主线
 
@@ -8,21 +8,35 @@
 
 ## 目录
 
-- `delivery/book/` 专著源文件。编译命令见下。
-- `src/acts_mcdt/` 评分核。
-- `results/logs/` 已落盘的战役摘要、命题核对和种子 7 轨迹。
-- `results/figures/` 由这些日志画出的图。
+- `outline/` 规划稿。源文件 `main.tex`，已编译的 PDF 是 `outline.pdf`。
+- `monograph/` 正文。源文件 `book.tex`，PDF 是 `book.pdf`，同一正文的 Word 是 `ACTS-MCDT.docx`。公式编号以 PDF 为准。
+- `refs.tex` 规划稿和正文共用的文献入口。
+- `src/acts_mcdt/` 评分核。一维十六个控制体，不改物理后再跑战役。
+- `tests/` 命题核对。
+- `scripts/run_campaign.py` 写出 `results/logs/` 和正文里已有的几张图。日志已经落盘，不必重跑。
+- `scripts/build_docx.py` 由正文源文件生成 `monograph/ACTS-MCDT.docx`。
+- `results/logs/` 战役摘要、命题核对和种子 7 轨迹。
+- `results/figures/` 由这些日志画出的图，以及演示截屏。
 - `demo/` 浏览器演示。十六条控制体与种子 7 的日志对齐到写入精度。
 - `external/gab-fit.xlsx` 已读入的公开等温线拟合。
+- `requirements.txt` 评分核、作图和 Word 生成用的 Python 依赖。
 
-## 编译
+## 编译正文
 
-在 `delivery/book` 下执行两次：
+在 `monograph` 下执行两次：
 
 ```
 xelatex -interaction=nonstopmode book.tex
 xelatex -interaction=nonstopmode book.tex
 ```
+
+Word 在仓库根目录生成：
+
+```
+python scripts/build_docx.py
+```
+
+规划稿在 `outline` 下对 `main.tex` 执行两次 XeLaTeX。它引用上一级的 `refs.tex`。
 
 ## 演示
 
@@ -32,7 +46,7 @@ npm install
 npm run dev
 ```
 
-默认条件是种子 7、肉糜、厚度 30 mm、初温 8 °C、含水 0.72。页面上的表面、冷点和估计与 `results/logs/demo_seed7_dual.csv` 一致。
+默认条件是种子 7、肉糜、厚度 30 mm、初温 8 °C、含水 0.72。页面上的表面、冷点和估计与 `results/logs/demo_seed7_dual.csv` 一致。`node check_seed7.mjs` 用相对路径读这张表。
 
 ## 边界
 

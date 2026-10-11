@@ -2,7 +2,11 @@ demo/node_modules/
 demo/dist/
 **/__pycache__/
 *.pyc
-delivery/book/*.aux
-delivery/book/*.log
-delivery/book/*.out
-delivery/book/*.toc
+monograph/*.aux
+monograph/*.log
+monograph/*.out
+monograph/*.toc
+outline/*.aux
+outline/*.log
+outline/*.out
+outline/*.toc

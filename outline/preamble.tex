@@ -1,41 +1,47 @@
 % !TeX program = xelatex
 \documentclass[a4paper,11pt,openany]{ctexbook}
+
 \usepackage{geometry}
 \geometry{left=2.5cm,right=2.5cm,top=2.6cm,bottom=2.6cm,headheight=14pt}
 \usepackage{amsmath,amssymb,amsthm,bm,mathtools}
 \usepackage{booktabs,longtable,tabularx,multirow,array}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,calc}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
 \usepackage{fancyhdr}
+\usepackage{titlesec}
 \usepackage{caption}
 \usepackage{setspace}
 \usepackage{float}
-\usepackage{hyperref}
+
 \hypersetup{
   colorlinks=true,
   linkcolor=blue!50!black,
   citecolor=blue!50!black,
   urlcolor=blue!60!black,
-  pdftitle={ACTS-MCDT 技术文档},
+  pdftitle={ACTS-MCDT 非均质食品热加工自主认知系统},
   pdfauthor={ACTS-MCDT}
 }
-\setstretch{1.28}
-\setlist[itemize]{itemsep=0.2em,topsep=0.35em}
-\setlist[enumerate]{itemsep=0.2em,topsep=0.35em}
+
+\setstretch{1.25}
+\setlist[itemize]{itemsep=0.15em,topsep=0.3em}
+\setlist[enumerate]{itemsep=0.15em,topsep=0.3em}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small ACTS-MCDT}
 \fancyhead[R]{\small 非均质食品热加工自主认知系统}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
 \newtheorem{definition}{定义}[chapter]
 \newtheorem{proposition}{命题}[chapter]
 \newtheorem{theorem}{定理}[chapter]
 \newtheorem{lemma}{引理}[chapter]
 \newtheorem{assumption}{假设}[chapter]
+
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\Prob}{\mathbb{P}}
@@ -45,17 +51,28 @@
 \newcommand{\cX}{\mathcal{X}}
 \newcommand{\cY}{\mathcal{Y}}
 \newcommand{\cA}{\mathcal{A}}
+\newcommand{\Pa}{\mathrm{Pa}}
 \newcommand{\diag}{\mathrm{diag}}
 \newcommand{\tr}{\mathrm{tr}}
 \newcommand{\argmin}{\operatorname*{arg\,min}}
 \newcommand{\argmax}{\operatorname*{arg\,max}}
 \newcommand{\vect}[1]{\bm{#1}}
-\numberwithin{equation}{chapter}
-\allowdisplaybreaks
-\graphicspath{{../../results/figures/}}
-\setcounter{tocdepth}{1}
+
 \title{\bfseries 面向非均质食品热加工过程的自主认知系统\\[0.45em]
-\large ACTS-MCDT\\[0.3em]
-\normalsize 多尺度界面物理、对偶信息控制、因果路径与测量隔离的安全执行}
+\large ACTS-MCDT\\[0.35em]
+\normalsize 多尺度界面物理、对偶信息控制、因果数字孪生与测量隔离的安全执行}
 \author{技术文档}
-\date{}
+\date{仿真闭环 \quad 真值模型与在线模型隔离}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{center}
+\parbox{0.9\textwidth}{\small
+对象是非均质食品在耦合热—湿—相变—反应场中的隐藏状态。蒸烤腔体提供可切换的蒸汽、排汽、气流与辐射边界，是该对象的承载过程。系统要在不切开食品的条件下，重构决策所需的内部状态，区分加工动作与信息动作，解释效应经过的物理路径，并在执行前用与品质模型无关的测量完成安全投影。数值结果只来自按第 \ref{ch:sim} 章协议运行的仿真。
+}
+\end{center}
+
+\tableofcontents
+\clearpage

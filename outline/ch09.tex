@@ -1,0 +1,140 @@
+\chapter{安全认知控制}
+\label{ch:safe}
+
+认知层可以建议激进的加热或蒸汽。执行层只接受安全投影后的动作。本章把品质目标、机会约束和控制屏障写成一个优化问题，并规定神经网络不在安全环里。
+
+\section{品质泛函}
+
+对预测时域 $[k,k+H]$，阶段代价使用决策状态的后验期望：
+\begin{equation}
+\label{eq:J}
+\begin{aligned}
+J(\vect{u})={}&\E\Big[
+w_m\big(1-\alpha_m(t_f)\big)_+^2
++w_b\big(\alpha_b(t_f)-\alpha_b^\star\big)^2
++w_M\big(\varepsilon_{l,s}(t_f)-\varepsilon^\star\big)^2\\
+&\quad+w_U\sigma_T^2
++w_E\sum_{j=k}^{k+H}P_j\Delta t
++w_t\,t_f
+\Big].
+\end{aligned}
+\end{equation}
+第一项惩罚没达到热力安全进度，第二项惩罚表面过褐或不足，第三项把“蒸嫩”与“烤干”写成不同的终端含水目标，第四项惩罚温度不均匀。权重随用户模式切换，但 $w_m$ 有下限，禁止把安全进度权置零。
+
+期望对集合成员取样本平均。优化用 $\alpha_m$ 的下分位数而不是均值做约束，见下一节。这样“平均看起来熟了”不能通过。
+
+\section{机会约束 MPC}
+
+\begin{equation}
+\label{eq:mpc}
+\begin{aligned}
+\min_{\vect{u}\in\mathcal{U}}\quad & J(\vect{u})\\
+\mathrm{s.t.}\quad
+&\vect{z}_{j+1}=\mathcal{G}(\vect{z}_j,\vect{u}_j,\vect{\theta}^{(i)}),
+\quad i=1,\ldots,N,\\
+&\Prob\big(\alpha_m(t_f)\ge\alpha_{\mathrm{safe}}\big)\ge 1-\delta,\\
+&\Prob\big(T_s(t)\le T_{\mathrm{char}}\big)\ge 1-\delta_T,\\
+&\text{探针占用区间内 }\vect{u}\text{ 等于已发布的 }a^\star.
+\end{aligned}
+\end{equation}
+$\mathcal{U}$ 是加热功率、蒸汽质量流、风速、排汽阀的物理范围。概率用集合成员的经验频率近似。$\delta$ 是热力进度失败率的设计值，在仿真中做灵敏度。它不是微生物认证限值。
+
+求解器为 CasADi/IPOPT，模型取两节点或算子的可微近似。实时形式把概率约束替换为最坏 $N_{\mathrm{tail}}$ 个成员的硬约束。两种形式的停止时刻之差作为保守性指标，一并记入第 \ref{ch:sim} 章。
+
+名义控制周期 5 s，预测时域覆盖剩余烹饪，但控制时域只优化前 60 s，其后跟随当前模式的基准轨迹。这避免在长时域上假装算子仍然准确。
+
+\section{控制屏障}
+
+品质优化的输出记为 $\vect{u}_{\mathrm{AI}}$。安全层求解
+\begin{equation}
+\label{eq:cbf}
+\begin{aligned}
+\vect{u}={}&\argmin_{\vect{u}}\;\|\vect{u}-\vect{u}_{\mathrm{AI}}\|_W^2\\
+\mathrm{s.t.}\quad
+&\dot h_j(\vect{x}_{\mathrm{safe}},\vect{u})+\gamma_j h_j(\vect{x}_{\mathrm{safe}})\ge 0,
+\quad j\in\mathcal{J}.
+\end{aligned}
+\end{equation}
+$h_j\ge 0$ 表示安全集内部。$\vect{x}_{\mathrm{safe}}$ 只含直接测量：壳体漏电流代理量、加热器温度、水位、腔压、门状态、执行器电流。它不依赖 $\alpha_m$ 的估计。屏障因此在估计器崩溃时仍然成立。
+
+第一版屏障函数：
+
+\begin{align}
+h_{\mathrm{leak}}&=I_{\mathrm{leak,max}}-I_{\mathrm{leak}},\\
+h_{\mathrm{dry}}&=H_{\mathrm{water}}-H_{\min},\\
+h_{T}&=T_{\mathrm{heater,max}}-T_{\mathrm{heater}},\\
+h_{p}&=p_{\mathrm{cav,max}}-p_{\mathrm{cav}},\\
+h_{\mathrm{door}}&=\mathbf{1}_{\{\mathrm{door\ closed}\}}.
+\end{align}
+
+漏电与干烧另有独立断电回路。\eqref{eq:cbf} 在到达硬件阈值之前减小功率。硬件回路不读取品质后验，也不经过产生 $\vect{u}_{\mathrm{AI}}$ 的处理器。两级串联：投影负责提前限制，断电负责投影失效后的切断。
+
+置信度低于阈值时，送入投影的参考动作改为预先存储的低功率保温，不保持学习模块的最后一次输出。
+
+\section{模式与信息赤字的调度}
+
+蒸、烤、组合三个模式只改变 \eqref{eq:J} 的终端目标 $\varepsilon^\star$、$\alpha_b^\star$ 与基准轨迹，不改变估计器、探针库和屏障。
+
+\begin{table}[H]
+\centering
+\caption{模式对终端目标的改变}
+\begin{tabularx}{\textwidth}{lXXX}
+\toprule
+模式 & 含水目标 & 褐变目标 & 默认执行器偏置 \\
+\midrule
+蒸 & 表面保持湿 & 抑制 $\alpha_b$ & 蒸汽可用，风速低 \\
+烤 & 表面下降到干壳区 & 跟踪 $\alpha_b^\star$ & 排汽可用，辐射为主 \\
+组合 & 先湿后干，切换由 $\alpha_m$ 分位触发 & 后段才放开 & 先 P 类蒸汽后热风 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+组合模式的切换条件是 $\alpha_m$ 的下分位数跨过中间阈值，同时表面含水仍高于干耗线。按时钟切换不能响应这一次的冷点后验。
+
+信息赤字高时，有限时域目标加入第 \ref{ch:ati} 章的信息项，允许在未来 60 s 内插入一个探针。插入仍受损伤预算约束。主动感知与加工是同一个代价里的两类动作。
+
+\section{降级阶梯}
+
+\begin{enumerate}
+\item 全功能：集合估计 + 探针 + 因果解释 + MPC + 屏障。
+\item 估计失配：关闭因果解释文本，MPC 改为尾部硬约束，增加探针间隔。
+\item 算子超时或残差越界：两节点物理模型 + 屏障，探针库保留。
+\item 质量或热像失效：只保留腔温湿度与安全测量，输出区间很宽的保温程序，界面声明无法保证冷点。
+\item 安全测量失效或硬件阈值触发：断电，软件不参与。
+\end{enumerate}
+
+每一级的进入条件用可测残差书写。降级之后界面只显示进度区间。区间宽度与当前协方差一致，不保留降级前的点状剩余时间。
+
+\begin{figure}[H]
+\centering
+\small
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, align=center, font=\small, inner sep=2pt, minimum width=28mm},
+  arr/.style={-{Stealth}}
+]
+\node[box] (l1) {全功能};
+\node[box, right=5mm of l1] (l2) {尾部约束\\关闭解释};
+\node[box, right=5mm of l2] (l3) {两节点\\保留探针};
+\node[box, right=5mm of l3] (l4) {宽区间保温};
+\node[box, below=6mm of l4] (l5) {硬件断电};
+\draw[arr] (l1)--(l2);
+\draw[arr] (l2)--(l3);
+\draw[arr] (l3)--(l4);
+\draw[arr] (l4)--(l5);
+\end{tikzpicture}
+\caption{降级只向更少依赖估计的一级移动。安全测量失效时直接进入断电。}
+\end{figure}
+
+\section{电气与热安全的感知点}
+
+安全观测与品质观测分开布设。
+
+\begin{itemize}
+\item 加热器与蒸汽发生器支路的剩余电流检测，硬件切断；
+\item 加热管壳体温度与空烧温升速率 $\mathrm{d}T/\mathrm{d}t$，用于在水位传感器粘滞时仍能发现干烧；
+\item 腔体压力与温度的冗余：压力传感器失效时，用温度上升速率限制蒸汽发生器功率；
+\item 门封温度，防止密封老化变成持续漏汽与局部过热；
+\item 门开关作为互锁，开门时蒸汽与风机进入屏障定义的安全值。
+\end{itemize}
+
+这些传感器不进入品质网络的特征。它们的读数只与阈值和屏障不等式比较。离散屏障的一次线性化步骤见附录。

@@ -1,0 +1,95 @@
+\chapter{从大纲到全量构建}
+\label{ch:build}
+
+本章是后续工作的顺序。顺序不能颠倒的原因是：没有日志就没有数据图，没有断言就没有演示，没有文献边界就把仿真残差写成物理定律。
+
+\section{依赖}
+
+\begin{center}
+\small
+\begin{tikzpicture}[
+  node distance=5mm and 7mm,
+  box/.style={draw, rounded corners, align=center, font=\small, inner sep=3pt, minimum width=24mm},
+  arr/.style={-{Stealth}}
+]
+\node[box] (a) {符号与\\方程冻结};
+\node[box, right=of a] (b) {六条命题\\的证明};
+\node[box, right=of b] (c) {两节点\\数值核};
+\node[box, right=of c] (d) {无界面\\断言};
+\node[box, below=8mm of a] (e) {多孔介质\\真值};
+\node[box, right=of e] (f) {四策略\\日志};
+\node[box, right=of f] (g) {D 图与\\结果章};
+\node[box, below=8mm of e] (h) {外部数据\\只作先验与核对};
+\node[box, right=of h] (i) {三维与\\机制视图};
+\node[box, right=of i] (j) {PDF 与\\Word};
+\draw[arr] (a)--(b);
+\draw[arr] (b)--(c);
+\draw[arr] (c)--(d);
+\draw[arr] (d.south) |- (i.north);
+\draw[arr] (a.south)--(e.north);
+\draw[arr] (e)--(f);
+\draw[arr] (f)--(g);
+\draw[arr] (g.south) |- (j.north);
+\draw[arr] (h)--(i);
+\draw[arr] (i)--(j);
+\end{tikzpicture}
+\end{center}
+
+视图可以在断言通过后与多孔介质并行开发。它不能先于断言发布。Word 在 PDF 公式编号稳定后同步，不并行改两套正文。
+
+\section{工作包}
+
+\begin{table}[H]
+\centering
+\caption{可直接开工的包}
+\begin{tabularx}{\textwidth}{clXX}
+\toprule
+序 & 包 & 完成判据 & 不做 \\
+\midrule
+1 & 符号表与单位 & 全文同一符号只指一个量 & 引入未定义的品质分数 \\
+2 & 命题证明 & Q1--Q6 的证明与图 & 用仿真代替证明 \\
+3 & 两节点核 & 固定种子下轨迹可复现 & 在界面里写差分 \\
+4 & 断言 & 四条命题有独立测试 & 用截图代替断言 \\
+5 & 多孔真值 & 含 GAB、各向异性、脂肪层、收缩 & 用两节点结果充当主表 \\
+6 & 试验 & B0--B3 与消融日志 & 改指标迁就结果 \\
+7 & 图与正文 & 76 个图位中，有日志的 D 图画点，其余保留坐标 & 空图位填示意曲线 \\
+8 & 演示 & 机制与三维切面读取同一状态；导出 CSV 与核一致 & 着色器内传热 \\
+9 & 双文件 & PDF 与 Word 编号一致 & Word 单独改公式 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+包 5 的等温线先验使用第 \ref{ch:data} 章已经读入的清洁子集。肉类导热仍用文献区间，并在参数文件中与等温线来源分开。S1 的 1\,620 条是决策轨迹规模，完成判据是四套日志的清单与种子可复现，不是轨迹条数本身。
+
+主线在构建中的检查点：S0 不过不进入 S1；命题断言不过不接入三维；T2 的策略排序与 T1 相反时，主结论改为“排序依赖几何”，不取平均把差异抹平。演示预置条目必须能在切面上指出冷点、在时间轴上指出 P4、在双针上指出投影。这三处任一缺失，演示与正文的闭环就不一致。
+
+\section{成稿时的逻辑骨架}
+
+全文只沿一条链写，章内允许展开，章间不另起主题。
+
+\[
+\begin{aligned}
+&\text{信息赤字}
+\to\text{多尺度场}
+\to\text{决策状态}\\
+&\to\text{被动观测的秩不足}
+\to\text{对偶动作}\\
+&\to\text{三条路径的解释}
+\to\text{测量隔离的执行}\\
+&\to\text{真值隔离的检验}.
+\end{aligned}
+\]
+
+文献、数据和演示都挂在这条链上：文献说明每一环继承了什么；数据只收紧其中的参数环；演示把秩、路径和投影变成可看的状态。任何新增章节若不能指出自己位于哪一环，就不加入正文。
+
+\section{风险写在适用区，不写在口号里}
+
+\begin{itemize}
+\item 两节点命题通过，只允许声明判据方向。主结论等待异构真值。
+\item 等温线没有肉类，肉类活度保持为开放参数。
+\item 公开温度历程尚未接入，外部预测误差不出现在摘要。
+\item 三维切面在两节点阶段必须标注插值。
+\item 安全阈值是设计量，不写成认证结论。
+\end{itemize}
+
+这些限制留在相应章的末尾。它们缩小的是句子的适用范围，不是把未完成的环节提前写成结果。
