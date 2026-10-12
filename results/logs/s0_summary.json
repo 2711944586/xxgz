@@ -1,0 +1,200 @@
+[
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 0,
+    "e16": -0.1116,
+    "e8": 0.1155,
+    "delta_e": 0.227,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 1,
+    "e16": -0.1115,
+    "e8": 0.1155,
+    "delta_e": 0.227,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 2,
+    "e16": -0.1113,
+    "e8": 0.1155,
+    "delta_e": 0.2269,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 3,
+    "e16": -0.1547,
+    "e8": 0.1154,
+    "delta_e": 0.2701,
+    "stop16": 1714.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 4,
+    "e16": -0.1113,
+    "e8": 0.1155,
+    "delta_e": 0.2269,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "mince",
+    "seed": 5,
+    "e16": -0.1115,
+    "e8": 0.1155,
+    "delta_e": 0.227,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 0,
+    "e16": -0.1548,
+    "e8": 0.1154,
+    "delta_e": 0.2702,
+    "stop16": 1714.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 1,
+    "e16": -0.1108,
+    "e8": 0.1157,
+    "delta_e": 0.2265,
+    "stop16": 1718.0,
+    "stop8": 1750.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 2,
+    "e16": -0.1113,
+    "e8": 0.1155,
+    "delta_e": 0.2269,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 3,
+    "e16": -0.1108,
+    "e8": 0.1157,
+    "delta_e": 0.2265,
+    "stop16": 1718.0,
+    "stop8": 1750.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 4,
+    "e16": -0.1549,
+    "e8": 0.1153,
+    "delta_e": 0.2702,
+    "stop16": 1714.0,
+    "stop8": 1746.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "potato",
+    "seed": 5,
+    "e16": -0.1112,
+    "e8": 0.1156,
+    "delta_e": 0.2268,
+    "stop16": 1716.0,
+    "stop8": 1750.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 0,
+    "e16": -0.1117,
+    "e8": 0.1154,
+    "delta_e": 0.2271,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 1,
+    "e16": -0.1549,
+    "e8": 0.1153,
+    "delta_e": 0.2703,
+    "stop16": 1714.0,
+    "stop8": 1746.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 2,
+    "e16": -0.1117,
+    "e8": 0.1154,
+    "delta_e": 0.2271,
+    "stop16": 1716.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 3,
+    "e16": -0.1108,
+    "e8": 0.1157,
+    "delta_e": 0.2266,
+    "stop16": 1718.0,
+    "stop8": 1750.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 4,
+    "e16": -0.1547,
+    "e8": 0.1154,
+    "delta_e": 0.2701,
+    "stop16": 1714.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  },
+  {
+    "suite": "S0",
+    "food": "dough",
+    "seed": 5,
+    "e16": -0.1548,
+    "e8": 0.1154,
+    "delta_e": 0.2702,
+    "stop16": 1714.0,
+    "stop8": 1748.0,
+    "source": "simulation"
+  }
+]

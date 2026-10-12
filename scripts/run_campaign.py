@@ -54,6 +54,7 @@ def run_rows(rows, minutes=55.0):
                 seed=np.array([1000 + r[7] + 17 * r[2] for r in part]),
                 policy=policy,
                 minutes=minutes,
+                store_history=False,
             )
             for i, row in enumerate(part):
                 summary.append({
@@ -70,7 +71,7 @@ def run_rows(rows, minutes=55.0):
                     "e_alpha": round(float(out["e_alpha"][i]), 4),
                     "energy": round(float(out["energy"][i]), 1),
                     "var_r": round(float(out["final_var"][i]), 4),
-                    "alpha_b": round(float(out["alpha_b"][-1, i]), 4),
+                    "alpha_b": round(float(out["alpha_b_end"][i]), 4),
                     "augmented": False,
                     "source": "simulation",
                 })
@@ -154,6 +155,85 @@ def write_figures(summary, traces):
     plt.close()
 
 
+def write_logged_panels(summary, traces):
+    """Panels whose columns already exist on the S1 summary or the seed-7 trace."""
+    policies = list(POLICIES)
+    colors = ("#888888", "#c4543a", "#7eb8c9", "#e07a3d")
+    labels = ("open", "pid", "mpc", "dual")
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.6))
+    energy = [
+        float(np.median([r["energy"] for r in summary if r["policy"] == p]))
+        for p in policies
+    ]
+    stop = [
+        float(np.median([r["stop_s"] for r in summary if r["policy"] == p]))
+        for p in policies
+    ]
+    axes[0].bar(labels, energy, color=colors)
+    axes[0].set_ylabel("median energy (command x 10 s)")
+    axes[1].bar(labels, stop, color=colors)
+    axes[1].set_ylabel("median stop (s)")
+    fig.suptitle("D11  energy and stop, medians of 4860")
+    fig.tight_layout()
+    fig.savefig(FIG / "D11_energy_stop.png", dpi=140)
+    plt.close()
+
+    tr = traces["dual"]
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    ax.plot(tr["time"][:, 0] / 60, tr["m_mean"][:, 0], color="#7eb8c9")
+    ax.set_xlabel("time (min)")
+    ax.set_ylabel("mean moisture")
+    ax.set_title("D2  mean moisture, dual, mince, 30 mm, seed 7")
+    fig.tight_layout()
+    fig.savefig(FIG / "D2_moisture.png", dpi=140)
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    ax.plot(tr["time"][:, 0] / 60, tr["alpha_m"][:, 0], color="#e07a3d", label="alpha_m")
+    ax.plot(tr["time"][:, 0] / 60, tr["alpha_b"][:, 0], color="#c4543a", label="alpha_b")
+    ax.set_xlabel("time (min)")
+    ax.set_ylabel("progress")
+    ax.legend(frameon=False)
+    ax.set_title("D3  thermal progress and browning, seed 7")
+    fig.tight_layout()
+    fig.savefig(FIG / "D3_progress.png", dpi=140)
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    ax.plot(tr["time"][:, 0] / 60, tr["heat_req"][:, 0], color="#d6c07a", label="request")
+    ax.plot(tr["time"][:, 0] / 60, tr["heat"][:, 0], color="#e07a3d", label="command")
+    ax.set_xlabel("time (min)")
+    ax.set_ylabel("heater command")
+    ax.legend(frameon=False)
+    ax.set_title("D19  request and command, seed 7")
+    fig.tight_layout()
+    fig.savefig(FIG / "D19_projection.png", dpi=140)
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    for policy, color in zip(policies, colors):
+        xs = [r["seed"] for r in summary if r["policy"] == policy and r["length_mm"] == 15.0 and r["food"] == "mince" and r["t0"] == 5.0 and r["m0"] == 0.72 and r["hetero"] == 2]
+        ys = [r["stop_s"] for r in summary if r["policy"] == policy and r["length_mm"] == 15.0 and r["food"] == "mince" and r["t0"] == 5.0 and r["m0"] == 0.72 and r["hetero"] == 2]
+        ax.scatter(xs, ys, s=18, color=color, label=policy)
+    ax.set_xlabel("seed")
+    ax.set_ylabel("stop (s)")
+    ax.legend(frameon=False, fontsize=8)
+    ax.set_title("D23  stop versus seed, one 15 mm cell")
+    fig.tight_layout()
+    fig.savefig(FIG / "D23_seed_stop.png", dpi=140)
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    marks = [r["augmented"] for r in summary]
+    sources = [r["source"] for r in summary]
+    ax.bar(["augmented", "not augmented"], [sum(marks), len(marks) - sum(marks)], color=("#e07a3d", "#7eb8c9"))
+    ax.set_title(f"D35  augmented flag, source={sources[0]}, n={len(marks)}")
+    fig.tight_layout()
+    fig.savefig(FIG / "D35_augmented.png", dpi=140)
+    plt.close()
+
+
 def aggregate(summary):
     out = {}
     for policy in POLICIES:
@@ -194,6 +274,7 @@ def main():
         lines.append(",".join(str(round(float(demo[c][i, 0]), 5)) for c in cols))
     (LOG / "demo_seed7_dual.csv").write_text("\n".join(lines), encoding="utf-8")
     write_figures(summary, traces)
+    write_logged_panels(summary, traces)
     print(json.dumps(stats, indent=2))
     print("checks", checks)
 

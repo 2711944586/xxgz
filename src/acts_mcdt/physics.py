@@ -57,6 +57,12 @@ def rollout(
     minutes: float = 70.0,
     dt: float = 2.0,
     record_every: int = 5,
+    store_history: bool = True,
+    n: int = 16,
+    noise_scale: float = 1.0,
+    occlude_s: float = 0.0,
+    use_mass: bool = True,
+    door_s: float | None = None,
 ) -> dict:
     """Integrate a batch of slabs.
 
@@ -65,13 +71,17 @@ def rollout(
     """
     policy_code = {"open": 1, "pid": 2, "mpc": 3, "dual": 4}[policy]
     b = length.shape[0]
-    n = 16
+    if n < 2:
+        raise ValueError("n must be at least 2")
     steps = int(minutes * 60.0 / dt)
-    dx = length * DX_FRAC
+    dx_frac = 1.0 / n
+    dx = length * dx_frac
     # Local conductivity. Fat layer lowers k at 1/3 depth.
+    # n=16 keeps the historical index 5. Other grids use the same depth fraction.
+    fat_index = 5 if n == 16 else int(round((n - 1) / 3.0))
     k = np.full((b, n), K_BASE)
     if np.any(hetero == 2):
-        fat = (hetero == 2)[:, None] & (np.arange(n)[None, :] == 5)
+        fat = (hetero == 2)[:, None] & (np.arange(n)[None, :] == fat_index)
         k = np.where(fat, 0.45 * K_BASE, k)
     # Thickness jitter moves the cold cell off-center by stretching one side.
     alpha = k / RHO_C
@@ -96,15 +106,20 @@ def rollout(
     probe_locked = np.zeros(b, dtype=bool)
     stop = np.full(b, minutes * 60.0)
     stopped = np.zeros(b, dtype=bool)
-    alpha_stop_hat = np.full(b, np.nan)
+    rec_time = []
+    rec_alpha = []
     mode = np.zeros(b, dtype=int)  # 0 quality, 1 info, 2 hold
 
-    keep = list(range(0, steps, record_every))
+    keep = list(range(0, steps, record_every)) if store_history else []
     hist = {key: [] for key in (
         "time", "t_surf", "t_core", "t_hat", "m_mean", "alpha_m",
         "alpha_b", "r_true_proxy", "r_hat", "var_r", "heat", "heat_req",
         "steam", "fan", "mode", "heater",
     )}
+    energy_acc = np.zeros(b)
+    snap_std = np.full(b, np.nan)
+    snap_cold = np.full(b, np.nan)
+    held_y = t0 + 0.0
 
     menu_time = 900.0 + 18000.0 * (length - 0.015)
     target_core = np.full(b, 75.0)
@@ -117,10 +132,16 @@ def rollout(
         m_mean = m.mean(axis=1)
         # Measurable channels.
         unit = _unit_noise(seed + 17 * policy_code, s)
-        noise_t = 0.4 * unit
-        noise_m = 0.004 * _unit_noise(seed + 91 * policy_code, s + 3)
+        noise_t = 0.4 * unit * noise_scale
+        noise_m = 0.004 * _unit_noise(seed + 91 * policy_code, s + 3) * noise_scale
         y_t = t_surf + noise_t
+        if now < occlude_s:
+            y_t = held_y
+        else:
+            held_y = y_t
         y_m = np.clip(m_mean + noise_m, 0.0, 1.0)
+        if not use_mass:
+            y_m = np.zeros(b)
         y_cav = t_inf0 + noise_t * 0.2
 
         # True internal resistance proxy: core lag per unit surface gradient.
@@ -136,10 +157,13 @@ def rollout(
             mode[:] = 0
             newly = (now >= menu_time) & ~stopped
             stop = np.where(newly, menu_time, stop)
+            if np.any(newly):
+                snap_std = np.where(newly, t.std(axis=1), snap_std)
+                snap_cold = np.where(newly, t.argmin(axis=1).astype(float), snap_cold)
             stopped = stopped | newly
         elif policy == "pid":
             heat_req = np.clip(0.04 * (160.0 - y_cav) + 0.6, 0.0, 1.0)
-            steam = (y_m > 0.2).astype(float) * 0.3
+            steam = (y_m > 0.2).astype(float) * 0.3 if use_mass else np.zeros(b)
             fan = np.full(b, 0.45)
             mode[:] = 0
         else:
@@ -173,7 +197,9 @@ def rollout(
             ready = ready & ~((policy == "dual") & (var_r > 0.45) & (length > 0.04))
             newly = ready & ~stopped
             stop = np.where(newly, now, stop)
-            alpha_stop_hat = np.where(newly, tc_hat, alpha_stop_hat)
+            if np.any(newly):
+                snap_std = np.where(newly, t.std(axis=1), snap_std)
+                snap_cold = np.where(newly, t.argmin(axis=1).astype(float), snap_cold)
             stopped = stopped | ready
             heat_req = np.where(stopped, 0.15, heat_req)
             mode = np.where(stopped, 2, mode)
@@ -186,6 +212,8 @@ def rollout(
         # Full power approaches ~250 C. The shield trims only past 230 C.
         over = np.clip((heater_temp - 230.0) / 40.0, 0.0, 1.0)
         heat_cmd = heat_cmd * (1.0 - 0.75 * over)
+        if (s % record_every == 0) or (s == steps - 1):
+            energy_acc += heat_cmd
 
         # Boundary.
         h = 12.0 + 55.0 * fan
@@ -196,6 +224,9 @@ def rollout(
         lap = np.zeros_like(t)
         lap[:, 1:-1] = (t[:, 2:] - 2 * t[:, 1:-1] + t[:, :-2]) / dx[:, None] ** 2
         lap[:, 0] = (t[:, 1] - t[:, 0]) / dx ** 2 + flux / (K_BASE * dx)
+        if door_s is not None and abs(now - door_s) < dt * 0.5:
+            t = t.copy()
+            t[:, 0] = np.maximum(t[:, 0] - 15.0, 0.0)
         lap[:, -1] = (t[:, -2] - t[:, -1]) / dx ** 2
         t = t + dt * alpha * lap
         t = np.clip(t, 0.0, 220.0)
@@ -205,7 +236,7 @@ def rollout(
         ml[:, 1:-1] = (m[:, 2:] - 2 * m[:, 1:-1] + m[:, :-2]) / dx[:, None] ** 2
         loss = 1.6e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - steam)
         gain = 1.1e-4 * steam * (1.0 - m[:, 0])
-        ml[:, 0] = (m[:, 1] - m[:, 0]) / dx ** 2 - loss / DX_FRAC + gain / DX_FRAC
+        ml[:, 0] = (m[:, 1] - m[:, 0]) / dx ** 2 - loss / dx_frac + gain / dx_frac
         ml[:, -1] = (m[:, -2] - m[:, -1]) / dx ** 2
         m = np.clip(m + dt * d * ml, 0.02, 0.95)
         # Kinetics at core and surface.
@@ -215,6 +246,9 @@ def rollout(
         alpha_b = alpha_b + dt * 2e-4 * np.maximum(t[:, 0] - 110.0, 0.0) * np.maximum(0.55 - m[:, 0], 0.0)
         alpha_b = np.clip(alpha_b, 0.0, 1.5)
         shell = np.clip(shell + dt * 1.5e-4 * np.maximum(0.45 - m[:, 0], 0.0), 0.0, 1.0)
+        if (s % record_every == 0) or (s == steps - 1):
+            rec_time.append(now)
+            rec_alpha.append(1.0 - np.exp(-f_value / 2.0))
 
         if s in keep or s == steps - 1:
             alpha_m = 1.0 - np.exp(-f_value / 2.0)
@@ -235,21 +269,31 @@ def rollout(
             hist["mode"].append(mode.astype(float).copy())
             hist["heater"].append(heater_temp.copy())
 
-    out = {k: np.stack(v, axis=0) for k, v in hist.items()}
-    alpha_end = out["alpha_m"][-1]
-    # alpha at each run's stop index
-    times = out["time"][:, 0]
-    alpha_at_stop = np.empty(b)
-    for i in range(b):
-        j = int(np.argmin(np.abs(times - stop[i])))
-        alpha_at_stop[i] = out["alpha_m"][j, i]
+    alpha_end = 1.0 - np.exp(-f_value / 2.0)
+    rec_time = np.asarray(rec_time)
+    rec_alpha = np.stack(rec_alpha, axis=0)
+    nearest = np.argmin(np.abs(rec_time[:, None] - stop[None, :]), axis=0)
+    alpha_at_stop = rec_alpha[nearest, np.arange(b)]
+    if store_history:
+        out = {k: np.stack(v, axis=0) for k, v in hist.items()}
+        out["alpha_end"] = out["alpha_m"][-1]
+        out["energy"] = out["heat"].sum(axis=0) * dt * record_every
+    else:
+        out = {}
+        out["alpha_end"] = alpha_end
+        out["energy"] = energy_acc * dt * record_every
     out["stop"] = stop
     out["alpha_at_stop"] = alpha_at_stop
     out["e_alpha"] = alpha_at_stop - 0.85
-    out["energy"] = out["heat"].sum(axis=0) * dt * record_every
     out["proto"] = proto
     out["length"] = length
     out["policy"] = policy
-    out["final_var"] = out["var_r"][-1]
-    out["alpha_end"] = alpha_end
+    out["final_var"] = var_r
+    out["alpha_b_end"] = alpha_b
+    still = np.isnan(snap_std)
+    if np.any(still):
+        snap_std = np.where(still, t.std(axis=1), snap_std)
+        snap_cold = np.where(still, t.argmin(axis=1).astype(float), snap_cold)
+    out["t_std_stop"] = snap_std
+    out["cold_index_stop"] = snap_cold
     return out

@@ -155,7 +155,7 @@ def main():
     sec.right_margin = Cm(2.5)
     sec.top_margin = Cm(2.6)
     sec.bottom_margin = Cm(2.6)
-    add_para(doc, "面向非均质食品热加工过程的自主认知系统", 18, True, center=True, space_after=4)
+    add_para(doc, "智能蒸烤一体机的自主认知系统", 18, True, center=True, space_after=4)
     add_para(doc, "ACTS-MCDT", 14, True, center=True, space_after=8)
     add_para(doc, "公式编号以同名 PDF 为准。本文 Word 保留公式的源文本，便于批注。图与表来自同一批日志。", 11, center=True)
     for name in ORDER:

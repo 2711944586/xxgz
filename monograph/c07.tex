@@ -80,7 +80,34 @@ S1 的四个策略是四条不同的闭环，不是在同一噪声下的 do 算�
 +\underbrace{\frac{\partial Q}{\partial\varepsilon_{l,s}}\frac{\partial\varepsilon_{l,s}}{\partial m_{\mathrm{st}}}}_{\text{B}}
 +\underbrace{\frac{\partial Q}{\partial\alpha_m}\frac{\partial\alpha_m}{\partial R_{\mathrm{int}}}\frac{\partial R_{\mathrm{int}}}{\partial m_{\mathrm{st}}}}_{\text{C}}.
 \end{equation}
-厚度增大使 A 变小。结壳使 B 更负，并使 C 在烤制段为负。解释输出的是这三项的数值与区间，不是一个重要度分数。命题 \ref{prop:path} 说明在所述依赖下三者相加恰好等于全导数。
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[font=\small, box/.style={draw, rounded corners=1pt, inner sep=3pt, align=center}]
+\node[box] (st) at (0,0) {蒸汽指令};
+\node[box] (lat) at (3.3,1.5) {潜热通量};
+\node[box] (t2) at (6.8,1.5) {冷点};
+\node[box] (am) at (9.6,1.5) {\(\alpha_m\)};
+\node[box] (surf) at (3.3,0) {表面含水};
+\node[box] (ab) at (6.8,0) {褐变、失水};
+\node[box] (sh) at (3.3,-1.5) {结壳};
+\node[box] (r) at (6.8,-1.5) {内部热阻};
+\node[box] (q) at (12.2,0) {品质};
+\draw[-{Stealth}] (st) -- (lat);
+\draw[-{Stealth}] (lat) -- (t2);
+\draw[-{Stealth}] (t2) -- (am);
+\draw[-{Stealth}] (am) -- (q);
+\draw[-{Stealth}] (st) -- (surf);
+\draw[-{Stealth}] (surf) -- (ab);
+\draw[-{Stealth}] (ab) -- (q);
+\draw[-{Stealth}, dashed] (surf) -- (sh);
+\draw[-{Stealth}, dashed] (sh) -- (r);
+\draw[-{Stealth}, dashed] (r) -- (t2);
+\node[anchor=west] at (0,-2.35) {实线是本次通量里有对应项的边。虚线经过结壳；结壳不改十六条的导热。};
+\end{tikzpicture}
+\caption{三条路径的分叉。路径 A 走潜热到冷点。路径 B 走表面含水到褐变和失水。路径 C 走结壳到内部热阻，再回到冷点。虚线没有在积分里闭合，所以这张图不是三项偏效应的数值。}
+\end{figure}
+
+厚度增大使 A 变小。结壳使 B 更负，并使 C 在烤制段为负。解释输出的是这三项的数值与区间，不是一个重要度分数。命题 \ref{prop:path} 说明在所述依赖下三者相加恰好等于全导数。本次积分只闭合了实线：潜热通量含蒸汽、活度和风机，表面失水含活度和风机。结壳只累加，不乘进导热。
 
 本次核没有计算这三项。浏览器侧栏若用蒸汽指令和方差拼出三根条，那是显示公式，不是 \eqref{eq:path}。种子 7 的探针窗内冷点从 \(8.01^\circ\mathrm{C}\) 到 \(8.05^\circ\mathrm{C}\)，只能作为“短窗内 A 与 C 的温度增量很小”的一条抽样，不能给出三项的符号。
 

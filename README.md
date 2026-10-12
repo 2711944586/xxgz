@@ -1,6 +1,6 @@
 # ACTS-MCDT
 
-面向非均质食品热加工过程的自主认知系统。仓库按规划、正文、数值核、结果、演示分开。
+智能蒸烤一体机的自主认知系统。仓库按规划、正文、数值核、结果、演示分开。腔体里的四个执行量是加热、蒸汽、排汽和气流。
 
 ## 主线
 
@@ -13,7 +13,8 @@
 - `refs.tex` 规划稿和正文共用的文献入口。
 - `src/acts_mcdt/` 评分核。一维十六个控制体，不改物理后再跑战役。
 - `tests/` 命题核对。
-- `scripts/run_campaign.py` 写出 `results/logs/` 和正文里已有的几张图。日志已经落盘，不必重跑。
+- `scripts/run_campaign.py` 写出 S1 的 `results/logs/` 和由该日志画出的图。这 19440 行已经落盘。
+- `scripts/run_s0_s2.py` 写出网格减半的 18 条配对和边界扫描的 480 行，以及 `S0_grid.png`、`D15_occlusion.png`、`S2_factors.png`。
 - `scripts/build_docx.py` 由正文源文件生成 `monograph/ACTS-MCDT.docx`。
 - `results/logs/` 战役摘要、命题核对和种子 7 轨迹。
 - `results/figures/` 由这些日志画出的图，以及演示截屏。
