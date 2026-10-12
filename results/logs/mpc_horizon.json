@@ -1,0 +1,8 @@
+{
+  "kind": "two-node 60 s search, one state",
+  "horizon_s": 60,
+  "searched_heat": 0.7,
+  "predicted_core": 74.73,
+  "saturated_heat": 1.0,
+  "tau_s": 840.0
+}

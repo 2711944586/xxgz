@@ -1,0 +1,10 @@
+{
+  "kind": "two-node teacher, trunk plus branch, not a Fourier operator",
+  "train": 3276,
+  "holdout": 820,
+  "epochs": 80,
+  "holdout_mse_both": 1683.2651,
+  "holdout_mse_trunk": 2106.2329,
+  "steam_step_mse": 1232.1862,
+  "augmented": true
+}

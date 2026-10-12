@@ -1,0 +1,29 @@
+{
+  "kind": "channel correlation",
+  "rows": [
+    {
+      "speed_m_s": 0.0,
+      "h_W_m2K": 3.2
+    },
+    {
+      "speed_m_s": 0.5,
+      "h_W_m2K": 3.58
+    },
+    {
+      "speed_m_s": 1.0,
+      "h_W_m2K": 6.24
+    },
+    {
+      "speed_m_s": 1.5,
+      "h_W_m2K": 8.63
+    },
+    {
+      "speed_m_s": 2.0,
+      "h_W_m2K": 10.86
+    },
+    {
+      "speed_m_s": 2.5,
+      "h_W_m2K": 12.99
+    }
+  ]
+}
