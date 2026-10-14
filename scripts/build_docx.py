@@ -30,6 +30,48 @@ def suppress_header_distance(section):
             node = OxmlElement(tag)
             sect.append(node)
         node.set(qn("w:w"), val)
+    pg_mar = sect.find(qn("w:pgMar"))
+    if pg_mar is None:
+        pg_mar = OxmlElement("w:pgMar")
+        sect.append(pg_mar)
+    for attr in ("w:top", "w:right", "w:bottom", "w:left", "w:header", "w:footer", "w:gutter"):
+        pg_mar.set(qn(attr), "0")
+    doc_grid = sect.find(qn("w:docGrid"))
+    if doc_grid is None:
+        doc_grid = OxmlElement("w:docGrid")
+        sect.append(doc_grid)
+    doc_grid.set(qn("w:type"), "default")
+    doc_grid.set(qn("w:linePitch"), "0")
+
+
+def tight_paragraph(paragraph, page_break_before=False):
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
+    paragraph.paragraph_format.line_spacing = 1.0
+    paragraph.paragraph_format.page_break_before = page_break_before
+    pPr = paragraph._p.get_or_add_pPr()
+    spacing = pPr.find(qn("w:spacing"))
+    if spacing is None:
+        spacing = OxmlElement("w:spacing")
+        pPr.append(spacing)
+    spacing.set(qn("w:before"), "0")
+    spacing.set(qn("w:after"), "0")
+    spacing.set(qn("w:line"), "0")
+    spacing.set(qn("w:lineRule"), "auto")
+    for tag, val in (
+        ("w:autoSpaceDE", "0"),
+        ("w:autoSpaceDN", "0"),
+        ("w:adjustRightInd", "0"),
+        ("w:widowControl", "0"),
+        ("w:kinsoku", "0"),
+        ("w:overflowPunct", "0"),
+        ("w:contextualSpacing", "1"),
+    ):
+        node = pPr.find(qn(tag))
+        if node is None:
+            node = OxmlElement(tag)
+            pPr.append(node)
+        node.set(qn("w:val"), val)
 
 
 def build():
@@ -37,6 +79,12 @@ def build():
         raise SystemExit(f"missing {PDF}; compile XeLaTeX first")
 
     doc = Document()
+    normal = doc.styles["Normal"]
+    normal.paragraph_format.space_before = Pt(0)
+    normal.paragraph_format.space_after = Pt(0)
+    normal.paragraph_format.line_spacing = 1.0
+    normal.font.size = Pt(1)
+
     section = doc.sections[0]
     section.page_width = Mm(210)
     section.page_height = Mm(297)
@@ -55,19 +103,21 @@ def build():
     tmp = BOOK / "_page_images"
     tmp.mkdir(exist_ok=True)
 
+    # A full A4 bitmap plus the paragraph mark overflows one page and
+    # a separate page-break paragraph then becomes a blank sheet.
+    page_w = Mm(210)
+    page_h = Mm(296.2)
+
     for i, page in enumerate(pdf):
         pix = page.get_pixmap(matrix=matrix, alpha=False)
         img_path = tmp / f"page-{i + 1:03d}.png"
         pix.save(img_path)
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
-        p.paragraph_format.line_spacing = 1.0
+        tight_paragraph(p, page_break_before=(i > 0))
         run = p.add_run()
         set_run_font(run)
-        run.add_picture(str(img_path), width=Mm(210), height=Mm(297))
-        if i < pdf.page_count - 1:
-            doc.add_page_break()
+        run.font.size = Pt(1)
+        run.add_picture(str(img_path), width=page_w, height=page_h)
 
     pdf.close()
     pdf_bytes = PDF.read_bytes()
