@@ -34,10 +34,10 @@
 \((\rho c)_{\mathrm{eff}}\) & \(\mathrm{J}/(\mathrm{m}^3\mathrm{K})\) & 有效容积热容 \\
 \(\Delta h_{\mathrm{vap}}\) & \(\mathrm{J}/\mathrm{kg}\) & 汽化潜热 \\
 \(h\) & \(\mathrm{W}/(\mathrm{m}^2\mathrm{K})\) & 界面对流换热系数 \\
-\(R_{\mathrm{ext}},R_{\mathrm{int}}\) & \(\mathrm{K}/\mathrm{W}\) & 外部与内部热阻。数值核中的 \(r\) 是无量纲代理，不是这两个量 \\
+\(R_{\mathrm{ext}},R_{\mathrm{int}}\) & \(\mathrm{K}/\mathrm{W}\) & 外部与内部热阻。数值核中的 \(r\) 是无量纲代理 \\
 \(C_1,C_2\) & \(\mathrm{J}/\mathrm{K}\) & 两节点热容 \\
 \(F\) & \(\mathrm{min}\) & 以参考温度计的等效加热时间 \\
-\(z\) & \(\mathrm{K}\) & 热力值的温度宽度。与决策状态 \(\vect{z}\) 不是同一个符号 \\
+\(z\) & \(\mathrm{K}\) & 热力值的温度宽度。决策状态 \(\vect{z}\) 另见 \eqref{eq:z} \\
 \(\mathrm{Fo},\mathrm{Bi},\mathrm{Ko}\) & 1 & Fourier、Biot、Kossovich 数 \\
 \bottomrule
 \end{longtable}
@@ -65,7 +65,7 @@
 \(a^\star\) & 探针库上的最优探针 \\
 \(J\) & 品质泛函 \\
 \(h_j\) & 控制屏障。自变量只有硬测量 \\
-\(\vect{u}_{\mathrm{AI}}\) & 品质层给出的参考执行量，进入投影之前不是指令 \\
+\(\vect{u}_{\mathrm{AI}}\) & 品质层给出的参考执行量，进入投影之前 \\
 \(e_{\alpha}\) & 真值进度在停机时刻相对设计线 \(0.85\) 的差 \\
 \(N_{\mathrm{viol}}\) & 安全不等式被违反的次数。本次核没有单独的越界计数器 \\
 \bottomrule
@@ -73,7 +73,7 @@
 
 \section{数值核里实际出现的量}
 
-下列常数只属于一维工程核。它们的数量级参照瘦组织导热、水的潜热和家用腔体换热，不是一次测定的回归结果。
+下列常数只属于一维工程核。它们的数量级参照瘦组织导热、水的潜热和家用腔体换热。
 
 \begin{longtable}{lllp{6.5cm}}
 \caption{数值核常数}\\
@@ -103,7 +103,7 @@
 
 \section{日志列}
 
-\texttt{s1\_summary.json} 的每一行是一条轨迹的停机摘要，不是一个时间序列。
+\texttt{s1\_summary.json} 的每一行是一条轨迹的停机摘要。
 
 \begin{longtable}{lp{10cm}}
 \caption{摘要日志的列}\\
@@ -127,9 +127,9 @@
 \texttt{stop\_s} & 策略自己决定的停机时刻，单位秒 \\
 \texttt{e\_alpha} & 该时刻真值 \(\alpha_m-0.85\) \\
 \texttt{energy} & 加热指令沿记录点求和再乘记录间隔 \\
-\texttt{var\_r} & 轨迹终点的方差，不是探针刚结束的方差 \\
+\texttt{var\_r} & 轨迹终点的方差 \\
 \texttt{alpha\_b} & 终点表面褐变进度 \\
-\texttt{augmented} & 恒为 false。这些行不是扩充教师 \\
+\texttt{augmented} & 恒为 false \\
 \texttt{source} & 恒为 simulation \\
 \bottomrule
 \end{longtable}

@@ -1,0 +1,114 @@
+\chapter{二维截面、边界关联与尺度诊断}
+\label{ch:section}
+
+一维核把冷点取成十六条中的最低温度，默认冷点在对称面。文献里的三维烤箱场表明冷点可以偏离几何中心。一块独立的二维显式截面用来回答偏离是否能在本次几何里出现；通道关联、Fourier 数、Biot 数和加热器温度则把一维核用到的尺度写清楚。二维截面独立于评分循环。
+
+\section{二十四乘十六的显式截面}
+
+截面沿厚度 24 格、沿横向 16 格，时间 20 min，边界固定。脂肪夹层关闭时，20 min 终点冷点 \(36.18^\circ\mathrm{C}\)，表面 \(128.62^\circ\mathrm{C}\)，最低温度落在绝热侧格子 23，几何中心在格子 12，偏移 \(13.75\,\mathrm{mm}\)。脂肪夹层打开时，终点冷点 \(34.11^\circ\mathrm{C}\)，表面 \(126.0^\circ\mathrm{C}\)，最低温度仍在绝热侧，偏移同样是 \(13.75\,\mathrm{mm}\)。图\ref{fig:t2grid}给出 20 min 的温度场，图\ref{fig:t2core}给出冷点历史。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{X_t2_grid.png}
+\caption{24 乘 16 显式截面在 20 min 的温度场。最低温度在绝热侧，偏离中心 \(13.75\,\mathrm{mm}\)。}
+\label{fig:t2grid}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{X_t2_core.png}
+\caption{同一截面的冷点历史。脂肪夹层把 20 min 冷点从 \(36.18^\circ\mathrm{C}\) 降到 \(34.11^\circ\mathrm{C}\)。}
+\label{fig:t2core}
+\end{figure}
+
+前 160 s 两条曲线几乎贴在初温 \(8^\circ\mathrm{C}\) 上，与一维核探针窗内冷点只升 \(0.04\,\mathrm{K}\) 同量级。20 min 时一维核种子 7 的冷点是 \(17.1^\circ\mathrm{C}\)（600 s 为 \(17.10^\circ\mathrm{C}\)），二维截面已经到 \(36^\circ\mathrm{C}\)。差别来自边界：截面用固定高温边界，一维核的腔温和界面通量是时变的，探针之后蒸汽回到 0.15。截面证明冷点可以不在中心：最低温度被绝热边界钉在最内侧，偏移 \(13.75\,\mathrm{mm}\)。温度场图把这一偏移画成冷列，而不是只在格子上描两条竖线。三维烤箱里的冷点云需要两侧边界不对称和真实搁架遮挡；评分循环仍用一维核的十六条，是因为交叉表比较的是策略，不是搁架几何。把二维偏移写进一维冷点定义，会把“最低温度所在格”改成“横向再取一次下确界”，主表没有这一步。
+
+脂肪夹层把指定列的导热乘 0.45。20 min 的冷点差是 \(2.07\,\mathrm{K}\)，表面差是 \(2.62\,\mathrm{K}\)。偏移距离不变，因为最低温度仍然被绝热边界钉在最内侧。要让冷点跑到脂肪列，需要把夹层放在中心附近并且让两侧边界不对称。本次截面的脂肪列在下标 8，没有完成这一迁移。
+
+\section{通道关联与核里的换热}
+
+另有一张通道关联表。
+风速从静止升到 \(2.5\,\mathrm{m/s}\) 时，换热系数从 \(3.20\) 升到 \(12.99\)。
+单位是瓦每平方米开尔文。
+图\ref{fig:t3h}画出这条曲线。一维核使用的是
+\[
+h=12+55\,u_{\mathrm{fan}}\qquad[\mathrm{W}/(\mathrm{m}^2\mathrm{K})].
+\]
+风机 0.4 时 \(h=34\)，风机 1.3 时 \(h=83.5\)。通道表的数值低一个量级，而且没有接到十六条的边界。把通道表读成核的换热定律，Biot 数会整体偏小。后文凡写 Biot 数，一律用核的 \(h=12+55u_{\mathrm{fan}}\) 和 \(k=0.68\,\mathrm{W}/(\mathrm{m\cdot K})\)。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{X_t3_h.png}
+\caption{通道关联 \(h(v)\)。该表没有进入十六条控制体，核使用 \(h=12+55u_{\mathrm{fan}}\)。}
+\label{fig:t3h}
+\end{figure}
+
+风速 0 时 \(h=3.20\)，\(2.5\,\mathrm{m/s}\) 时 \(h=12.99\)。核在风机 0.4 时已经用 \(h=34\)，通道表全程低于核的工作点。
+
+\section{Fourier 数与 Biot 数}
+
+半厚 \(L=30\,\mathrm{mm}\)，\(\alpha=2.0\times 10^{-7}\,\mathrm{m}^2/\mathrm{s}\)，\(k=0.68\,\mathrm{W}/(\mathrm{m\cdot K})\)。Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出正文用到的时间与风机。
+
+\begin{table}[htbp]
+\centering
+\caption{核常数下的 Fourier 数与 Biot 数。\(L=30\,\mathrm{mm}\)。}
+\label{tab:fobi}
+\begin{tabular}{lrrr}
+\toprule
+条件 & \(t\) 或 \(u_{\mathrm{fan}}\) & \(\mathrm{Fo}\) 或 \(h\) & \(\mathrm{Bi}\) \\
+\midrule
+探针窗 & 40 s & \(8.9\times 10^{-3}\) & --- \\
+开环 30 mm 菜单 & 1170 s & 0.26 & --- \\
+种子 7 停机 & 1866 s & 0.41 & --- \\
+55 min 时域 & 3300 s & 0.73 & --- \\
+风机 0 & \(h=12\) & --- & 0.53 \\
+风机 0.4 & \(h=34\) & --- & 1.50 \\
+风机 1.0 & \(h=67\) & --- & 2.96 \\
+探针段风机 1.3 & \(h=83.5\) & --- & 3.68 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+探针窗的 Fourier 数远小于 1，冷点来不及跟上表面。探针段把 Biot 数从 1.50 升到 3.68，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 40 s 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在一起。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{X_fo_bi.png}
+\caption{核常数下的 Fourier 数随时间、Biot 数随风机。探针窗落在 \(\mathrm{Fo}\ll 1\)、\(\mathrm{Bi}>1\) 的区域。}
+\label{fig:fobi}
+\end{figure}
+
+15 mm 开环菜单 900 s 的 Fourier 数为 0.80，50 mm 菜单 1530 s 为 0.12。薄件在菜单时刻导热时间尺度已经走完一多半，厚件才走了八分之一。第\ref{ch:result}章开环薄件过熟、厚件不足，与这两条 Fourier 数同方向。图\ref{fig:pfo}把 40 s 探针与菜单终点的 Fourier 数画在三种厚度上。探针窗三条都接近零；菜单终点从 15 mm 的 0.80 降到 50 mm 的 0.12。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{P_fo.png}
+\caption{核扩散率下的 Fourier 数。探针窗远小于 1；菜单终点随厚度下降。}
+\label{fig:pfo}
+\end{figure}
+
+\section{加热器温度与腔温}
+
+种子 7 满功率段加热器停在 \(196.52^\circ\mathrm{C}\)，与平衡点 \(196.5^\circ\mathrm{C}\) 一致。削减阈值 \(230^\circ\mathrm{C}\) 从未触及。腔温在品质加热段停在 \(159.5^\circ\mathrm{C}\) 附近，进入保持后随请求下降。图\ref{fig:heater}给出加热器、腔温和加热指令。请求与指令重合，因为屏障在这条轨迹上不动作。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{X_heater_cav.png}
+\caption{种子 7：加热器温度、腔温与加热指令。加热器平衡在 \(196.5^\circ\mathrm{C}\)，低于 \(230^\circ\mathrm{C}\) 阈值。}
+\label{fig:heater}
+\end{figure}
+
+满功率平衡由加热器热容、向腔体的换热和辐射份额共同决定。把阈值降到 \(190^\circ\mathrm{C}\) 才会在主表里看见削减。本次没有改阈值，主表因此没有“贴近屏障”的轨迹。规则仍只读加热器温度，不含进度估计。
+
+\section{结壳扫描}
+
+结壳因子在 \(\{0,0.25,0.55,0.80\}\) 上扫描时，15 mm 与 30 mm 的停机偏差几乎不动，50 mm 从 \(-0.775\) 降到 \(-0.785\)。核里结壳只在表面含水低于 0.45 时增长，S1 的初始含水达不到这条门槛，扫描等于在积分外把导热乘子强行写入。强行写入对薄件几乎无影响，因为薄件的停机由表面进度饱和决定；厚件被多削去约 0.01。图\ref{fig:shell}给出三条厚度。路径 C 在积分里仍然没有闭合：结壳变量被写入，没有乘回十六条的导热，除非走这条扫描。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{X_shell.png}
+\caption{结壳因子扫描。15 mm 与 30 mm 几乎不动；50 mm 下移约 0.01。}
+\label{fig:shell}
+\end{figure}
+
+结壳导热削减从 0 到 0.8，15 mm 与 30 mm 几乎水平，50 mm 贴着 \(-0.78\)。显式格式的内部步长上界在 15 mm 贴近战役步长 2 s，30 mm 与 50 mm 更宽。二维截面把冷点偏移写成 \(13.75\,\mathrm{mm}\)，一维核把冷点取成十六条中的最低温度。后文凡写 Biot 数，一律用核的 \(h=12+55u_{\mathrm{fan}}\) 和 \(k=0.68\,\mathrm{W}/(\mathrm{m\cdot K})\)。15 mm 开环菜单 900 s 的 Fourier 数为 0.80；50 mm 菜单 1530 s 只有 0.12。厚度效应先报 Fourier 数，再报策略名称。

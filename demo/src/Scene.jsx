@@ -1,74 +1,523 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-const T_MIN = 5;
+const T_MIN = 8;
 const T_MAX = 170;
+const N_CELL = 16;
 
-function colorAt(value) {
+function heatColor(value) {
   const x = Math.min(1, Math.max(0, (value - T_MIN) / (T_MAX - T_MIN)));
-  return new THREE.Color().setHSL(0.08 - 0.07 * x, 0.55, 0.78 - 0.38 * x);
+  const color = new THREE.Color();
+  if (x < 0.35) color.setHSL(0.52 - 0.18 * (x / 0.35), 0.38, 0.62);
+  else if (x < 0.7) color.setHSL(0.11, 0.58, 0.58 - 0.1 * ((x - 0.35) / 0.35));
+  else color.setHSL(0.045, 0.7, 0.36);
+  return color;
 }
 
-export default function Scene({ frame, slice, length = 0.03 }) {
+function addMesh(group, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  mesh.rotation.set(rx, ry, rz);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+function steamTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+  g.addColorStop(0, "rgba(255,255,255,0.78)");
+  g.addColorStop(0.32, "rgba(214,232,240,0.32)");
+  g.addColorStop(1, "rgba(214,232,240,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function metal(color, metalness, roughness, env = 1.05) {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    metalness,
+    roughness,
+    envMapIntensity: env,
+  });
+}
+
+function fasciaMap() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0, "#2a3238");
+  g.addColorStop(1, "#161b20");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1024, 128);
+  ctx.fillStyle = "#c4a574";
+  ctx.font = "600 22px 'IBM Plex Sans', 'Microsoft YaHei', sans-serif";
+  ctx.textAlign = "center";
+  ["加热", "蒸汽", "风机", "模式"].forEach((lab, i) => {
+    ctx.fillText(lab, 168 + i * 148, 108);
+  });
+  ctx.fillStyle = "#7eb8c9";
+  ctx.font = "600 26px 'IBM Plex Sans', sans-serif";
+  ctx.fillText("ACTS", 860, 52);
+  ctx.fillStyle = "#8d938b";
+  ctx.font = "16px 'IBM Plex Mono', monospace";
+  ctx.fillText("MCDT  2402", 860, 86);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function airfoilGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.bezierCurveTo(0.12, 0.10, 0.17, 0.42, 0.058, 1.08);
+  shape.bezierCurveTo(-0.07, 0.58, -0.075, 0.16, 0, 0);
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.058,
+    bevelEnabled: true,
+    bevelThickness: 0.009,
+    bevelSize: 0.006,
+    bevelSegments: 4,
+    curveSegments: 18,
+  });
+}
+
+function makeCavity() {
+  const group = new THREE.Group();
+
+  const outer = metal("#2a3136", 0.58, 0.46);
+  const liner = metal("#d8e0e6", 0.92, 0.16, 1.25);
+  const floor = metal("#8f989f", 0.72, 0.34);
+  const dark = metal("#3a434a", 0.62, 0.4);
+  const brass = metal("#c4a574", 0.84, 0.26, 1.2);
+  const ceramic = new THREE.MeshStandardMaterial({
+    color: "#d8d0c4",
+    metalness: 0.08,
+    roughness: 0.72,
+  });
+  const rubber = new THREE.MeshStandardMaterial({
+    color: "#1b1e21",
+    metalness: 0.12,
+    roughness: 0.8,
+  });
+  const foam = new THREE.MeshStandardMaterial({
+    color: "#c9b89a",
+    roughness: 0.92,
+    metalness: 0.02,
+  });
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: "#9eb8c4",
+    metalness: 0.05,
+    roughness: 0.08,
+    transmission: 0.58,
+    thickness: 0.045,
+    transparent: true,
+    opacity: 0.4,
+    envMapIntensity: 1.35,
+  });
+  const chrome = metal("#cfd8de", 0.95, 0.12, 1.3);
+  const enamel = new THREE.MeshStandardMaterial({
+    color: "#1e2428",
+    metalness: 0.35,
+    roughness: 0.55,
+  });
+
+  addMesh(group, new RoundedBoxGeometry(5.18, 0.2, 3.26, 3, 0.04), outer, 0, -0.09, 0);
+  addMesh(group, new RoundedBoxGeometry(5.18, 0.2, 3.26, 3, 0.04), outer, 0, 2.8, 0);
+  addMesh(group, new RoundedBoxGeometry(5.18, 3.08, 0.2, 3, 0.04), outer, 0, 1.36, -1.6);
+  addMesh(group, new RoundedBoxGeometry(0.2, 3.08, 3.26, 3, 0.04), outer, -2.52, 1.36, 0);
+  addMesh(group, new RoundedBoxGeometry(0.2, 3.08, 3.26, 3, 0.04), outer, 2.52, 1.36, 0);
+
+  addMesh(group, new THREE.BoxGeometry(0.1, 2.55, 2.7), foam, -2.33, 1.3, 0.02);
+  addMesh(group, new THREE.BoxGeometry(0.1, 2.55, 2.7), foam, 2.33, 1.3, 0.02);
+  addMesh(group, new THREE.BoxGeometry(4.7, 0.1, 2.7), foam, 0, 2.62, 0.02);
+  addMesh(group, new THREE.BoxGeometry(4.7, 2.55, 0.1), foam, 0, 1.3, -1.42);
+
+  addMesh(group, new RoundedBoxGeometry(4.5, 0.055, 2.7, 2, 0.018), floor, 0, 0.1, 0.06);
+  addMesh(group, new RoundedBoxGeometry(4.5, 0.055, 2.7, 2, 0.018), liner, 0, 2.5, 0.06);
+  addMesh(group, new RoundedBoxGeometry(4.5, 2.48, 0.055, 2, 0.018), liner, 0, 1.3, -1.3);
+  addMesh(group, new RoundedBoxGeometry(0.055, 2.48, 2.7, 2, 0.018), liner, -2.2, 1.3, 0.06);
+  addMesh(group, new RoundedBoxGeometry(0.055, 2.48, 2.7, 2, 0.018), liner, 2.2, 1.3, 0.06);
+
+  [
+    [new THREE.BoxGeometry(4.72, 0.075, 0.075), [0, 2.56, 1.4]],
+    [new THREE.BoxGeometry(4.72, 0.075, 0.075), [0, 0.08, 1.4]],
+    [new THREE.BoxGeometry(0.075, 2.56, 0.075), [-2.32, 1.32, 1.4]],
+    [new THREE.BoxGeometry(0.075, 2.56, 0.075), [2.32, 1.32, 1.4]],
+  ].forEach(([geo, pos]) => addMesh(group, geo, brass, ...pos));
+  addMesh(group, new THREE.BoxGeometry(4.55, 0.04, 0.05), rubber, 0, 2.5, 1.36);
+  addMesh(group, new THREE.BoxGeometry(4.55, 0.04, 0.05), rubber, 0, 0.12, 1.36);
+  addMesh(group, new THREE.BoxGeometry(0.04, 2.4, 0.05), rubber, -2.24, 1.31, 1.36);
+  addMesh(group, new THREE.BoxGeometry(0.04, 2.4, 0.05), rubber, 2.24, 1.31, 1.36);
+
+  const door = new THREE.Group();
+  door.position.set(2.42, 1.32, 1.52);
+  door.rotation.y = -0.72;
+  addMesh(door, new RoundedBoxGeometry(0.07, 2.64, 0.1, 2, 0.012), chrome, 0, 0, -1.18);
+  addMesh(door, new THREE.BoxGeometry(0.022, 2.48, 2.28), glass, -0.02, 0, 0);
+  addMesh(door, new THREE.BoxGeometry(0.022, 2.48, 2.28), glass, 0.024, 0, 0);
+  addMesh(door, new RoundedBoxGeometry(0.08, 0.09, 2.38, 2, 0.01), enamel, 0, 1.22, 0);
+  addMesh(door, new RoundedBoxGeometry(0.08, 0.09, 2.38, 2, 0.01), enamel, 0, -1.22, 0);
+  addMesh(door, new RoundedBoxGeometry(0.08, 2.54, 0.1, 2, 0.01), enamel, 0, 0, 1.18);
+  addMesh(door, new THREE.CylinderGeometry(0.035, 0.035, 0.58, 16), chrome, 0.08, 0.15, 0.85, 0, 0, Math.PI / 2);
+  addMesh(door, new THREE.SphereGeometry(0.048, 16, 16), chrome, 0.36, 0.15, 0.85);
+  addMesh(door, new THREE.TorusGeometry(0.05, 0.008, 8, 20), brass, 0.36, 0.15, 0.85, 0, 0, Math.PI / 2);
+  group.add(door);
+
+  const fasciaMat = enamel.clone();
+  fasciaMat.map = fasciaMap();
+  fasciaMat.roughness = 0.48;
+  addMesh(group, new RoundedBoxGeometry(5.18, 0.44, 0.56, 2, 0.03), fasciaMat, 0, 2.99, 1.22);
+  for (let i = 0; i < 4; i++) {
+    const x = -1.55 + i * 0.74;
+    addMesh(group, new THREE.CylinderGeometry(0.075, 0.075, 0.055, 24), chrome, x, 3.2, 1.4);
+    addMesh(group, new THREE.CylinderGeometry(0.048, 0.048, 0.042, 18), brass, x, 3.24, 1.4);
+    addMesh(group, new THREE.CylinderGeometry(0.012, 0.012, 0.03, 10), dark, x, 3.27, 1.4);
+  }
+  addMesh(group, new THREE.BoxGeometry(1.22, 0.18, 0.045), metal("#12181c", 0.18, 0.32), 1.62, 3.01, 1.5);
+  addMesh(group, new THREE.BoxGeometry(0.92, 0.09, 0.02), metal("#7eb8c4", 0.2, 0.28, 0.6), 1.62, 3.01, 1.53);
+
+  const heatMat = new THREE.MeshStandardMaterial({
+    color: "#b85a32",
+    emissive: "#c45c26",
+    emissiveIntensity: 0.22,
+    metalness: 0.48,
+    roughness: 0.28,
+  });
+  const coil = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const x = -1.75 + i * 0.7;
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 2.12, 20), heatMat);
+    rod.rotation.x = Math.PI / 2;
+    rod.position.set(x, 2.28, -0.02);
+    rod.castShadow = true;
+    coil.add(rod);
+    const uFront = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.028, 14, 24, Math.PI), heatMat);
+    uFront.rotation.set(0, Math.PI / 2, Math.PI / 2);
+    uFront.position.set(x, 2.195, 1.06);
+    coil.add(uFront);
+    const uBack = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.028, 14, 24, Math.PI), heatMat);
+    uBack.rotation.set(0, -Math.PI / 2, Math.PI / 2);
+    uBack.position.set(x, 2.195, -1.1);
+    coil.add(uBack);
+    const dropF = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.09, 14), heatMat);
+    dropF.position.set(x, 2.15, 1.145);
+    coil.add(dropF);
+    const dropB = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.09, 14), heatMat);
+    dropB.position.set(x, 2.15, -1.185);
+    coil.add(dropB);
+    addMesh(coil, new THREE.CylinderGeometry(0.052, 0.048, 0.12, 16), ceramic, x, 2.28, 1.18, Math.PI / 2, 0, 0);
+    addMesh(coil, new THREE.CylinderGeometry(0.052, 0.048, 0.12, 16), ceramic, x, 2.28, -1.22, Math.PI / 2, 0, 0);
+    addMesh(coil, new THREE.CylinderGeometry(0.018, 0.018, 0.08, 10), chrome, x, 2.28, 1.26, Math.PI / 2, 0, 0);
+    addMesh(coil, new THREE.CylinderGeometry(0.018, 0.018, 0.08, 10), chrome, x, 2.28, -1.30, Math.PI / 2, 0, 0);
+  }
+  const bus = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.018, 0.04), chrome);
+  bus.position.set(0, 2.28, 1.32);
+  coil.add(bus);
+  const busB = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.018, 0.04), chrome);
+  busB.position.set(0, 2.28, -1.34);
+  coil.add(busB);
+  group.add(coil);
+
+  const lamp = addMesh(
+    group,
+    new THREE.SphereGeometry(0.078, 20, 20),
+    new THREE.MeshStandardMaterial({
+      color: "#fff4d6",
+      emissive: "#ffe7b0",
+      emissiveIntensity: 1.45,
+    }),
+    1.78,
+    2.22,
+    0.58,
+  );
+  addMesh(group, new THREE.CylinderGeometry(0.095, 0.095, 0.04, 18), chrome, 1.78, 2.29, 0.58);
+  addMesh(group, new THREE.CylinderGeometry(0.11, 0.09, 0.03, 16), dark, 1.78, 2.32, 0.58);
+
+  const fanHub = new THREE.Group();
+  fanHub.position.set(0.02, 1.4, -1.24);
+  addMesh(fanHub, new THREE.CylinderGeometry(0.92, 0.92, 0.06, 48), metal("#1a1f24", 0.35, 0.55), 0, 0, -0.16, Math.PI / 2, 0, 0);
+  addMesh(fanHub, new THREE.CylinderGeometry(0.30, 0.36, 0.32, 22), metal("#161b20", 0.42, 0.5), 0, 0, -0.28, Math.PI / 2, 0, 0);
+  addMesh(fanHub, new THREE.BoxGeometry(0.22, 0.22, 0.16), dark, 0, -0.5, -0.28);
+  addMesh(fanHub, new THREE.TorusGeometry(0.80, 0.022, 10, 56), chrome, 0, 0, -0.01, Math.PI / 2, 0, 0);
+  addMesh(fanHub, new THREE.CylinderGeometry(0.84, 0.84, 0.028, 48), metal("#14181c", 0.28, 0.62), 0, 0, -0.11, Math.PI / 2, 0, 0);
+  for (let i = 0; i < 4; i++) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.008, 1.52, 0.006), chrome);
+    bar.rotation.z = (i * Math.PI) / 4;
+    bar.position.z = -0.02;
+    fanHub.add(bar);
+  }
+  const blades = new THREE.Group();
+  const bladeMat = new THREE.MeshPhysicalMaterial({
+    color: "#2a3238",
+    metalness: 0.72,
+    roughness: 0.34,
+    envMapIntensity: 0.85,
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.42,
+  });
+  const foil = airfoilGeometry();
+  for (let i = 0; i < 10; i++) {
+    const blade = new THREE.Mesh(foil, bladeMat);
+    blade.position.set(-0.02, 0.22, 0.22);
+    blade.rotation.set(0.18, 0.68, 0.06);
+    blade.castShadow = true;
+    blade.receiveShadow = true;
+    const wrap = new THREE.Group();
+    wrap.rotation.z = (i * Math.PI * 2) / 10;
+    wrap.add(blade);
+    blades.add(wrap);
+  }
+  fanHub.add(blades);
+  addMesh(fanHub, new THREE.CylinderGeometry(0.19, 0.19, 0.13, 28), chrome, 0, 0, 0.22, Math.PI / 2, 0, 0);
+  addMesh(fanHub, new THREE.CylinderGeometry(0.058, 0.058, 0.16, 16), chrome, 0, 0, 0.21, Math.PI / 2, 0, 0);
+  addMesh(fanHub, new THREE.TorusGeometry(0.16, 0.014, 8, 28), brass, 0, 0, 0.20, Math.PI / 2, 0, 0);
+  group.add(fanHub);
+
+  for (let ix = -6; ix <= 6; ix++) {
+    for (let iy = -5; iy <= 5; iy++) {
+      if (ix * ix + iy * iy < 28) continue;
+      addMesh(
+        group,
+        new THREE.CircleGeometry(0.024, 10),
+        dark,
+        ix * 0.17,
+        1.4 + iy * 0.155,
+        -1.295,
+      );
+    }
+  }
+
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.68, 16), liner);
+  pipe.rotation.z = Math.PI / 2;
+  pipe.position.set(-2.0, 1.62, 0.18);
+  group.add(pipe);
+  addMesh(group, new THREE.SphereGeometry(0.06, 16, 16), liner, -1.68, 1.62, 0.18);
+  addMesh(group, new THREE.CylinderGeometry(0.072, 0.072, 0.13, 14), dark, -2.28, 1.62, 0.18, 0, 0, Math.PI / 2);
+  const jetMat = new THREE.MeshStandardMaterial({
+    color: "#d9e7ee",
+    transparent: true,
+    opacity: 0.32,
+    roughness: 1,
+    depthWrite: false,
+  });
+  const jet = addMesh(group, new THREE.ConeGeometry(0.08, 0.2, 16, 1, true), jetMat, -1.54, 1.62, 0.18, 0, 0, -Math.PI / 2);
+  addMesh(group, new THREE.ConeGeometry(0.055, 0.14, 14, 1, true), jetMat, -1.5, 1.48, 0.32, 0.18, 0, -Math.PI / 2);
+
+  const vent = new THREE.Group();
+  for (let i = 0; i < 7; i++) {
+    addMesh(vent, new THREE.BoxGeometry(0.5, 0.032, 0.055), dark, 1.86, 2.2 - i * 0.068, 1.26);
+  }
+  group.add(vent);
+
+  const railMat = metal("#bcc5cb", 0.82, 0.24);
+  for (let i = 0; i < 5; i++) {
+    const z = -0.9 + i * 0.46;
+    addMesh(group, new THREE.BoxGeometry(3.62, 0.018, 0.018), railMat, 0, 0.5, z);
+    addMesh(group, new THREE.BoxGeometry(3.62, 0.018, 0.018), railMat, 0, 1.12, z);
+    addMesh(group, new THREE.BoxGeometry(0.028, 0.64, 0.018), railMat, -1.78, 0.81, z);
+    addMesh(group, new THREE.BoxGeometry(0.028, 0.64, 0.018), railMat, 1.78, 0.81, z);
+  }
+
+  addMesh(group, new RoundedBoxGeometry(2.24, 0.034, 1.48, 2, 0.012), liner, 0, 0.64, 0.08);
+  addMesh(group, new RoundedBoxGeometry(2.3, 0.05, 1.52, 2, 0.014), liner, 0, 0.67, 0.08);
+  addMesh(group, new THREE.BoxGeometry(0.04, 0.04, 1.5), dark, -1.1, 0.7, 0.08);
+  addMesh(group, new THREE.BoxGeometry(0.04, 0.04, 1.5), dark, 1.1, 0.7, 0.08);
+  for (let i = 0; i < 6; i++) {
+    addMesh(group, new THREE.BoxGeometry(2.0, 0.01, 0.028), dark, 0, 0.7, -0.55 + i * 0.22);
+  }
+  for (let ix = -4; ix <= 4; ix++) {
+    for (let iz = -3; iz <= 3; iz++) {
+      addMesh(group, new THREE.CircleGeometry(0.028, 8), dark, ix * 0.22, 0.705, 0.08 + iz * 0.18);
+    }
+  }
+  addMesh(group, new RoundedBoxGeometry(5.4, 0.16, 3.6, 2, 0.04), metal("#1a1f24", 0.22, 0.72), 0, -0.22, 0.08);
+
+  addMesh(group, new RoundedBoxGeometry(0.64, 0.4, 0.8, 2, 0.03), dark, -2.08, 0.34, -0.88);
+  addMesh(group, new THREE.BoxGeometry(0.52, 0.24, 0.08), glass, -2.08, 0.36, -0.48);
+  const water = addMesh(group, new THREE.BoxGeometry(0.46, 0.18, 0.02), STEAM_LEVEL(), -2.08, 0.3, -0.47);
+  water.userData.baseY = 0.3;
+
+  addMesh(group, new THREE.BoxGeometry(2.4, 0.04, 0.18), dark, 0, 0.12, 1.18);
+  addMesh(group, new RoundedBoxGeometry(2.2, 0.03, 1.1, 2, 0.01), metal("#6a7378", 0.55, 0.42), 0, 0.14, 0.22);
+
+  for (const x of [-2.15, 2.15]) {
+    for (const z of [-1.2, 1.15]) {
+      addMesh(group, new THREE.CylinderGeometry(0.07, 0.09, 0.12, 14), enamel, x, -0.2, z);
+    }
+  }
+
+  addMesh(group, new THREE.BoxGeometry(0.08, 0.08, 0.55), chrome, 1.55, 1.05, 0.55);
+  addMesh(group, new THREE.CylinderGeometry(0.012, 0.012, 0.58, 12), chrome, 0.55, 0.95, 0.2, 0, 0, Math.PI / 2);
+  addMesh(group, new THREE.SphereGeometry(0.02, 12, 12), metal("#c45c26", 0.4, 0.35), 0.26, 0.95, 0.2);
+
+  addMesh(group, new THREE.BoxGeometry(0.22, 0.08, 0.08), dark, -2.08, 2.22, 0.18);
+  addMesh(group, new THREE.CylinderGeometry(0.035, 0.035, 0.16, 12), chrome, -1.92, 2.22, 0.18, 0, 0, Math.PI / 2);
+  addMesh(group, new RoundedBoxGeometry(0.34, 0.06, 1.6, 2, 0.01), dark, 0, 2.46, 0.08);
+  for (let i = 0; i < 3; i++) {
+    addMesh(group, new THREE.BoxGeometry(0.04, 0.22, 0.04), brass, -1.92 + i * 1.92, 0.22, 1.22);
+  }
+  addMesh(group, new THREE.CylinderGeometry(0.018, 0.018, 0.42, 10), chrome, 1.92, 2.18, -0.22, 0, 0, Math.PI / 2);
+  addMesh(group, new THREE.SphereGeometry(0.028, 12, 12), metal("#c45c26", 0.35, 0.4), 1.72, 2.18, -0.22);
+  addMesh(group, new THREE.BoxGeometry(0.12, 0.04, 0.22), dark, 2.08, 0.42, 1.18);
+  addMesh(group, new THREE.CylinderGeometry(0.03, 0.03, 0.18, 12), chrome, 2.08, 0.52, 1.18);
+  for (let i = 0; i < 4; i++) {
+    addMesh(group, new THREE.BoxGeometry(0.06, 0.03, 0.08), brass, -1.78, 0.52 + i * 0.42, 0.92);
+    addMesh(group, new THREE.BoxGeometry(0.06, 0.03, 0.08), brass, 1.78, 0.52 + i * 0.42, 0.92);
+  }
+
+  return { group, coilMat: heatMat, blades, vent, jet, lamp, door, water };
+}
+
+function STEAM_LEVEL() {
+  return new THREE.MeshStandardMaterial({
+    color: "#2a6f7f",
+    emissive: "#1a4a55",
+    emissiveIntensity: 0.35,
+    roughness: 0.4,
+  });
+}
+
+function makeFood() {
+  const group = new THREE.Group();
+  const slabs = [];
+  const w = 1.68 / N_CELL;
+  for (let i = 0; i < N_CELL; i++) {
+    const fat = i === 5;
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: fat ? "#8a5a32" : "#c9a078",
+      roughness: fat ? 0.42 : 0.58,
+      metalness: 0.03,
+      clearcoat: fat ? 0.38 : 0.22,
+      clearcoatRoughness: fat ? 0.28 : 0.42,
+    });
+    const mesh = new THREE.Mesh(
+      new RoundedBoxGeometry(w * (fat ? 0.96 : 0.99), fat ? 0.48 : 0.40, fat ? 1.26 : 1.16, 4, 0.012),
+      mat,
+    );
+    mesh.position.set(-0.84 + (i + 0.5) * w, 0.93, 0.08);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.fat = fat;
+    group.add(mesh);
+    slabs.push(mesh);
+  }
+  group.userData.slabs = slabs;
+  return group;
+}
+
+function makeSteam() {
+  const n = 720;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(n * 3);
+  const seeds = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const layer = i % 3;
+    seeds.push({
+      x: -1.72 + t * 2.05 + Math.random() * 0.18,
+      y: 1.42 + t * 0.58 + 0.12 * layer + Math.random() * 0.22,
+      z: 0.18 + (Math.random() - 0.5) * 0.92,
+      s: 0.55 + Math.random() * 1.05,
+    });
+    pos[i * 3] = seeds[i].x;
+    pos[i * 3 + 1] = seeds[i].y;
+    pos[i * 3 + 2] = seeds[i].z;
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    map: steamTexture(),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    size: 0.22,
+    opacity: 0.48,
+    color: "#d7e6ee",
+    sizeAttenuation: true,
+  });
+  const points = new THREE.Points(geo, mat);
+  points.visible = false;
+  return { points, seeds, pos };
+}
+
+export default function Scene({ frame, length = 0.03, doorOpen = true }) {
   const host = useRef(null);
   const state = useRef(null);
 
   useEffect(() => {
     const el = host.current;
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(el.clientWidth || 640, 460);
+    renderer.setSize(el.clientWidth || 760, el.clientHeight || 520);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(renderer.domElement);
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#d9d3c7");
-    const width = el.clientWidth || 640;
-    const camera = new THREE.PerspectiveCamera(32, width / 460, 0.1, 40);
-    camera.position.set(2.6, 1.55, 3.4);
-    camera.lookAt(0, 0.42, 0);
-    const ambient = new THREE.AmbientLight(0xffffff, 0.72);
-    const key = new THREE.DirectionalLight(0xfff6ea, 0.9);
-    key.position.set(2.2, 3.4, 1.6);
-    scene.add(ambient, key);
 
-    const food = new THREE.Group();
-    const cells = [];
-    for (let i = 0; i < 16; i++) {
-      const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.09, 0.62, 0.92),
-        new THREE.MeshStandardMaterial({ color: "#f4efe6", roughness: 0.78 })
-      );
-      mesh.position.set(-0.72 + i * 0.096, 0.42, 0);
-      food.add(mesh);
-      cells.push(mesh);
-    }
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#101418");
+    scene.fog = new THREE.Fog("#101418", 9.5, 16);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture;
+
+    const camera = new THREE.PerspectiveCamera(30, (el.clientWidth || 760) / (el.clientHeight || 520), 0.1, 40);
+    const hemi = new THREE.HemisphereLight(0xf4efe6, 0x2c3338, 0.5);
+    const key = new THREE.DirectionalLight(0xfff3e4, 1.12);
+    key.position.set(3.6, 5.2, 4.6);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 18;
+    key.shadow.camera.left = -6;
+    key.shadow.camera.right = 6;
+    key.shadow.camera.top = 6;
+    key.shadow.camera.bottom = -4;
+    const fill = new THREE.DirectionalLight(0xb7d3dc, 0.36);
+    fill.position.set(-3.8, 1.7, 2.5);
+    const rim = new THREE.PointLight(0xe07a3d, 0.55, 10);
+    rim.position.set(0, 2.2, 0.15);
+    const interior = new THREE.PointLight(0xfff1dc, 1.08, 8);
+    interior.position.set(0, 1.5, 0.4);
+    const lampLight = new THREE.PointLight(0xffe7b0, 0.72, 5);
+    lampLight.position.set(1.78, 2.22, 0.58);
+    const fanLight = new THREE.PointLight(0xe8f0f4, 1.35, 3.6);
+    fanLight.position.set(0.02, 1.4, -0.28);
+    scene.add(hemi, key, fill, rim, interior, lampLight, fanLight);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(7.5, 48),
+      new THREE.MeshStandardMaterial({ color: "#161b20", roughness: 0.92, metalness: 0.08 }),
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.28;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const cavity = makeCavity();
+    scene.add(cavity.group);
+    const food = makeFood();
     scene.add(food);
-    const cut = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.04, 0.66),
-      new THREE.MeshStandardMaterial({ color: "#2f6f7e", side: THREE.DoubleSide, roughness: 0.4 })
-    );
-    scene.add(cut);
-    const steam = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07, 18, 12),
-      new THREE.MeshStandardMaterial({ color: "#d9e4ea", emissive: "#7eb8c9", emissiveIntensity: 0.05, roughness: 0.45 })
-    );
-    steam.position.set(-0.55, 0.98, 0.15);
-    scene.add(steam);
-    const fan = new THREE.Mesh(
-      new THREE.BoxGeometry(0.22, 0.035, 0.22),
-      new THREE.MeshStandardMaterial({ color: "#efe6d4", emissive: "#e07a3d", emissiveIntensity: 0.05, roughness: 0.6 })
-    );
-    fan.position.set(0.55, 0.98, 0.15);
-    scene.add(fan);
-    const heater = new THREE.Mesh(
-      new THREE.BoxGeometry(1.15, 0.05, 0.08),
-      new THREE.MeshStandardMaterial({ color: "#c46b3a", emissive: "#c46b3a", emissiveIntensity: 0.2 })
-    );
-    heater.position.set(0, 1.05, -0.55);
-    scene.add(heater);
-    const target = new THREE.Vector3(0, 0.42, 0);
-    let yaw = 0.72;
-    let pitch = 0.42;
-    let dist = 4.55;
+    const steam = makeSteam();
+    scene.add(steam.points);
+
+    const target = new THREE.Vector3(0, 1.22, 0.1);
+    let yaw = 0.52;
+    let pitch = 0.2;
+    let dist = 6.55;
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
@@ -81,6 +530,7 @@ export default function Scene({ frame, slice, length = 0.03 }) {
       camera.lookAt(target);
     };
     place();
+
     const onDown = (ev) => {
       dragging = true;
       lastX = ev.clientX;
@@ -88,59 +538,113 @@ export default function Scene({ frame, slice, length = 0.03 }) {
     };
     const onMove = (ev) => {
       if (!dragging) return;
-      yaw -= (ev.clientX - lastX) * 0.008;
-      pitch = Math.min(1.2, Math.max(-0.2, pitch + (ev.clientY - lastY) * 0.008));
+      yaw -= (ev.clientX - lastX) * 0.007;
+      pitch = Math.min(0.82, Math.max(-0.04, pitch + (ev.clientY - lastY) * 0.007));
       lastX = ev.clientX;
       lastY = ev.clientY;
       place();
     };
-    const onUp = () => { dragging = false; };
+    const onUp = () => {
+      dragging = false;
+    };
     const onWheel = (ev) => {
-      dist = Math.min(8, Math.max(2.2, dist + ev.deltaY * 0.004));
+      dist = Math.min(9.2, Math.max(3.8, dist + ev.deltaY * 0.003));
       place();
+    };
+    const onResize = () => {
+      const w = el.clientWidth || 760;
+      const h = el.clientHeight || 520;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
     };
     el.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     el.addEventListener("wheel", onWheel, { passive: true });
-    state.current = { renderer, scene, camera, cells, cut, heater, steam, fan, food, el, place };
+    window.addEventListener("resize", onResize);
+
+    state.current = {
+      renderer, scene, camera, food, cavity, steam, rim, interior, lampLight, el, place,
+    };
     let alive = true;
     const tick = () => {
       if (!alive) return;
-      renderer.render(scene, camera);
+      const s = state.current;
+      if (s) {
+        const fan = s.frame?.fan ?? 0.4;
+        s.cavity.blades.rotation.z += 0.035 + 0.18 * Math.min(fan / 1.3, 1);
+        const steamOn = s.frame?.steam ?? 0;
+        const showSteam = steamOn > 0.5;
+        s.steam.points.visible = showSteam;
+        s.cavity.jet.visible = showSteam;
+        if (showSteam) {
+          s.steam.points.material.opacity = 0.22 + 0.42 * steamOn;
+          s.steam.points.material.size = 0.14 + 0.14 * steamOn;
+          const { seeds, pos } = s.steam;
+          seeds.forEach((p, i) => {
+            p.x += 0.008 + 0.014 * steamOn;
+            p.y += 0.004 + 0.011 * steamOn;
+            p.z += 0.0022 * Math.sin(p.x * 4.2 + i);
+            if (p.x > 1.62 || p.y > 2.38) {
+              p.x = -1.74 + Math.random() * 0.22;
+              p.y = 1.40 + Math.random() * 0.38;
+              p.z = 0.18 + (Math.random() - 0.5) * 0.86;
+            }
+            pos[i * 3] = p.x;
+            pos[i * 3 + 1] = p.y + 0.018 * Math.sin(p.x * 6 + i);
+            pos[i * 3 + 2] = p.z;
+          });
+          s.steam.points.geometry.attributes.position.needsUpdate = true;
+        }
+        if (s.cavity.water) {
+          const water = s.frame?.water ?? 0.72;
+          const sy = 0.45 + 0.7 * Math.min(Math.max(water, 0), 1);
+          s.cavity.water.scale.y = sy;
+          s.cavity.water.position.y = s.cavity.water.userData.baseY - 0.09 * (1 - sy);
+        }
+        renderer.render(scene, camera);
+      }
       requestAnimationFrame(tick);
     };
     tick();
     return () => {
       alive = false;
       renderer.dispose();
+      pmrem.dispose();
       el.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       el.removeEventListener("wheel", onWheel);
+      window.removeEventListener("resize", onResize);
       if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement);
     };
   }, []);
 
   useEffect(() => {
     const s = state.current;
-    if (!s || !frame?.field) return;
-    frame.field.forEach((value, i) => {
-      s.cells[i].material.color.copy(colorAt(value));
+    if (!s || !frame) return;
+    s.frame = frame;
+    const slabs = s.food.userData.slabs || [];
+    const span = Math.max(frame.t1 - frame.t2, 1);
+    slabs.forEach((mesh, i) => {
+      const u = i / Math.max(N_CELL - 1, 1);
+      const value = frame.t1 - span * u ** 1.15;
+      const color = heatColor(value);
+      if (mesh.userData.fat) color.offsetHSL(0.02, 0.12, -0.12);
+      mesh.material.color.copy(color);
     });
-    const index = Math.min(15, Math.max(0, Math.round(slice * 15)));
-    const cell = frame.field[index];
-    s.cut.position.set(-0.72 + index * 0.096, 0.42, 0.52);
-    s.cut.material.color.copy(colorAt(cell));
     s.food.scale.set(length / 0.03, 1, 1);
-    s.heater.material.emissiveIntensity = 0.08 + 0.9 * frame.heat;
-    s.steam.material.emissiveIntensity = 0.04 + 0.85 * frame.steam;
-    s.fan.material.emissiveIntensity = 0.04 + 0.7 * (frame.fan / 1.3);
-    const probing = frame.time >= 150 && frame.time < 190;
-    s.cells[0].material.emissive.set(probing ? "#7eb8c9" : "#000000");
-    s.cells[0].material.emissiveIntensity = probing ? 0.45 : 0;
+    s.cavity.coilMat.emissiveIntensity = 0.16 + 1.55 * frame.heat;
+    s.rim.intensity = 0.22 + 1.45 * frame.heat;
+    s.interior.intensity = 0.72 + 0.7 * frame.heat;
+    s.lampLight.intensity = 0.45 + 0.55 * frame.heat;
+    s.cavity.vent.scale.set(1, 1, 0.55 + 1.2 * frame.exhaust);
+    if (s.cavity.door) {
+      s.cavity.door.rotation.y = doorOpen ? -0.72 : 0;
+    }
     s.renderer.render(s.scene, s.camera);
-  }, [frame, slice, length]);
+  }, [frame, length, doorOpen]);
 
-  return <div ref={host} style={{ minHeight: 460 }} />;
+  return <div ref={host} style={{ height: "100%", minHeight: 460, position: "relative" }} />;
 }

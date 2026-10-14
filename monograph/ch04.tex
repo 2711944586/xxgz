@@ -1,0 +1,197 @@
+\chapter{多尺度物理模型}
+\label{ch:physics}
+
+停机、探针和解释至少要看见温度、液相含水和反应进度。中心温度到达某一阈值只是跟踪器的中间量；十六条控制体的工程通量是评分核，连续方程是规格。本章先给出连续形式，再收缩到实际积分的离散核。收缩保留冷点、表面温度、平均含水和致死进度，压力场、蒸汽质量分数和三维流动留在规格里。界面潜热用蒸汽指令和活度的工程式给出，方向与冷凝放热、蒸发吸热一致。
+
+\section{计算域与全场}
+
+食品区域 \(\Omega_f\subset\R^3\)，腔体气体区域 \(\Omega_c\)，交界面 \(\Gamma=\partial\Omega_f\)。体积分数满足
+\[
+\varepsilon_s+\varepsilon_l+\varepsilon_g=1,\qquad \varepsilon_s=\varepsilon_s(S)>0.
+\]
+\(S(\vect{r},t)\) 综合收缩、孔隙闭合与表面结壳。全场状态为
+\begin{equation}
+\label{eq:state}
+\vect{X}(\vect{r},t)=\big(T,\,p_g,\,\varepsilon_l,\,\omega_v,\,\vect{\alpha},\,S\big).
+\end{equation}
+反应进度 \(\vect{\alpha}=(\alpha_p,\alpha_g,\alpha_b,\alpha_m)\) 依次是蛋白质变性、淀粉糊化、美拉德褐变与微生物致死当量。腔体状态不进入食品场，而作为边界输入 \((T_\infty,Y_\infty,\vect{v}_\infty,\dot m_{\mathrm{st}},P_{\mathrm{heat}})\)。
+
+十六条控制体没有独立的 \(p_g\) 和 \(\omega_v\) 未知量。写出全场是为了标明离散项各自对应连续方程里的哪一项。
+
+\section{能量与三相质量}
+
+忽略热局部非平衡时，固、液、气在一个代表体元内用同一个 \(T\)。该简化在蒸烤的分钟尺度上可接受。能量方程保留四项：
+\begin{equation}
+\label{eq:energy}
+(\rho c)_{\mathrm{eff}}\frac{\partial T}{\partial t}
+=\nabla\!\cdot\!\big(k_{\mathrm{eff}}\nabla T\big)
+-\sum_{i\in\{l,v,a\}}\nabla\!\cdot\!(h_i\vect{n}_i)
+-\dot m_{\mathrm{phase}}\,\Delta h_{\mathrm{vap}}
++q_{\mathrm{reac}}.
+\end{equation}
+有效容积热容与导热随 \(\varepsilon_l\) 和 \(S\) 变化，表面变干后导热下降，这是外干内生的机制。液相与蒸汽
+\begin{align}
+\label{eq:liquid}
+\frac{\partial(\varepsilon_l\rho_l)}{\partial t}
+&=-\nabla\!\cdot\!\vect{n}_l-\dot m_{\mathrm{phase}},\\
+\label{eq:vapor}
+\frac{\partial(\varepsilon_g\rho_g\omega_v)}{\partial t}
+&=-\nabla\!\cdot\!\vect{n}_v+\dot m_{\mathrm{phase}}.
+\end{align}
+通量由 Darcy 渗流与 Fick 扩散合成。相变保持有限速率：
+\begin{equation}
+\label{eq:phase}
+\dot m_{\mathrm{phase}}
+=K_{\mathrm{ev}}\,a_w(\varepsilon_l,T)\,
+\big(p_{\mathrm{sat}}(T)-p_v\big)_+
+-K_{\mathrm{cd}}\,(p_v-p_{\mathrm{sat}}(T))_+.
+\end{equation}
+蒸制时腔体蒸汽压高，冷凝项在表面释放潜热；烤制时蒸汽压低，蒸发项吸热并留下干壳。符号由 \(p_v-p_{\mathrm{sat}}\) 决定，不由档位名称决定。
+
+本次核没有压力未知量。界面潜热被收成
+\begin{equation}
+\label{eq:qlat}
+q_{\mathrm{lat}}=18000\,u_{\mathrm{st}}(1-a_w)-9000\,(1-u_{\mathrm{st}})\max(a_w-0.35,0)\,u_{\mathrm{fan}}.
+\end{equation}
+蒸汽指令直接决定符号，活度只调制幅度。这保留冷凝放热、蒸发吸热的方向，没有保留\eqref{eq:phase}对局部蒸汽压的依赖。
+
+\section{腔体、表面与一维核}
+
+腔温与腔湿
+\begin{align}
+\dot T_c &= 0.02\,u\,(T_h-T_c)-0.01\,e\,(T_c-25),\\
+\dot h_c &= 0.015\,s-0.02\,e\,h_c.
+\end{align}
+换热系数 \(h=12+55f\)。水的饱和蒸汽压用 Antoine 式，温度取摄氏度，压力取 bar：
+\begin{equation}
+\label{eq:antoine}
+\log_{10} P^\star = 5.1962 - \frac{1730.63}{T+233.426}.
+\end{equation}
+腔体侧分压是腔湿乘以腔温下的饱和压，食品侧分压是表面活度乘以表面温度下的饱和压。两侧之差再乘 \(4000\,\mathrm{W}/(\mathrm{m}^2\cdot\mathrm{bar})\)，加到潜热上。辐射没有单独的角系数场，加热指令上保留 \(7000u\) 作为工程份额。
+
+食品沿厚度分成十六条控制体。下标 0 在界面一侧，下标 15 在对称面。时间步 \(\Delta t=2\,\mathrm{s}\)。导热基线 \(k=\alpha\rho c\)。结壳变量 \(\xi\) 在表面含水低于 \(0.45\) 时增长，增长之后表面那一条的导热乘 \(1-0.55\xi\)。含水扩散系数 \(D=2\times 10^{-9}(1+3m)\)。15 mm 的显式稳定上限约 \(2.20\,\mathrm{s}\)，选用的 \(2\,\mathrm{s}\) 低于该上限。离散方程的完整形式见附录\ref{app:discrete}。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{P_profiles.png}
+\caption{种子 7、肉糜 30 mm、组合档、对偶策略：若干时刻的厚度剖面。表面先升，冷点滞后；后期加热下降后剖面重新拉平。}
+\label{fig:profiles}
+\end{figure}
+
+图\ref{fig:profiles}是同一格式重放得到的内部场。0 min 接近均匀初温；2.5 min 表面已经超过 \(80^\circ\mathrm{C}\)，冷点仍接近初值；10 min 梯度最陡；28 min 接近停机，冷点越过 \(70^\circ\mathrm{C}\)；55 min 加热已经降到保持，剖面接近等温。CSV 只保存表面和冷点最小值，十六条剖面由同一离散格式重放，与日志的最大差低于 \(5\times 10^{-6}\,\mathrm{K}\)。
+
+图\ref{fig:xt}把同一剖面沿时间展开。探针窗口约在 2.5--3.2 min，近表面留下短暂的高温条带，尚未传到冷点。横向没有第二维梯度，这是一维核的几何。图\ref{fig:field3dP}用同一剖面按深度比的 1.15 次幂着色，供演示页面使用；指数是显示约定。含水剖面见图\ref{fig:moistP}：平均含水从 0.72 缓降，结壳门槛 0.45 在 55 min 内未触及，路径 C 因此在这条轨迹上接近零。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\textwidth]{P_field_xt.png}
+\caption{同一条轨迹的厚度--时间温度场。探针窗口在近表面留下短暂高温条带，尚未传到冷点。}
+\label{fig:xt}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{P_field_3d.png}
+\caption{十六条剖面的插值色带。着色指数 1.15 是显示约定，横向没有第二维梯度。}
+\label{fig:field3dP}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{X_moist.png}
+\caption{种子 7 平均含水与表面含水。结壳门槛 0.45 未触及。}
+\label{fig:moistP}
+\end{figure}
+
+图\ref{fig:paw}给出核内活度对含水。S1 的三档初含水 \(0.64/0.72/0.80\) 都落在饱和段 \(a_w\approx 0.99\)，竖线标出这三档。界面潜热对含水的导数在这一段接近零，这是第\ref{ch:ablate}章含水零效应的函数形状原因。活度是含水的单调饱和函数，与公开 GAB 等温线同方向：含水升高则活度升高并趋近 1。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{P_aw.png}
+\caption{核内活度。竖线是 S1 三档初含水，三者都在饱和段。}
+\label{fig:paw}
+\end{figure}
+\FloatBarrier
+
+\section{反应进度}
+
+速率形式为
+\begin{equation}
+\label{eq:kinetics}
+\frac{\partial\alpha_i}{\partial t}
+=A_i\exp\!\Big(-\frac{E_{a,i}}{RT}\Big)
+(1-\alpha_i)^{n_i}\,g_i(\varepsilon_l,S).
+\end{equation}
+\(g_p\) 在自由水不足时下降，\(g_b\) 在低水分、高温时上升，使表面褐变和内部变性可以分离。热力进度不另造机理：
+\begin{equation}
+\label{eq:F}
+\frac{\mathrm{d}F}{\mathrm{d}t}=10^{(T_{\mathrm{cold}}-T_{\mathrm{ref}})/z},\qquad
+\alpha_m=1-\exp(-F/F_{\mathrm{req}}).
+\end{equation}
+\(T_{\mathrm{cold}}(t)=\operatorname{ess\,inf}_{\vect{r}\in\Omega_f}T(\vect{r},t)\)。核取十六条的最低温度。\(\alpha_m=1-\mathrm{e}^{-F/2}=0.85\) 给出 \(F=-2\ln 0.15=3.794\,\mathrm{min}\)。冷点若保持恒温 \(T\)，每分钟累积 \(10^{(T-70)/10}\) 分钟的等效时间。表\ref{tab:constT}只使用这条映射，不使用任何一条轨迹。
+
+\begin{table}[htbp]
+\centering
+\caption{恒温冷点到达 \(\alpha_m=0.85\) 的时间}
+\label{tab:constT}
+\begin{tabular}{rrrr}
+\toprule
+\(T/^\circ\mathrm{C}\) & 每分钟的 \(F\) & 所需时间 / min & 所需时间 / s \\
+\midrule
+55 & 0.0316 & 119.98 & 7199 \\
+60 & 0.100 & 37.94 & 2277 \\
+65 & 0.316 & 12.00 & 720 \\
+70 & 1 & 3.794 & 228 \\
+75 & 3.162 & 1.200 & 72 \\
+80 & 10 & 0.379 & 23 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\(60^\circ\mathrm{C}\) 的 38 min 还放得进 55 min 的时域；\(55^\circ\mathrm{C}\) 的 120 min 放不进。厚件开环在菜单终点冷点往往还在 \(70^\circ\mathrm{C}\) 以下，进度误差贴着 \(-0.85\)，与这张表的左端一致。薄件若把冷点推过 \(80^\circ\mathrm{C}\) 并保持几十秒，进度就会冲到上沿 \(+0.15\)。表不区分这两种情形是哪一种策略造成的。恒温表不是种子 7 的冷点历史，也不能把 0.85 读成法规限值。
+
+结构演化
+\begin{equation}
+\label{eq:structure}
+\frac{\partial S}{\partial t}
+=\kappa_s(1-S)\,\langle\alpha_p-\alpha_s^\star\rangle_+
++\kappa_c\,\langle M_{c}- \varepsilon_l\rangle_+.
+\end{equation}
+核里结壳只在表面含水低于 0.45 时以 \(1.5\times 10^{-4}\,\mathrm{s}^{-1}\) 增长。S1 的初始含水不低于 0.64，表面失水率很低，结壳常停在 0。规格中的路径 C 因此在多数样本上没有闭合。
+
+三个原型共用同一套导热和进度公式。差别只在活度尺度：肉糜 \((0.10,0.70)\)，土豆 \((0.055,0.80)\)，面团 \((0.08,0.75)\)。交叉表里三个食材的中位误差几乎相同，与“原型只改了一个弱的活度尺度”一致。这不能用来声称蛋白与淀粉的反应差异已经被检验。面团膨胀不在状态里。
+
+Kossovich 数
+\[
+\mathrm{Ko}
+=\frac{\Delta h_{\mathrm{vap}}\,\varepsilon_{l0}\,\rho_l}{(\rho c)_{\mathrm{eff}}\,\Delta T}
+\]
+停在两个未定因子上。核文件里写着潜热常数 \(\Delta h_{\mathrm{vap}}=2.3\times 10^{6}\,\mathrm{J/kg}\)。步进不读取这个常数：界面潜热走的是 \(18000\,u_{\mathrm{st}}\) 与 \(9000\,u_v\) 两条工程通量。体积热容 \((\rho c)_{\mathrm{eff}}=3.4\times 10^{6}\,\mathrm{J}/(\mathrm{m}^3\mathrm{K})\) 进入了温升。两者之比是 \(0.6765\,\mathrm{K\cdot m}^3/\mathrm{kg}\)，于是 \(\mathrm{Ko}=0.6765\,\varepsilon_{l0}\rho_l/\Delta T\)。核里的含水是夹在 \([0.02,0.95]\) 的分数，不是液相体积分数乘密度。因此 Ko 留在这两个因子上，不化成一个纯数。
+
+\section{两节点工作方程}
+
+探针分析使用表面节点 1 与内部节点 2：
+\begin{align}
+\label{eq:twonode}
+C_1\dot T_1
+&=\frac{T_\infty-T_1}{R_{\mathrm{ext}}(v)}+\frac{T_2-T_1}{R_{\mathrm{int}}}
++q_{\mathrm{lat}}(\dot m_\Gamma),\\
+C_2\dot T_2
+&=\frac{T_1-T_2}{R_{\mathrm{int}}},\\
+\dot m
+&=-k_m\big(a_w(m)\,p_{\mathrm{sat}}(T_1)-p_\infty\big).
+\end{align}
+\(R_{\mathrm{ext}}\) 由风速与是否冷凝切换，\(R_{\mathrm{int}}\) 随结壳增大。无相变且 \(\dot m=0\) 时，平衡迫使 \(T_1=T_2=T_\infty\)，三个参数从代数方程中消失。把含水冻结，相变通量为零，对 \((T_1,T_2)\) 线性化，
+\[
+\vect{A}=\begin{pmatrix}-a-b & b\\ c & -c\end{pmatrix},\qquad
+\vect{C}=\begin{pmatrix}1 & 0\end{pmatrix},
+\]
+其中 \(a=1/(C_1 R_{\mathrm{ext}})\)，\(b=1/(C_1 R_{\mathrm{int}})\)，\(c=1/(C_2 R_{\mathrm{int}})\)。可观测矩阵行列式等于 \(b\neq 0\)，两个温度状态从表面看是可观测的。平衡点上对 \(R_{\mathrm{int}}\) 的灵敏度为零。状态可观测给出温度节点可以从表面重建；内部热阻的辨识还需要离开平衡的输入，让灵敏度列不再是零。
+
+说明常数 \(C_1=C_2=2000\,\mathrm{J/K}\)，\(R_{\mathrm{ext}}=0.05\,\mathrm{K/W}\)，\(R_{\mathrm{int}}=0.15\,\mathrm{K/W}\) 时，特征根对应时间常数 \(69.72\,\mathrm{s}\) 与 \(430.3\,\mathrm{s}\)。40 s 的探针窗短于这两个时间常数，表面记录在代数上满秩，数值上仍然弱：窗口结束时冷点几乎还停在初值，信息主要写在表面节点的瞬态上。
+
+界面上还有一项工程辐射份额 \(7000u\)，加在对流与潜热之后。它没有角系数场，也没有发射率随含水变化。种子 7 的表面峰值约 \(150^\circ\mathrm{C}\) 来自这一项与对流的叠加。Antoine 蒸汽压差另乘 \(4000\,\mathrm{W}/(\mathrm{m}^2\cdot\mathrm{bar})\)，符号随腔温与表面温度的相对位置翻转，第\ref{ch:result}章用 216 对积分给出厚度上的符号变化。
+
+评分循环始终积分十六条控制体。压力场、蒸汽质量分数和有限速率相变源项写在连续形式里，用来标明离散项各自对应哪一项；核里看见的是温度、含水、结壳代理和进度。两节点工作方程只用于探针分析：它给出平衡点上内部热阻灵敏度为零、两段脉冲提供第二个灵敏度方向这两条代数事实。第\ref{ch:est}章把跟踪器接到表面读数上，第\ref{ch:ati}章把 40 s 窗口写成已经运行的时间表。
+
+后文凡引用尺度都读这一组工程常数：扩散率 \(\alpha=2.0\times 10^{-7}\,\mathrm{m}^2/\mathrm{s}\)，容积热容 \(\rho c=3.4\times 10^{6}\,\mathrm{J}/(\mathrm{m}^3\mathrm{K})\)，基线导热 \(k=0.68\,\mathrm{W}/(\mathrm{m\cdot K})\)，时间步 \(2\,\mathrm{s}\)，时域 55 min，控制体数 16；换热 \(h=12+55u_{\mathrm{fan}}\)，界面潜热按\eqref{eq:qlat}，辐射份额 \(7000u\)，Antoine 压差再乘 \(4000\,\mathrm{W}/(\mathrm{m}^2\cdot\mathrm{bar})\)；脂肪夹层把指定控制体的导热乘 0.45。蒸档把加热夹在 0.25，冷凝潜热从外向内送；烤档关掉蒸汽、抬高排汽，管壁辐射和热风把表面推高，内部仍靠导热；组合档放开四个量，探针窗先拉陡表面梯度，窗外回到品质加热。这些数字一旦改写，交叉表、网格加密和种子 7 轨迹都要重跑；正文以已经写出的日志为准。

@@ -58,6 +58,9 @@ def rollout(
     dt: float = 2.0,
     record_every: int = 5,
     store_history: bool = True,
+    cook: str = "combi",
+    use_antoine: bool = True,
+    shell_k: float = 0.55,
     n: int = 16,
     noise_scale: float = 1.0,
     occlude_s: float = 0.0,
@@ -97,7 +100,16 @@ def rollout(
     heat_cmd = np.ones(b)
     steam = np.zeros(b)
     fan = np.full(b, 0.35)
+    exhaust = np.full(b, 0.4)
     heater_temp = np.full(b, 40.0)
+    # Cavity. Product modes: 0 steam, 1 bake, 2 combi.
+    cook_mode = np.full(b, {"steam": 0, "bake": 1, "combi": 2}[cook], dtype=int)
+    water = np.full(b, 0.8)
+    cav_t = np.full(b, 25.0)
+    cav_h = np.full(b, 0.4)
+    cav_p = np.full(b, 1.0)
+    door = np.zeros(b)
+    leak = np.zeros(b)
     # Estimator state. Prior R is deliberately wrong.
     r_hat = np.full(b, 5.0)
     tc_hat = t0 + 0.0
@@ -114,7 +126,9 @@ def rollout(
     hist = {key: [] for key in (
         "time", "t_surf", "t_core", "t_hat", "m_mean", "alpha_m",
         "alpha_b", "r_true_proxy", "r_hat", "var_r", "heat", "heat_req",
-        "steam", "fan", "mode", "heater",
+        "steam", "fan", "exhaust", "mode", "heater",
+        "cook_mode", "water", "cav_t", "cav_h", "cav_p", "door", "leak",
+        "vapor", "shell", "path_a", "path_b", "path_c", "r_field",
     )}
     energy_acc = np.zeros(b)
     snap_std = np.full(b, np.nan)
@@ -155,6 +169,7 @@ def rollout(
             steam = ((now < 0.45 * menu_time) & (proto >= 1)).astype(float) * 0.8
             fan = np.full(b, 0.3)
             mode[:] = 0
+            exhaust = np.full(b, 0.35)
             newly = (now >= menu_time) & ~stopped
             stop = np.where(newly, menu_time, stop)
             if np.any(newly):
@@ -165,6 +180,7 @@ def rollout(
             heat_req = np.clip(0.04 * (160.0 - y_cav) + 0.6, 0.0, 1.0)
             steam = (y_m > 0.2).astype(float) * 0.3 if use_mass else np.zeros(b)
             fan = np.full(b, 0.45)
+            exhaust = np.full(b, 0.5)
             mode[:] = 0
         else:
             # Observer.
@@ -174,8 +190,9 @@ def rollout(
             tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
             if policy == "dual":
                 in_probe = (now >= 150.0) & (now < 190.0) & (var_r > 0.25) & (~probe_locked)
-                steam = np.where(in_probe & (now < 170.0), 1.0, 0.0)
+                steam = np.where(in_probe & (now < 170.0), 1.0, 0.15)
                 fan = np.where(in_probe & (now >= 170.0), 1.3, 0.4)
+                exhaust = np.where(in_probe & (now < 170.0), 0.05, 0.55)
                 mode = np.where(in_probe, 1, 0)
                 just_done = (now >= 190.0) & (~probed) & (var_r > 0.25)
                 if np.any(just_done):
@@ -190,6 +207,7 @@ def rollout(
             else:
                 steam = np.zeros(b)
                 fan = np.full(b, 0.4)
+                exhaust = np.full(b, 0.7)
                 mode[:] = 0
             margin = 6.0 + 10.0 * np.sqrt(var_r) * (length / 0.03)
             heat_req = np.clip(0.35 + (target_core + margin - tc_hat) / 30.0, 0.15, 1.0)
@@ -204,6 +222,19 @@ def rollout(
             heat_req = np.where(stopped, 0.15, heat_req)
             mode = np.where(stopped, 2, mode)
 
+        # Cavity. Product mode selects which actuators may move.
+        # 0 steam: no dry heat. 1 bake: no steam. 2 combi: all four.
+        steam = np.where(cook_mode == 1, 0.0, steam)
+        heat_req = np.where(cook_mode == 0, np.minimum(heat_req, 0.25), heat_req)
+        exhaust = np.clip(exhaust, 0.0, 1.0)
+        # Hard measurements. Quality estimates never enter these four lines.
+        if door_s is not None and now >= door_s:
+            door[:] = 1.0
+        water = np.clip(water - dt * 1.2e-4 * steam, 0.0, 1.0)
+        dry_tank = water < 0.05
+        door_open = door > 0.5
+        leak = np.where((heater_temp > 200.0) & (cav_h > 0.85), 0.004, 0.0)
+        leak_trip = leak > 0.003
         # Shield: heater temperature is a hard measurement.
         heat_cmd = heat_req.copy()
         heater_temp = heater_temp + dt * (
@@ -212,14 +243,36 @@ def rollout(
         # Full power approaches ~250 C. The shield trims only past 230 C.
         over = np.clip((heater_temp - 230.0) / 40.0, 0.0, 1.0)
         heat_cmd = heat_cmd * (1.0 - 0.75 * over)
+        blocked = dry_tank | door_open | leak_trip | (heater_temp >= 250.0)
+        heat_cmd = np.where(blocked, 0.0, heat_cmd)
+        steam = np.where(blocked, 0.0, steam)
+        # Cavity air. Exhaust lowers humidity; steam raises it.
+        cav_t = cav_t + dt * (
+            0.02 * heat_cmd * (heater_temp - cav_t) - 0.01 * exhaust * (cav_t - 25.0)
+        )
+        cav_h = np.clip(
+            cav_h + dt * (0.015 * steam - 0.02 * exhaust * cav_h - 0.05 * door),
+            0.05, 0.98,
+        )
+        cav_p = 1.0 + 0.04 * cav_h + 0.0004 * np.maximum(cav_t - 100.0, 0.0)
         if (s % record_every == 0) or (s == steps - 1):
             energy_acc += heat_cmd
 
-        # Boundary.
+        # Boundary. Antoine vapour pressure of water, T in C, P in bar.
+        # log10(P) = 5.1962 - 1730.63 / (T + 233.426), 1 to 100 C.
+        p_food = 10.0 ** (5.1962 - 1730.63 / (t[:, 0] + 233.426))
+        p_cav = cav_h * 10.0 ** (5.1962 - 1730.63 / (np.maximum(cav_t, 1.0) + 233.426))
+        drive = np.clip(p_cav - aw * p_food, -0.4, 0.4)
         h = 12.0 + 55.0 * fan
         q_lat = 18000.0 * steam * (1.0 - aw) - 9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan
+        if use_antoine:
+            q_lat = q_lat + 4000.0 * drive
         t_inf = 90.0 + 95.0 * heat_cmd
         flux = h * (t_inf - t[:, 0]) + q_lat + 7000.0 * heat_cmd
+        # Crust raises thermal resistance of the surface cell before conduction.
+        k_step = k * (1.0 - shell_k * shell)[:, None]
+        k_step[:, 0] = k[:, 0] * (1.0 - shell_k * shell)
+        alpha = k_step / RHO_C
         # Conduction.
         lap = np.zeros_like(t)
         lap[:, 1:-1] = (t[:, 2:] - 2 * t[:, 1:-1] + t[:, :-2]) / dx[:, None] ** 2
@@ -234,11 +287,13 @@ def rollout(
         d = 2.0e-9 * (1.0 + 3.0 * m)
         ml = np.zeros_like(m)
         ml[:, 1:-1] = (m[:, 2:] - 2 * m[:, 1:-1] + m[:, :-2]) / dx[:, None] ** 2
-        loss = 1.6e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - steam)
-        gain = 1.1e-4 * steam * (1.0 - m[:, 0])
-        ml[:, 0] = (m[:, 1] - m[:, 0]) / dx ** 2 - loss / dx_frac + gain / dx_frac
+        ml[:, 0] = (m[:, 1] - m[:, 0]) / dx ** 2
         ml[:, -1] = (m[:, -2] - m[:, -1]) / dx ** 2
-        m = np.clip(m + dt * d * ml, 0.02, 0.95)
+        loss = 8.0e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - 0.5 * steam)
+        gain = 1.2e-4 * steam * (1.0 - m[:, 0])
+        m = m + dt * d * ml
+        m[:, 0] = m[:, 0] + dt * (gain - loss)
+        m = np.clip(m, 0.02, 0.95)
         # Kinetics at core and surface.
         rate = 10.0 ** ((t_core - 70.0) / 10.0) / 60.0
         f_value = f_value + dt * rate
@@ -246,6 +301,8 @@ def rollout(
         alpha_b = alpha_b + dt * 2e-4 * np.maximum(t[:, 0] - 110.0, 0.0) * np.maximum(0.55 - m[:, 0], 0.0)
         alpha_b = np.clip(alpha_b, 0.0, 1.5)
         shell = np.clip(shell + dt * 1.5e-4 * np.maximum(0.45 - m[:, 0], 0.0), 0.0, 1.0)
+        # Vapour fraction follows the surface dryness. It is a field, not a second pressure solve.
+        vapor = np.clip((1.0 - m[:, 0]) * (0.2 + 0.8 * cav_h), 0.0, 0.9)
         if (s % record_every == 0) or (s == steps - 1):
             rec_time.append(now)
             rec_alpha.append(1.0 - np.exp(-f_value / 2.0))
@@ -266,8 +323,23 @@ def rollout(
             hist["heat_req"].append(heat_req.copy())
             hist["steam"].append(steam.copy())
             hist["fan"].append(fan.copy())
+            hist["exhaust"].append(exhaust.copy())
             hist["mode"].append(mode.astype(float).copy())
             hist["heater"].append(heater_temp.copy())
+            hist["cook_mode"].append(cook_mode.astype(float).copy())
+            hist["water"].append(water.copy())
+            hist["cav_t"].append(cav_t.copy())
+            hist["cav_h"].append(cav_h.copy())
+            hist["cav_p"].append(cav_p.copy())
+            hist["door"].append(door.copy())
+            hist["leak"].append(leak.copy())
+            hist["vapor"].append(vapor.copy())
+            hist["shell"].append(shell.copy())
+            # Three paths of the same steam command.
+            hist["path_a"].append((18000.0 * steam * (1.0 - aw)).copy())
+            hist["path_b"].append((9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan).copy())
+            hist["path_c"].append((0.55 * shell * k[:, 0]).copy())
+            hist["r_field"].append((1.2 + 2.5 * shell).copy())
 
     alpha_end = 1.0 - np.exp(-f_value / 2.0)
     rec_time = np.asarray(rec_time)

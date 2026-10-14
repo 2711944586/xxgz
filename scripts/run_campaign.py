@@ -268,7 +268,12 @@ def main():
     (LOG / "s1_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     traces = trace_one()
     demo = traces["dual"]
-    cols = ["time", "t_surf", "t_core", "t_hat", "m_mean", "alpha_m", "var_r", "heat", "heat_req", "steam", "mode"]
+    cols = [
+        "time", "t_surf", "t_core", "t_hat", "m_mean", "alpha_m",
+        "r_hat", "var_r", "heat", "heat_req", "steam", "fan", "exhaust",
+        "mode", "heater", "water", "cav_t", "cav_h", "cav_p", "shell",
+        "vapor", "path_a", "path_b", "path_c",
+    ]
     lines = [",".join(cols)]
     for i in range(demo["time"].shape[0]):
         lines.append(",".join(str(round(float(demo[c][i, 0]), 5)) for c in cols))

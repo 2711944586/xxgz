@@ -1,54 +1,58 @@
 # ACTS-MCDT
 
-智能蒸烤一体机的自主认知系统。仓库按规划、正文、数值核、结果、演示分开。腔体里的四个执行量是加热、蒸汽、排汽和气流。
+东北大学《信息感知》课程报告配套仓库。学号 20241334，姓名庄颂，班级信息2402。
 
-## 主线
-
-被动观测看不到内部热阻。评分核在一维十六条控制体上比较四种策略。对偶策略在 150–190 s 做一次固定探针。停机进度只在停机时刻读取。公开等温线只约束淀粉类活度，而且测定不超过 60 °C。
+一体机真正能改的只有加热、蒸汽、排汽和风机。评分核在一维十六条控制体上比较开环、腔温比例、无探针与对偶。对偶策略在 150–190 s 做一次固定探针。停机进度只在停机时刻读取。设计线 \(\alpha_m=0.85\)（恒温冷点 \(F=3.794\,\mathrm{min}\)）是比较零点，不是认证阈值。
 
 ## 目录
 
-- `outline/` 规划稿。源文件 `main.tex`，已编译的 PDF 是 `outline.pdf`。
-- `monograph/` 正文。源文件 `book.tex`，PDF 是 `book.pdf`，同一正文的 Word 是 `ACTS-MCDT.docx`。公式编号以 PDF 为准。
-- `refs.tex` 规划稿和正文共用的文献入口。
-- `src/acts_mcdt/` 评分核。一维十六个控制体，不改物理后再跑战役。
+- `src/acts_mcdt/` 评分核。一维十六个控制体，时间步 2 s，时域 55 min。
 - `tests/` 命题核对。
-- `scripts/run_campaign.py` 写出 S1 的 `results/logs/` 和由该日志画出的图。这 19440 行已经落盘。
-- `scripts/run_s0_s2.py` 写出网格减半的 18 条配对和边界扫描的 480 行，以及 `S0_grid.png`、`D15_occlusion.png`、`S2_factors.png`。
-- `scripts/build_docx.py` 由正文源文件生成 `monograph/ACTS-MCDT.docx`。
-- `results/logs/` 战役摘要、命题核对和种子 7 轨迹。
-- `results/figures/` 由这些日志画出的图，以及演示截屏。
-- `demo/` 浏览器演示。十六条控制体与种子 7 的日志对齐到写入精度。
+- `scripts/` 战役、图件、Word 导出与演示轨迹导出。
+- `results/logs/` 已落盘的战役摘要与种子 7 轨迹。正文数字以这里为准。
+- `results/figures/paper/` 正文引用的图；`results/figures/study/` 档位研究附图。
+- `monograph/` 正文。源文件 `book.tex` 与 `ch01.tex`–`ch15.tex`。PDF 用 `xelatex -jobname=ACTS-MCDT` 生成 `ACTS-MCDT.pdf`。Word 由该 PDF 逐页嵌入，版式与 PDF 相同。
+- `demo/` 浏览器演示。读取 `demo/public/catalog.json`，不在浏览器里重跑积分。`catalog.json` 必须留在 `demo/public/`。
+- `outline/` 规划稿，不进入提交 PDF。
 - `external/gab-fit.xlsx` 已读入的公开等温线拟合。
-- `requirements.txt` 评分核、作图和 Word 生成用的 Python 依赖。
+- `.github/workflows/pages.yml` 把 `demo/` 构建并发布到 GitHub Pages。
+- 提交副本：仓库根目录 `20241334庄颂信息2402.pdf` 与 `.docx`。课程中文文件名副本同时写在仓库根目录与 `monograph/`。
 
 ## 编译正文
 
 在 `monograph` 下执行两次：
 
 ```
-xelatex -interaction=nonstopmode book.tex
-xelatex -interaction=nonstopmode book.tex
+xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
+xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
 ```
 
-Word 在仓库根目录生成：
+Word 必须在 PDF 之后生成，按页嵌入该 PDF：
 
 ```
 python scripts/build_docx.py
 ```
 
-规划稿在 `outline` 下对 `main.tex` 执行两次 XeLaTeX。它引用上一级的 `refs.tex`。
+提交文件名：`20241334庄颂信息2402.pdf` 与 `.docx`（由脚本同时写出课程中文文件名副本）。
 
 ## 演示
 
-```
-cd demo
-npm install
-npm run dev
-```
+本地：仓库根目录执行 `.\start-demo.ps1` 或双击 `start-demo.bat`。默认条件是种子 7、肉糜、厚度 30 mm、初温 8 °C、含水 0.72、组合档、对偶策略。1680 s 冷点 70.21 °C、进度 0.558；停机约 1866 s，\(e_\alpha=+0.145\)。
 
-默认条件是种子 7、肉糜、厚度 30 mm、初温 8 °C、含水 0.72。页面上的表面、冷点和估计与 `results/logs/demo_seed7_dual.csv` 一致。`node check_seed7.mjs` 用相对路径读这张表。
+页面上可以切换蒸/烤/组合与四种策略，叠一条对照策略（虚线冷点与进度），把门打开或关上，并跳到起始、探针窗、1680 s 品质段和停机。15/30/50 mm 三档芯片只切换已经写出的数组。左栏给出本条轨迹的 \(e_\alpha\) 与探针是否把方差降到 0.224；页面按 8 s 抽样显示停机 1864 s，核日志是 1866 s。红虚线是设计线 0.85。开门只改铰链，不改已经写出的温度数组。
+
+静态部署：推送到 `main` 后，Actions 工作流构建 `demo/` 并发布。仓库 Settings → Pages 选择 GitHub Actions 作为源。公开地址
+
+https://2711944586.github.io/xxgz/
+
+仓库 https://github.com/2711944586/xxgz 。`vite.config.js` 使用相对基址 `./`。
+
+## 数字从哪里来
+
+S1 共 19440 行，档位研究 11664 行。种子 7、肉糜、30 mm、组合、对偶：方差 192 s 由 0.64 降到 0.224；停机 1866 s，能量 1864。50 mm 对偶组合中位 \(e_\alpha=-0.782\)，55 min 时 Fourier 数 0.12。网格从 8 到 16 会把 30 mm 对偶停机偏差翻号（\(\Delta e\approx 0.227\)）。加热器平衡点 196.5 °C，削减阈值 230 °C。
+
+重跑战役调用 `scripts/run_campaign.py` 与 `scripts/run_study.py`，耗时以小时计。图件重绘：`python scripts/draw_expansion.py`；只重绘截面、S2 横条与 Fo/Bi 时加 `--fast`。
 
 ## 边界
 
-19440 行是同一数值过程的样本。另有六份日志：`s1_wide.jsonl` 是 648 个格子各 30000 个种子的分位；`ensemble.json` 是同一核的成员散布，没有分析步；`t2_section.json` 是 24 乘 16 的显式截面；`t3_boundary.json` 是通道关联，没有接进核；`mpc_horizon.json` 是一个状态下 60 秒、18 个加热点的搜索，不是 CasADi；`operators.json` 是两节点教师上的主干加分支，留出均方误差没有收紧，不是 Fourier 算子或 DeepONet。设计线 0.85 不是认证阈值。
+公开等温线的清洁子集以淀粉类为主，肉类条数为 0，测定多数不超过 60 °C。\(r_{\mathrm{proxy}}\) 使用表面与冷点的真值温差；实施到机器上要改成可安装通道。微生物初始数量不进入状态。设计线不是认证阈值。
