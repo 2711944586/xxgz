@@ -1,7 +1,7 @@
 \chapter{实现与交互演示}
 \label{ch:demo}
 
-正文中的轨迹、交叉表和命题核对来自同一套 Python 数值核。交互页面读取该核已经写出的状态流，在三维腔体里同时显示四个边界、食品温度色带、因果路径的显示量和安全投影前后的加热。页面读取已经写出的数组，着色器颜色是两个标量的插值。演示的用途是把交叉表读回可见零件：加热管发光、蒸汽从喷嘴喷出、风机叶片加速、排汽百叶张开，同时底部曲线给出表面、冷点、估计和进度。数字与附录\ref{app:trace} 的抽样一致。
+正文中的轨迹、交叉表和命题核对来自同一套数值核。交互页面读取该核已经写出的状态流，在三维腔体里同时显示四个边界、食品温度色带、因果路径的显示量和安全投影前后的加热。着色器颜色是两个标量的插值，不是现场积分。把交叉表读回可见零件之后，加热管发光、蒸汽从喷嘴喷出、风机叶片加速、排汽百叶张开，底部曲线同时给出表面、冷点、估计和进度。数字与附录\ref{app:trace} 的抽样一致。
 
 \section{数值核}
 
@@ -35,15 +35,13 @@ T_i=T_s-(T_s-T_{\mathrm{cold}})\,u_i^{1.15},\qquad u_i=i/15
 
 图\ref{fig:demo}给出组合档、对偶策略、30 mm 的三帧。厚度切到 50 mm 时，同一策略在时域终点进度只有 0.068，色带冷点一侧几乎仍停在初温附近：探针已经把方差降到 0.224，导热时间尺度没有走完，见图\ref{fig:demothick}。对照开环时，1170 s 加热切断，冷点停在 \(16^\circ\mathrm{C}\) 量级。停机帧把进度送到上沿附近：页面按 8 s 抽样取切入保持前一帧，显示 1864 s、\(e_{\alpha}=+0.145\)，核日志的停机是 1866 s，见图\ref{fig:demostop}。15 mm / 30 mm / 50 mm 三档芯片只切换已经写出的数组。这三次切换把第\ref{ch:result}章的厚度符号和第\ref{ch:atlas}章的策略轨迹读回同一腔体。
 
-\section{本地启动与静态部署}
+\section{交互页与导出字段}
 
-仓库根目录提供 \texttt{start-demo.bat} 与 \texttt{start-demo.ps1}，\texttt{demo/start.bat} 是同一入口。脚本进入 \texttt{demo/}，检测 Node.js，若缺少依赖则先安装，再启动开发服务器。浏览器打开终端打印的本地地址。页面读取 \texttt{demo/public/catalog.json}，资源路径使用相对基址 \texttt{./}，以便同一套构建同时用于本地预览和 GitHub Pages。
-
-静态页由 GitHub Actions 在推送到 \texttt{main} 时构建：工作流 \path{.github/workflows/pages.yml} 在 \texttt{demo/} 执行 \texttt{npm ci} 与 \texttt{vite build}，写入 \texttt{dist/.nojekyll}，再把 \texttt{demo/dist} 发布到 Pages。公开地址为
+交互页读取已经写出的 \texttt{catalog.json}，不在浏览器里重跑十六条积分。对照、跳转、厚度三档和开门是对同一数组的读法，不是第二条求解器。公开地址为
 \begin{center}
 \url{https://2711944586.github.io/xxgz/}
 \end{center}
-仓库本身是 \url{https://github.com/2711944586/xxgz}。页面顶栏重复写出该地址。仓库 Settings \(\to\) Pages 选择 GitHub Actions 作为源之后，工作流才会真正发布。页面不在浏览器里重跑十六条积分，只回放已经写出的状态流；对照、跳转、厚度三档和开门是对同一数组的读法，不是第二条求解器。
+页面顶栏重复写出该地址。默认条件对应种子 7、肉糜 30 mm、组合档、对偶策略；厚度滑条只切换所读数组和几何缩放。
 
 页面导出二十二列，顺序是时间、表面温度、冷点、估计、含水、进度、热阻代理、方差、加热指令、加热请求、蒸汽、风机、排汽、模式、加热器温度、水位、腔温、腔湿、壳体、路径 A/B/C。字段名写成一行就是
 \begin{quote}\small\ttfamily\raggedright
@@ -51,9 +49,7 @@ time, t1, t2, hat, m, alpha, rHat, varR, heat, heatReq, steam, fan, exhaust, mod
 \end{quote}
 步长 \(2\,\mathrm{s}\)，每四步记一行，间隔 \(8\,\mathrm{s}\)，默认时长 55 min，与种子 7 的 Python 轨迹相同，共 414 行。\(\texttt{t2}\) 是十六条里更新前的最低温度，\(\texttt{hat}\) 才是估计。两列都在，不能把冷点列当成估计。Python 的 \texttt{demo\_seed7\_dual.csv} 有平均含水，没有加热器。两边共有的表面、冷点和估计，在种子 7、肉糜、30 mm、初温 \(8^\circ\mathrm{C}\)、含水 0.72、对偶策略上，最大差低于 \(5\times 10^{-6}\,\mathrm{K}\)。差来自 CSV 保留五位小数。浏览器上改过厚度或策略之后的导出，没有再和 Python 对过。能量若从浏览器的加热列重算，得到的是指令乘 \(8\,\mathrm{s}\) 的展示和。规格中的 \(e_\alpha\) 仍是停止时刻的 \(\alpha_m-0.85\)。主表只引用第\ref{ch:result}章。
 
-\section{软件构成}
-
-数值核与图件使用 Python 与 Matplotlib。文稿使用 ctexbook 与 XeLaTeX。演示使用 React、Vite 与 Three.js r170。三者共用种子、厚度和策略名称，求解器只在 Python 核里。公式编号以 PDF 为准。Word 与 PDF 由同一份 XeLaTeX 成稿导出：PDF 是权威版式，Word 按页嵌入该 PDF 的页面图像，保证版心、图、表与分页一致。截屏脚本 \texttt{demo/shot.mjs} 在本地 5183 端口拉起页面，分别捕获起始帧、探针窗第 20 帧（约 160 s）、晚期第 210 帧（1680 s）、开门全貌、对照开环的叠线、停机帧以及 50 mm 时域终点。晚期帧对应品质加热、冷点 \(70.21^\circ\mathrm{C}\)，还没有切入保持。
+求解器只在数值核里。页面与附录共用种子、厚度和策略名称；图\ref{fig:demo}--\ref{fig:demothick} 取自同一条状态流的起始帧、探针窗、品质段、开门全貌、对照开环、停机附近以及 50 mm 时域终点。晚期帧对应品质加热、冷点 \(70.21^\circ\mathrm{C}\)，还没有切入保持。
 
 \begin{figure}[htbp]
 \centering
