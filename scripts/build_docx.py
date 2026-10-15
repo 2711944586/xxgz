@@ -887,6 +887,82 @@ def make_watermark(dest: Path) -> None:
     Image.merge("RGBA", (red, green, blue, alpha)).save(dest, "PNG")
 
 
+def add_body_header_bar(header) -> None:
+    leftover = list(header.paragraphs)
+    table = header.add_table(rows=1, cols=2, width=Mm(160))
+    tbl = table._tbl
+    if leftover:
+        leftover[0]._p.addprevious(tbl)
+        for paragraph in leftover:
+            if paragraph._p.getparent() is not None and paragraph._p.getparent().tag != qn("w:tc"):
+                delete_paragraph(paragraph)
+    tbl_pr = tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        tbl.insert(0, tbl_pr)
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    tbl_w.set(qn("w:type"), "pct")
+    tbl_w.set(qn("w:w"), "5000")
+    tbl_ind = tbl_pr.find(qn("w:tblInd"))
+    if tbl_ind is None:
+        tbl_ind = OxmlElement("w:tblInd")
+        tbl_pr.append(tbl_ind)
+    tbl_ind.set(qn("w:w"), "0")
+    tbl_ind.set(qn("w:type"), "dxa")
+    layout = tbl_pr.find(qn("w:tblLayout"))
+    if layout is None:
+        layout = OxmlElement("w:tblLayout")
+        tbl_pr.append(layout)
+    layout.set(qn("w:type"), "fixed")
+    set_invisible_table_borders(tbl_pr)
+    borders = tbl_pr.find(qn("w:tblBorders"))
+    bottom = borders.find(qn("w:bottom")) if borders is not None else None
+    if bottom is None:
+        bottom = OxmlElement("w:bottom")
+        if borders is not None:
+            borders.append(bottom)
+    bottom.set(qn("w:val"), "single")
+    bottom.set(qn("w:sz"), "8")
+    bottom.set(qn("w:space"), "4")
+    bottom.set(qn("w:color"), "000000")
+    mar = tbl_pr.find(qn("w:tblCellMar"))
+    if mar is None:
+        mar = OxmlElement("w:tblCellMar")
+        tbl_pr.append(mar)
+    for edge, val in (("top", "0"), ("left", "0"), ("bottom", "40"), ("right", "0")):
+        node = mar.find(qn(f"w:{edge}"))
+        if node is None:
+            node = OxmlElement(f"w:{edge}")
+            mar.append(node)
+        node.set(qn("w:w"), val)
+        node.set(qn("w:type"), "dxa")
+    for index, cell in enumerate((table.cell(0, 0), table.cell(0, 1))):
+        tc_pr = cell._tc.get_or_add_tcPr()
+        tc_w = tc_pr.find(qn("w:tcW"))
+        if tc_w is None:
+            tc_w = OxmlElement("w:tcW")
+            tc_pr.append(tc_w)
+        tc_w.set(qn("w:type"), "pct")
+        tc_w.set(qn("w:w"), "2500")
+        paragraph = cell.paragraphs[0]
+        set_paragraph_layout(
+            paragraph,
+            justify=False,
+            first_line_chars=0,
+            before=0,
+            after=0,
+            line=240,
+        )
+        paragraph.alignment = (
+            WD_ALIGN_PARAGRAPH.LEFT if index == 0 else WD_ALIGN_PARAGRAPH.RIGHT
+        )
+        run = paragraph.add_run(HEADER_LEFT if index == 0 else HEADER_RIGHT)
+        run_font(run, FANG, 9)
+
+
 def add_watermark(section, image_path: Path) -> None:
     header = section.header
     paragraph = header.add_paragraph()
@@ -1022,18 +1098,7 @@ def setup_headers(doc: Document, watermark: Path) -> None:
     body.footer.is_linked_to_previous = False
     clear_container(body.header)
     clear_container(body.footer)
-
-    header_p = body.header.paragraphs[0] if body.header.paragraphs else body.header.add_paragraph()
-    header_p.paragraph_format.first_line_indent = Pt(0)
-    header_p.paragraph_format.space_before = Pt(0)
-    header_p.paragraph_format.space_after = Pt(4)
-    header_p.paragraph_format.tab_stops.add_tab_stop(Cm(16), WD_TAB_ALIGNMENT.RIGHT)
-    left = header_p.add_run(HEADER_LEFT)
-    run_font(left, FANG, 9)
-    header_p.add_run("\t")
-    right = header_p.add_run(HEADER_RIGHT)
-    run_font(right, FANG, 9)
-    add_bottom_border(header_p, "8")
+    add_body_header_bar(body.header)
     add_watermark(body, watermark)
 
     footer_p = body.footer.paragraphs[0] if body.footer.paragraphs else body.footer.add_paragraph()
