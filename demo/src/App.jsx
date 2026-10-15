@@ -28,7 +28,7 @@ function scoreOf(rows) {
   };
 }
 
-function Chart({ rows, compareRows, index }) {
+function Chart({ rows, compareRows, index, stopS }) {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -163,6 +163,24 @@ function Chart({ rows, compareRows, index }) {
       dash(compareRows.map((r) => r.alpha), "#9a8a68", yA);
     }
 
+    if (stopS != null && stopS >= t0 && stopS <= t1) {
+      const xs = xOf(stopS);
+      ctx.save();
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = "#7a9e7e";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(xs, padT);
+      ctx.lineTo(xs, padT + plotH);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#7a9e7e";
+      ctx.font = "10px IBM Plex Mono, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("停机", xs, padT - 4);
+    }
+
     const x = xOf(rows[Math.min(index, rows.length - 1)].time);
     ctx.strokeStyle = "#ece7dc";
     ctx.lineWidth = 1;
@@ -170,7 +188,7 @@ function Chart({ rows, compareRows, index }) {
     ctx.moveTo(x, padT);
     ctx.lineTo(x, padT + plotH);
     ctx.stroke();
-  }, [rows, compareRows, index]);
+  }, [rows, compareRows, index, stopS]);
   return <canvas ref={ref} className="chart" />;
 }
 
@@ -255,6 +273,13 @@ export default function App() {
   const probing = frame && frame.time >= 150 && frame.time < 190;
   const cookLabel = { steam: "蒸", bake: "烤", combi: "组合" }[cook];
   const policyLabel = { dual: "对偶", mpc: "无探针", open: "开环", pid: "腔温比例" }[policy];
+  const mm = Math.round(length * 1000);
+  const stopS = score ? score.stopS : null;
+  const varText = score
+    ? (score.probed
+      ? `方差 ${score.varEnd.toFixed(3)}`
+      : `仍为先验 ${score.varEnd.toFixed(3)}`)
+    : "—";
 
   return (
     <div className="app">
@@ -271,10 +296,46 @@ export default function App() {
           <span className="chip">种子 7 · 肉糜 · 8 °C · 含水 0.72</span>
           <span className={`chip ${cook === "steam" ? "steam" : "on"}`}>{cookLabel}</span>
           <span className="chip">{policyLabel}</span>
+          <span className="chip">{mm} mm</span>
           {probing && <span className="chip steam">探针窗</span>}
-          {frame && <span className="chip">{MODES[frame.mode] || "—"}</span>}
+          {frame && <span className={`chip ${frame.mode === 1 ? "steam" : frame.mode === 2 ? "hold" : ""}`}>{MODES[frame.mode] || "—"}</span>}
         </div>
       </header>
+
+      <div className="fascia" aria-live="polite">
+        <div className="fascia-cell">
+          <span>本帧</span>
+          <b>{frame ? `${Math.round(frame.time)} s` : "—"}</b>
+        </div>
+        <div className="fascia-cell">
+          <span>冷点</span>
+          <b>{frame ? `${frame.t2.toFixed(1)} °C` : "—"}</b>
+        </div>
+        <div className="fascia-cell">
+          <span className="keep-case">进度 α</span>
+          <b className={frame && frame.alpha >= 0.85 ? "over" : "under"}>
+            <i className={`led ${frame && frame.alpha >= 0.85 ? "ok" : "off"}`} />
+            {frame ? frame.alpha.toFixed(3) : "—"}
+          </b>
+        </div>
+        <div className="fascia-cell">
+          <span>停机</span>
+          <b>{stopS != null ? `${Math.round(stopS)} s` : "—"}</b>
+        </div>
+        <div className="fascia-cell">
+          <span>相对 0.85</span>
+          <b className={score && score.eAlpha >= 0 ? "over" : "under"}>
+            {score ? `${score.eAlpha >= 0 ? "+" : ""}${score.eAlpha.toFixed(3)}` : "—"}
+          </b>
+        </div>
+        <div className="fascia-cell">
+          <span>热阻方差</span>
+          <b className={frame && frame.varR < 0.3 ? "over" : "under"}>
+            <i className={`led ${frame && frame.varR < 0.3 ? "ok" : "off"}`} />
+            {frame ? frame.varR.toFixed(3) : "—"}
+          </b>
+        </div>
+      </div>
 
       {error && <p className="err">{error}</p>}
 
@@ -304,9 +365,9 @@ export default function App() {
           </select>
           <label htmlFor="thick">厚度 {Math.round(length * 1000)} mm</label>
           <div className="events">
-            <button type="button" className="chip-btn" onClick={() => { setLength(0.015); setIndex(0); }}>15 mm</button>
-            <button type="button" className="chip-btn" onClick={() => { setLength(0.03); setIndex(0); }}>30 mm</button>
-            <button type="button" className="chip-btn" onClick={() => { setLength(0.05); setIndex(0); }}>50 mm</button>
+            <button type="button" className={`chip-btn ${length === 0.015 ? "active" : ""}`} onClick={() => { setLength(0.015); setIndex(0); }}>15 mm</button>
+            <button type="button" className={`chip-btn ${length === 0.03 ? "active" : ""}`} onClick={() => { setLength(0.03); setIndex(0); }}>30 mm</button>
+            <button type="button" className={`chip-btn ${length === 0.05 ? "active" : ""}`} onClick={() => { setLength(0.05); setIndex(0); }}>50 mm</button>
           </div>
           <input
             id="thick"
@@ -335,7 +396,7 @@ export default function App() {
             <button type="button" className="ghost" onClick={downloadAll} disabled={!frame}>
               导出 CSV
             </button>
-            <button type="button" className="ghost" onClick={() => jumpTo(1680)} disabled={!frame}>
+            <button type="button" className="ghost keep-case" onClick={() => jumpTo(1680)} disabled={!frame}>
               1680 s
             </button>
           </div>
@@ -343,32 +404,66 @@ export default function App() {
           <div className="events">
             <button type="button" className="chip-btn" onClick={() => jumpTo(0)}>起始</button>
             <button type="button" className="chip-btn" onClick={() => jumpTo(160)}>探针窗</button>
-            <button type="button" className="chip-btn" onClick={() => jumpTo(1680)}>品质段</button>
-            <button type="button" className="chip-btn" onClick={() => jumpTo(1866)}>停机</button>
+            <button type="button" className="chip-btn" onClick={() => jumpTo(1680)}>1680 s</button>
+            <button
+              type="button"
+              className="chip-btn"
+              onClick={() => { if (stopS != null) jumpTo(stopS); }}
+              disabled={stopS == null}
+            >
+              停机{stopS != null ? ` ${Math.round(stopS)} s` : ""}
+            </button>
           </div>
           {score && (
             <div className="verdict">
+              <div className="lamps" aria-label="两盏判断灯">
+                <div className={`lamp ${frame && frame.varR < 0.3 ? "on-ok" : "on-off"}`}>
+                  <i />
+                  <div>
+                    <small>热阻</small>
+                    <span>{frame && frame.varR < 0.3 ? "已见" : "先验"}</span>
+                  </div>
+                </div>
+                <div className={`lamp ${frame && frame.alpha >= 0.85 ? "on-ok" : "on-off"}`}>
+                  <i />
+                  <div>
+                    <small>进度</small>
+                    <span>{frame && frame.alpha >= 0.85 ? "已到" : "未到"}</span>
+                  </div>
+                </div>
+              </div>
               <div className="row"><span>停机</span><span>{Math.round(score.stopS)} s</span></div>
               <div className="row"><span>e<sub>α</sub></span><span>{score.eAlpha >= 0 ? "+" : ""}{score.eAlpha.toFixed(3)}</span></div>
-              <div className="row"><span>探针</span><span>{score.probed ? "方差 0.224" : "仍为先验 0.64"}</span></div>
+              <div className="row"><span>探针</span><span>{varText}</span></div>
               <div className="row"><span>相对 0.85</span><span>{score.eAlpha >= 0 ? "越过设计线" : "低于设计线"}</span></div>
+              <div className="row"><span>停机冷点</span><span>{score.tCoreStop.toFixed(1)} °C</span></div>
+              <div className="row"><span>停机进度</span><span>{score.alphaStop.toFixed(3)}</span></div>
             </div>
           )}
           <p className="note">
-            页面读取数值核已经写出的状态流，不在浏览器里重跑积分。对照策略以虚线叠在底部曲线上。开门只改铰链，不改温度数组。红虚线是设计线 α=0.85。
+            页面读取数值核已经写出的状态流，不在浏览器里重跑积分。对照策略以虚线叠在底部曲线上。开门只改铰链，不改温度数组。红虚线是设计线 α=0.85。两盏灯跟本帧走：热阻是否已看见，进度是否越过 0.85。水位条只显示当前帧水箱液面。停机跳转到当前轨迹的评分时刻：30 mm 对偶组合约 1864 s，50 mm 为 3298 s。开局估计为负时 HUD 标为开局余量，来自先验热阻 5 的滞后上限。
           </p>
         </aside>
 
         <section className="panel viewport">
           <p className="panel-label" style={{ position: "absolute", zIndex: 2, left: 16, top: 10 }}>02 腔体</p>
-          <Scene frame={frame} length={length} doorOpen={doorOpen} />
+          <Scene frame={frame} length={length} doorOpen={doorOpen} cook={cook} />
           {frame && (
             <div className="hud">
+              <p className="hud-kicker keep-case">{cookLabel} · {policyLabel} · {mm} mm</p>
               <div>表面 <b>{frame.t1.toFixed(1)} °C</b></div>
               <div>冷点 <b>{frame.t2.toFixed(1)} °C</b></div>
-              <div>估计 <b>{frame.hat.toFixed(1)} °C</b></div>
-              <div>进度 <b>{frame.alpha.toFixed(3)}</b></div>
+              <div>
+                估计 <b>{frame.hat.toFixed(1)} °C</b>
+                {frame.hat < 0 ? <em className="hud-hint">开局余量</em> : null}
+              </div>
+              <div>进度 <b className={frame.alpha >= 0.85 ? "over" : ""}>{frame.alpha.toFixed(3)}</b></div>
               <div>时间 <b>{Math.round(frame.time)} s</b></div>
+              <div>模式 <b>{MODES[frame.mode] || "—"}</b></div>
+              <div className="hud-lamps" aria-hidden="true">
+                <span className={frame.varR < 0.3 ? "ok" : ""}>热阻{frame.varR < 0.3 ? "已见" : "先验"}</span>
+                <span className={frame.alpha >= 0.85 ? "ok" : ""}>进度{frame.alpha >= 0.85 ? "已到" : "未到"}</span>
+              </div>
             </div>
           )}
           <div className="legend">
@@ -380,22 +475,31 @@ export default function App() {
 
         <aside className="panel">
           <p className="panel-label">03 本帧</p>
+          {!frame && !error && <p className="note">正在读取 catalog.json …</p>}
           {frame && (
             <div className="kv">
               <div className="row"><span>含水</span><span>{frame.m.toFixed(3)}</span></div>
               <div className="row"><span>进度 α</span><span>{frame.alpha.toFixed(3)}</span></div>
               <div className="row"><span>热阻 / 方差</span><span>{frame.rHat.toFixed(2)} / {frame.varR.toFixed(3)}</span></div>
               <div className="row"><span>腔温 / 腔湿</span><span>{frame.cavT.toFixed(1)} °C / {frame.cavH.toFixed(2)}</span></div>
-              <div className="row"><span>水位</span><span>{frame.water.toFixed(2)}</span></div>
+              <div className="row tank-row">
+                <span>水位</span>
+                <span className="tank-read">
+                  <span className="tank" aria-hidden="true">
+                    <i style={{ height: `${Math.max(0, Math.min(1, frame.water)) * 100}%` }} />
+                  </span>
+                  <em>{frame.water.toFixed(2)}</em>
+                </span>
+              </div>
               <p className="panel-label">执行器</p>
               <Meter name="加热" value={frame.heat} />
               <Meter name="蒸汽" value={frame.steam} kind="steam" />
               <Meter name="风机" value={frame.fan / 1.3} kind="fan" />
               <Meter name="排汽" value={frame.exhaust} />
               <p className="panel-label">路径与投影</p>
-              <div className="row"><span>A 冷点潜热</span><span>{frame.pathA.toFixed(0)}</span></div>
-              <div className="row"><span>B 表面蒸发</span><span>{frame.pathB.toFixed(0)}</span></div>
-              <div className="row"><span>C 结壳热阻</span><span>{frame.pathC.toFixed(0)}</span></div>
+              <PathMeter name="A 冷点潜热" value={frame.pathA} max={220} kind="heat" />
+              <PathMeter name="B 表面蒸发" value={frame.pathB} max={2200} kind="steam" />
+              <PathMeter name="C 结壳热阻" value={frame.pathC} max={1} kind="fan" />
               <div className="row"><span>请求 → 指令</span><span>{frame.heatReq.toFixed(2)} → {frame.heat.toFixed(2)}</span></div>
               <div className="row"><span>加热器</span><span>{frame.heater.toFixed(1)} °C</span></div>
               {compareFrame && (
@@ -418,7 +522,7 @@ export default function App() {
       </main>
 
       <footer className="chartbar">
-        <Chart rows={rows} compareRows={compareRows} index={index} />
+        <Chart rows={rows} compareRows={compareRows} index={index} stopS={stopS} />
         <div className="chart-legend">
           <span><i className="dot" style={{ background: "#e07a3d" }} />表面温度</span>
           <span><i className="dot" style={{ background: "#7eb8c9" }} />冷点温度</span>
@@ -426,6 +530,7 @@ export default function App() {
           <span><i className="dot" style={{ background: "#c4a574" }} />进度 α（右轴）</span>
           {compare !== "none" && <span>虚线：对照冷点 / 进度</span>}
           <span>红虚线：设计线 0.85</span>
+          <span>绿虚线：当前轨迹停机</span>
         </div>
       </footer>
     </div>
@@ -438,6 +543,26 @@ function Meter({ name, value, kind }) {
     <div className="row">
       <span>{name}</span>
       <span className={`bar ${kind || ""}`}><i style={{ width: `${x * 100}%` }} /></span>
+    </div>
+  );
+}
+
+function formatPath(value) {
+  const a = Math.abs(value);
+  if (a >= 10) return value.toFixed(0);
+  if (a >= 1) return value.toFixed(1);
+  return value.toFixed(3);
+}
+
+function PathMeter({ name, value, max, kind }) {
+  const x = Math.max(0, Math.min(1, Math.abs(value) / (max || 1)));
+  return (
+    <div className="row path-row">
+      <span>{name}</span>
+      <span className="path-read">
+        <span className={`bar ${kind || ""}`}><i style={{ width: `${x * 100}%` }} /></span>
+        <em>{formatPath(value)}</em>
+      </span>
     </div>
   );
 }

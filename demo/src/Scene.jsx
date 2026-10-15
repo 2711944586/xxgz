@@ -56,26 +56,58 @@ function fasciaMap() {
   canvas.width = 1024;
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
-  const g = ctx.createLinearGradient(0, 0, 0, 128);
-  g.addColorStop(0, "#2a3238");
-  g.addColorStop(1, "#161b20");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1024, 128);
-  ctx.fillStyle = "#c4a574";
-  ctx.font = "600 22px 'IBM Plex Sans', 'Microsoft YaHei', sans-serif";
-  ctx.textAlign = "center";
-  ["加热", "蒸汽", "风机", "模式"].forEach((lab, i) => {
-    ctx.fillText(lab, 168 + i * 148, 108);
-  });
-  ctx.fillStyle = "#7eb8c9";
-  ctx.font = "600 26px 'IBM Plex Sans', sans-serif";
-  ctx.fillText("ACTS", 860, 52);
-  ctx.fillStyle = "#8d938b";
-  ctx.font = "16px 'IBM Plex Mono', monospace";
-  ctx.fillText("MCDT  2402", 860, 86);
+  const paint = (frame) => {
+    const g = ctx.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0, "#2a3238");
+    g.addColorStop(1, "#161b20");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 1024, 128);
+    ctx.fillStyle = "rgba(196, 165, 116, 0.18)";
+    ctx.fillRect(0, 0, 1024, 1);
+    ctx.fillStyle = "#c4a574";
+    ctx.font = "600 22px 'IBM Plex Sans', 'Microsoft YaHei', sans-serif";
+    ctx.textAlign = "center";
+    ["加热", "蒸汽", "风机", "模式"].forEach((lab, i) => {
+      ctx.fillText(lab, 168 + i * 148, 108);
+    });
+    ctx.fillStyle = "#7eb8c9";
+    ctx.font = "600 26px 'IBM Plex Sans', sans-serif";
+    ctx.fillText("ACTS", 860, 38);
+    ctx.fillStyle = "#8d938b";
+    ctx.font = "15px 'IBM Plex Mono', monospace";
+    ctx.fillText("MCDT  2402", 860, 62);
+    if (frame) {
+      ctx.fillStyle = frame.alpha >= 0.85 ? "#7a9e7e" : "#c4a574";
+      ctx.font = "600 18px 'IBM Plex Mono', monospace";
+      ctx.fillText(`${Math.round(frame.time)} s  α ${frame.alpha.toFixed(3)}`, 860, 86);
+      ctx.fillStyle = frame.varR < 0.3 ? "#7a9e7e" : "#c45c4a";
+      ctx.font = "500 13px 'IBM Plex Mono', monospace";
+      ctx.fillText(`var ${frame.varR.toFixed(3)}`, 860, 108);
+      ctx.beginPath();
+      ctx.fillStyle = frame.varR < 0.3 ? "#7a9e7e" : "#c45c4a";
+      ctx.arc(792, 86, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = frame.alpha >= 0.85 ? "#7a9e7e" : "#c45c4a";
+      ctx.arc(792, 106, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#8d938b";
+      ctx.font = "500 11px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("R", 804, 90);
+      ctx.fillText("α", 804, 110);
+      ctx.textAlign = "center";
+    } else {
+      ctx.fillStyle = "#8d938b";
+      ctx.font = "16px 'IBM Plex Mono', monospace";
+      ctx.fillText("待机", 860, 92);
+    }
+  };
+  paint(null);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
+  tex.userData = { paint, canvas };
   return tex;
 }
 
@@ -176,18 +208,35 @@ function makeCavity() {
   addMesh(door, new THREE.TorusGeometry(0.05, 0.008, 8, 20), brass, 0.36, 0.15, 0.85, 0, 0, Math.PI / 2);
   group.add(door);
 
+  const fasciaTex = fasciaMap();
   const fasciaMat = enamel.clone();
-  fasciaMat.map = fasciaMap();
+  fasciaMat.map = fasciaTex;
   fasciaMat.roughness = 0.48;
   addMesh(group, new RoundedBoxGeometry(5.18, 0.44, 0.56, 2, 0.03), fasciaMat, 0, 2.99, 1.22);
+  const knobs = [];
   for (let i = 0; i < 4; i++) {
     const x = -1.55 + i * 0.74;
-    addMesh(group, new THREE.CylinderGeometry(0.075, 0.075, 0.055, 24), chrome, x, 3.2, 1.4);
-    addMesh(group, new THREE.CylinderGeometry(0.048, 0.048, 0.042, 18), brass, x, 3.24, 1.4);
-    addMesh(group, new THREE.CylinderGeometry(0.012, 0.012, 0.03, 10), dark, x, 3.27, 1.4);
+    const knob = new THREE.Group();
+    knob.position.set(x, 3.22, 1.4);
+    addMesh(knob, new THREE.CylinderGeometry(0.075, 0.075, 0.055, 24), chrome, 0, -0.02, 0);
+    addMesh(knob, new THREE.CylinderGeometry(0.048, 0.048, 0.042, 18), brass, 0, 0.02, 0);
+    addMesh(knob, new THREE.CylinderGeometry(0.012, 0.012, 0.038, 10), dark, 0, 0.04, 0.018, 0.55, 0, 0);
+    group.add(knob);
+    knobs.push(knob);
   }
   addMesh(group, new THREE.BoxGeometry(1.22, 0.18, 0.045), metal("#12181c", 0.18, 0.32), 1.62, 3.01, 1.5);
-  addMesh(group, new THREE.BoxGeometry(0.92, 0.09, 0.02), metal("#7eb8c4", 0.2, 0.28, 0.6), 1.62, 3.01, 1.53);
+  const screen = addMesh(group, new THREE.BoxGeometry(0.92, 0.09, 0.02), metal("#7eb8c4", 0.2, 0.28, 0.6), 1.62, 3.01, 1.53);
+  const led = addMesh(
+    group,
+    new THREE.CylinderGeometry(0.018, 0.018, 0.012, 12),
+    new THREE.MeshStandardMaterial({ color: "#7a9e7e", emissive: "#7a9e7e", emissiveIntensity: 0.8 }),
+    2.18,
+    3.12,
+    1.48,
+    Math.PI / 2,
+    0,
+    0,
+  );
 
   const heatMat = new THREE.MeshStandardMaterial({
     color: "#b85a32",
@@ -378,7 +427,7 @@ function makeCavity() {
     addMesh(group, new THREE.BoxGeometry(0.06, 0.03, 0.08), brass, 1.78, 0.52 + i * 0.42, 0.92);
   }
 
-  return { group, coilMat: heatMat, blades, vent, jet, lamp, door, water };
+  return { group, coilMat: heatMat, blades, vent, jet, lamp, door, water, knobs, screen, led, fasciaMap: fasciaTex };
 }
 
 function STEAM_LEVEL() {
@@ -452,7 +501,7 @@ function makeSteam() {
   return { points, seeds, pos };
 }
 
-export default function Scene({ frame, length = 0.03, doorOpen = true }) {
+export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "combi" }) {
   const host = useRef(null);
   const state = useRef(null);
 
@@ -470,11 +519,11 @@ export default function Scene({ frame, length = 0.03, doorOpen = true }) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#101418");
-    scene.fog = new THREE.Fog("#101418", 9.5, 16);
+    scene.fog = new THREE.Fog("#101418", 12.5, 22);
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture;
 
-    const camera = new THREE.PerspectiveCamera(30, (el.clientWidth || 760) / (el.clientHeight || 520), 0.1, 40);
+    const camera = new THREE.PerspectiveCamera(34, (el.clientWidth || 760) / (el.clientHeight || 520), 0.1, 40);
     const hemi = new THREE.HemisphereLight(0xf4efe6, 0x2c3338, 0.5);
     const key = new THREE.DirectionalLight(0xfff3e4, 1.12);
     key.position.set(3.6, 5.2, 4.6);
@@ -514,10 +563,10 @@ export default function Scene({ frame, length = 0.03, doorOpen = true }) {
     const steam = makeSteam();
     scene.add(steam.points);
 
-    const target = new THREE.Vector3(0, 1.22, 0.1);
-    let yaw = 0.52;
-    let pitch = 0.2;
-    let dist = 6.55;
+    const target = new THREE.Vector3(0.04, 1.36, 0.22);
+    let yaw = -0.36;
+    let pitch = 0.27;
+    let dist = 7.85;
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
@@ -530,6 +579,17 @@ export default function Scene({ frame, length = 0.03, doorOpen = true }) {
       camera.lookAt(target);
     };
     place();
+    window.__actsCam = {
+      set(nextYaw, nextPitch, nextDist) {
+        if (Number.isFinite(nextYaw)) yaw = nextYaw;
+        if (Number.isFinite(nextPitch)) pitch = nextPitch;
+        if (Number.isFinite(nextDist)) dist = nextDist;
+        place();
+      },
+      get() {
+        return { yaw, pitch, dist };
+      },
+    };
 
     const onDown = (ev) => {
       dragging = true;
@@ -643,8 +703,32 @@ export default function Scene({ frame, length = 0.03, doorOpen = true }) {
     if (s.cavity.door) {
       s.cavity.door.rotation.y = doorOpen ? -0.72 : 0;
     }
+    if (s.cavity.knobs) {
+      const cookAngle = { steam: 0.4, bake: 2.2, combi: 4.1 }[cook] || 4.1;
+      s.cavity.knobs[0].rotation.y = frame.heat * 4.4;
+      s.cavity.knobs[1].rotation.y = frame.steam * 4.4;
+      s.cavity.knobs[2].rotation.y = (frame.fan / 1.3) * 4.4;
+      s.cavity.knobs[3].rotation.y = cookAngle;
+    }
+    if (s.cavity.led?.material) {
+      const probingNow = frame.time >= 150 && frame.time < 190;
+      const color = probingNow ? "#7eb8c9" : frame.mode === 2 ? "#7a9e7e" : "#e07a3d";
+      s.cavity.led.material.color.set(color);
+      s.cavity.led.material.emissive.set(color);
+      s.cavity.led.material.emissiveIntensity = 0.55 + 0.7 * Math.max(frame.heat, frame.steam);
+    }
+    if (s.cavity.screen?.material) {
+      s.cavity.screen.material.emissive = s.cavity.screen.material.emissive || new THREE.Color("#7eb8c4");
+      s.cavity.screen.material.emissive.set(frame.mode === 1 ? "#7eb8c9" : "#c4a574");
+      s.cavity.screen.material.emissiveIntensity = 0.25 + 0.35 * (frame.mode === 1 ? 1 : frame.heat);
+    }
+    const fasciaTex = s.cavity.fasciaMap;
+    if (fasciaTex?.userData?.paint) {
+      fasciaTex.userData.paint(frame);
+      fasciaTex.needsUpdate = true;
+    }
     s.renderer.render(s.scene, s.camera);
-  }, [frame, length, doorOpen]);
+  }, [frame, length, doorOpen, cook]);
 
-  return <div ref={host} style={{ height: "100%", minHeight: 460, position: "relative" }} />;
+  return <div ref={host} style={{ height: "100%", minHeight: 560, position: "relative" }} />;
 }

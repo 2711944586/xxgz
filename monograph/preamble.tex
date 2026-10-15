@@ -5,6 +5,7 @@
 \usepackage{amsmath,amssymb,amsthm,bm,mathtools}
 \usepackage{booktabs,longtable,tabularx,multirow,array}
 \usepackage{graphicx}
+\usepackage{eso-pic}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{tikz}
@@ -97,6 +98,27 @@
 \numberwithin{table}{chapter}
 \allowdisplaybreaks
 \graphicspath{{../results/figures/paper/}{../results/figures/study/}{../results/figures/}{figures/}}
+\newif\ifBodyBg
+\newcommand{\FullBleedPage}[1]{%
+  \clearpage
+  \thispagestyle{empty}
+  \AddToShipoutPictureBG*{%
+    \AtPageLowerLeft{%
+      \includegraphics[width=\paperwidth,height=\paperheight]{#1}%
+    }%
+  }%
+  \null
+}
+\AddToShipoutPictureBG{%
+  \ifBodyBg
+    \AtPageLowerLeft{%
+      \begin{tikzpicture}[overlay]
+        \node[anchor=south west, inner sep=0, opacity=0.13]
+          at (0,0) {\includegraphics[width=\paperwidth,height=\paperheight]{bg.png}};
+      \end{tikzpicture}%
+    }%
+  \fi
+}
 \setcounter{tocdepth}{2}
 \title{\bfseries 基于信息感知的智能蒸烤一体机}
 \author{庄颂}

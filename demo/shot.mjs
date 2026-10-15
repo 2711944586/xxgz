@@ -28,7 +28,7 @@ await new Promise((resolve, reject) => {
 });
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 1680, height: 1080 } });
 page.setDefaultTimeout(60000);
 await page.goto("http://127.0.0.1:5183/", { waitUntil: "networkidle" });
 await page.waitForSelector("#time");
@@ -37,7 +37,11 @@ await page.waitForFunction(() => {
   return el && Number(el.max) > 100;
 });
 await page.waitForSelector("canvas");
-await page.waitForTimeout(1800);
+await page.waitForTimeout(2200);
+await page.evaluate(() => {
+  window.__actsCam?.set(-0.36, 0.27, 7.85);
+});
+await page.waitForTimeout(400);
 
 async function setIndex(value) {
   await page.$eval("#time", (el, v) => {
@@ -72,16 +76,17 @@ await page.selectOption("#policy", "open");
 await setIndex(0);
 const doorBtn = page.getByRole("button", { name: /开门|关门/ });
 if ((await doorBtn.innerText()) === "开门") await doorBtn.click();
+await page.evaluate(() => window.__actsCam?.set(-0.28, 0.24, 8.15));
 await shot("E_demo_open.png");
+await page.evaluate(() => window.__actsCam?.set(-0.36, 0.27, 7.85));
 
 await page.selectOption("#policy", "dual");
 await page.selectOption("#compare", "open");
 await setIndex(lateIndex);
 await shot("E_demo_compare.png");
 
-const stopIndex = Math.min(max, 233);
 await page.selectOption("#compare", "none");
-await setIndex(stopIndex);
+await page.getByRole("button", { name: /停机/ }).click();
 await shot("E_demo_stop.png");
 
 await page.getByRole("button", { name: "50 mm" }).click();
