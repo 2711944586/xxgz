@@ -17,13 +17,14 @@ acts-mcdt/
 │   ├── book.tex            主文件（两次 xelatex，jobname=ACTS-MCDT）
 │   ├── ch01.tex–ch15.tex
 │   ├── refs.tex
-│   ├── figures/            封面 cover.png、正文水印 bg.png、封底 back.png
-│   └── ACTS-MCDT.pdf       编译产物，Word 按页嵌入此文件
+│   ├── figures/            400 DPI 封面 cover.png、水印 bg.png、封底 back.png
+│   ├── figures/_src_*.png  封面重绘用的原始海报
+│   └── ACTS-MCDT.pdf       编译产物
 ├── demo/                   浏览器实验台（Vite + Three.js）
 │   └── public/catalog.json 已写出的状态流，页面不重跑积分
 ├── src/acts_mcdt/          数值核
 ├── tests/                  命题核对
-├── scripts/                战役、绘图、导出 Word、导出演示轨迹
+├── scripts/                战役、绘图、封面、导出 Word
 ├── results/logs/           正文引用的数字以这里为准
 ├── results/figures/paper/  正文插图
 ├── results/figures/study/  档位研究附图
@@ -40,7 +41,7 @@ acts-mcdt/
 - `submit/20241334庄颂信息2402.pdf`
 - `submit/20241334庄颂信息2402.docx`
 
-Word 是 PDF 的逐页静图拷贝，页数与版式一致（封面、水印、封底都在）。
+PDF 由 XeLaTeX 排出。Word 按页把 PDF 做成 250 DPI JPEG，写入页眉浮动图（`wp:anchor`、`behindDoc`），并关闭 `doNotAutoCompressPictures`，避免把整页静图再压进正文。
 
 ## 编译正文
 
@@ -51,7 +52,13 @@ xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
 xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
 ```
 
-然后在仓库根目录导出 Word，并覆盖 `submit/`：
+封面、封底与正文水印若需重绘（A4、400 DPI、矢量文字）：
+
+```
+python scripts/draw_covers.py
+```
+
+源海报是 `monograph/figures/_src_cover.png` 等三张。然后在仓库根目录导出 Word，并覆盖 `submit/`：
 
 ```
 python scripts/build_docx.py
