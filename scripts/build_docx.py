@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import io
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -15,7 +16,7 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Mm, Pt
+from docx.shared import Cm, Emu, Mm, Pt, RGBColor
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,11 +36,19 @@ BODY_FIG_MAX = Mm(148)
 SONG = "宋体"
 HEI = "黑体"
 KAI = "楷体"
+FANG = "仿宋"
 TIMES = "Times New Roman"
 TOC_TAB_TWIPS = "9072"
 BODY_LINE = 360
 HEAD_LINE = 276
 TOC_LINE = 280
+A4_CX = 7560000
+A4_CY = 10692000
+DEMO_PX = (1680, 1445)
+DEMO_WIDTH = Mm(68)
+MATH_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
+DRAWING_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing"
+A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 HEADER_LEFT = "基于信息感知的智能蒸烤一体机"
 HEADER_RIGHT = "庄颂  20241334  信息2402"
 
@@ -314,9 +323,135 @@ def strip_layout(tex: str) -> str:
     tex = tex.replace(r"\operatorname{ess\,inf}", r"\mathrm{ess\,inf}")
     tex = tex.replace(r"\operatorname*{arg\,min}", r"\mathrm{arg\,min}")
     tex = tex.replace(r"\operatorname*{arg\,max}", r"\mathrm{arg\,max}")
+    tex = convert_subfigures(tex)
     tex = re.sub(r"\\begin\{subfigure\}(\[[^\]]*\])?\{[^}]*\}", r"\\begin{minipage}{0.48\\textwidth}", tex)
     tex = tex.replace(r"\end{subfigure}", r"\end{minipage}")
     return tex
+
+
+def extract_macro_arg(text: str, command: str) -> str | None:
+    token = "\\" + command
+    idx = 0
+    while True:
+        pos = text.find(token, idx)
+        if pos < 0:
+            return None
+        after = pos + len(token)
+        if after < len(text) and text[after].isalpha():
+            idx = pos + 1
+            continue
+        if after < len(text) and text[after] == "[":
+            depth = 1
+            after += 1
+            while after < len(text) and depth:
+                if text[after] == "[":
+                    depth += 1
+                elif text[after] == "]":
+                    depth -= 1
+                after += 1
+        if after >= len(text) or text[after] != "{":
+            idx = pos + 1
+            continue
+        after += 1
+        depth = 1
+        start = after
+        while after < len(text) and depth:
+            if text[after] == "{":
+                depth += 1
+            elif text[after] == "}":
+                depth -= 1
+            after += 1
+        return text[start : after - 1]
+
+
+def convert_subfigures(tex: str) -> str:
+    figure_re = re.compile(r"\\begin\{figure\}(?:\[[^\]]*\])?(.*?)\\end\{figure\}", re.S)
+    sub_re = re.compile(
+        r"\\begin\{subfigure\}(?:\[[^\]]*\])?\{[^}]*\}(.*?)\\end\{subfigure\}",
+        re.S,
+    )
+
+    def repl(match: re.Match[str]) -> str:
+        body = match.group(1)
+        subs = list(sub_re.finditer(body))
+        if not subs:
+            return match.group(0)
+        tail = body[subs[-1].end() :]
+        outer_cap = extract_macro_arg(tail, "caption")
+        chunks: list[str] = []
+        for sub in subs:
+            inner = sub.group(1)
+            image = extract_macro_arg(inner, "includegraphics")
+            caption = extract_macro_arg(inner, "caption")
+            if not image:
+                continue
+            chunks.append(r"\begin{center}")
+            chunks.append(rf"\includegraphics[width=0.48\textwidth]{{{image}}}")
+            chunks.append(r"\end{center}")
+            if caption:
+                chunks.append(r"\begin{center}")
+                chunks.append(r"{\small " + caption + "}")
+                chunks.append(r"\end{center}")
+        if outer_cap:
+            chunks.append(r"\begin{figure}[h]")
+            chunks.append(r"\centering")
+            chunks.append(rf"\caption{{{outer_cap}}}")
+            chunks.append(r"\end{figure}")
+        return "\n".join(chunks) + "\n"
+
+    return figure_re.sub(repl, tex)
+
+
+def strip_labels(text: str) -> str:
+    return re.sub(r"\\label\{[^}]+\}", "", text)
+
+
+def first_label_num(text: str, labels: dict[str, str]) -> str | None:
+    for key in re.findall(r"\\label\{([^}]+)\}", text):
+        if key in labels:
+            return labels[key]
+    return None
+
+
+def convert_equations(tex: str, labels: dict[str, str]) -> str:
+    def eq_repl(match: re.Match[str]) -> str:
+        star = match.group(1)
+        body = match.group(2).strip()
+        num = None if star else first_label_num(body, labels)
+        body_clean = strip_labels(body).strip()
+        if num:
+            return f"\\[\n{body_clean}\\qquad({num})\n\\]\n"
+        return f"\\[\n{body_clean}\n\\]\n"
+
+    tex = re.sub(
+        r"\\begin\{equation(\*?)\}(.*?)\\end\{equation\1\}",
+        eq_repl,
+        tex,
+        flags=re.S,
+    )
+
+    def align_repl(match: re.Match[str]) -> str:
+        star = match.group(1)
+        body = match.group(2)
+        lines = re.split(r"\\\\\s*", body.strip())
+        out_lines = []
+        for line in lines:
+            if not line.strip():
+                continue
+            num = None if star else first_label_num(line, labels)
+            clean = strip_labels(line).rstrip()
+            if num:
+                clean = f"{clean}\\qquad({num})"
+            out_lines.append(clean)
+        inner = " \\\\\n".join(out_lines)
+        return f"\\[\n\\begin{{aligned}}\n{inner}\n\\end{{aligned}}\n\\]\n"
+
+    return re.sub(
+        r"\\begin\{align(\*?)\}(.*?)\\end\{align\1\}",
+        align_repl,
+        tex,
+        flags=re.S,
+    )
 
 
 def flatten_tex() -> str:
@@ -332,6 +467,7 @@ def flatten_tex() -> str:
     labels, eq_ids = collect_labels(body)
     body = replace_cites(body, keys)
     body = replace_refs(body, labels, eq_ids)
+    body = convert_equations(body, labels)
     body = convert_bibliography(body)
     body = convert_tabularx(body)
     body = strip_layout(body)
@@ -535,6 +671,34 @@ def disable_auto_compress(doc: Document) -> None:
         spacing = OxmlElement("w:characterSpacingControl")
         settings.append(spacing)
     spacing.set(qn("w:val"), "compressPunctuation")
+    configure_math(doc)
+
+
+def configure_math(doc: Document) -> None:
+    settings = doc.settings.element
+    math_pr = settings.find(qn("m:mathPr"))
+    if math_pr is None:
+        math_pr = OxmlElement("m:mathPr")
+        settings.append(math_pr)
+    for child in list(math_pr):
+        math_pr.remove(child)
+    specs = (
+        ("m:mathFont", "Cambria Math"),
+        ("m:brkBin", "before"),
+        ("m:brkBinSub", "--"),
+        ("m:smallFrac", "off"),
+        ("m:dispDef", "on"),
+        ("m:lMargin", "0"),
+        ("m:rMargin", "0"),
+        ("m:defJc", "center"),
+        ("m:wrapIndent", "1440"),
+        ("m:intLim", "undOvr"),
+        ("m:naryLim", "undOvr"),
+    )
+    for tag, val in specs:
+        node = OxmlElement(tag)
+        node.set(qn("m:val"), val)
+        math_pr.append(node)
 
 
 def configure_hyperlink_style(doc: Document) -> None:
@@ -564,6 +728,13 @@ def run_font(run, east: str, size_pt: float | None = None, bold: bool | None = N
         run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
+    color = r_pr.find(qn("w:color"))
+    if color is None:
+        color = OxmlElement("w:color")
+        r_pr.append(color)
+    color.set(qn("w:val"), "000000")
+    if qn("w:themeColor") in color.attrib:
+        del color.attrib[qn("w:themeColor")]
 
 
 def prepend_run(paragraph, text: str, east: str, size_pt: float, bold: bool = False) -> None:
@@ -634,21 +805,34 @@ def add_page_field(paragraph) -> None:
     end.set(qn("w:fldCharType"), "end")
     paragraph.add_run()._r.append(end)
     for run in paragraph.runs:
-        run_font(run, SONG, 10.5)
+        run_font(run, FANG, 10.5)
 
 
-def inline_to_anchor(drawing, doc_pr_id: int, name: str) -> None:
+def inline_to_anchor(
+    drawing,
+    doc_pr_id: int,
+    name: str,
+    *,
+    behind: bool = True,
+    cx: str | None = None,
+    cy: str | None = None,
+    offset: int = 0,
+) -> None:
     inline = drawing.find(qn("wp:inline"))
     if inline is None:
         return
     extent = inline.find(qn("wp:extent"))
-    cx = extent.get("cx")
-    cy = extent.get("cy")
+    cx = cx or extent.get("cx")
+    cy = cy or extent.get("cy")
     doc_pr = inline.find(qn("wp:docPr"))
     cnv = inline.find(qn("wp:cNvGraphicFramePr"))
     graphic = inline.find(qn("a:graphic"))
-    doc_pr.set("id", str(doc_pr_id))
-    doc_pr.set("name", name)
+    if doc_pr is not None:
+        doc_pr.set("id", str(doc_pr_id))
+        doc_pr.set("name", name)
+    for ext in drawing.iter(f"{{{A_NS}}}ext"):
+        ext.set("cx", cx)
+        ext.set("cy", cy)
     anchor = OxmlElement("wp:anchor")
     for key, val in (
         ("distT", "0"),
@@ -656,8 +840,8 @@ def inline_to_anchor(drawing, doc_pr_id: int, name: str) -> None:
         ("distL", "0"),
         ("distR", "0"),
         ("simplePos", "0"),
-        ("relativeHeight", "0"),
-        ("behindDoc", "1"),
+        ("relativeHeight", "251658240"),
+        ("behindDoc", "1" if behind else "0"),
         ("locked", "1"),
         ("layoutInCell", "1"),
         ("allowOverlap", "1"),
@@ -669,12 +853,12 @@ def inline_to_anchor(drawing, doc_pr_id: int, name: str) -> None:
     pos_h = OxmlElement("wp:positionH")
     pos_h.set("relativeFrom", "page")
     off_h = OxmlElement("wp:posOffset")
-    off_h.text = "0"
+    off_h.text = str(offset)
     pos_h.append(off_h)
     pos_v = OxmlElement("wp:positionV")
     pos_v.set("relativeFrom", "page")
     off_v = OxmlElement("wp:posOffset")
-    off_v.text = "0"
+    off_v.text = str(offset)
     pos_v.append(off_v)
     new_extent = OxmlElement("wp:extent")
     new_extent.set("cx", cx)
@@ -771,27 +955,50 @@ def make_fullbleed_sectpr() -> OxmlElement:
     return sect_pr
 
 
-def add_full_page_picture(paragraph, image_path: Path) -> None:
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+def make_empty_bleed_paragraph(paragraph) -> None:
+    paragraph.clear()
+    set_paragraph_layout(
+        paragraph,
+        justify=False,
+        first_line_chars=0,
+        before=0,
+        after=0,
+        line=20,
+    )
+    run = paragraph.add_run(" ")
+    run.font.size = Pt(1)
+    run.font.color.rgb = RGBColor(255, 255, 255)
+
+
+def add_full_page_header_image(section, image_path: Path, doc_pr_id: int, name: str) -> None:
+    header = section.header
+    header.is_linked_to_previous = False
+    clear_container(header)
+    paragraph = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
     paragraph.paragraph_format.space_before = Pt(0)
     paragraph.paragraph_format.space_after = Pt(0)
     paragraph.paragraph_format.line_spacing = 1.0
     paragraph.paragraph_format.first_line_indent = Pt(0)
-    p_pr = paragraph._p.get_or_add_pPr()
-    ind = p_pr.find(qn("w:ind"))
-    if ind is None:
-        ind = OxmlElement("w:ind")
-        p_pr.append(ind)
-    ind.set(qn("w:firstLine"), "0")
-    ind.set(qn("w:firstLineChars"), "0")
     run = paragraph.add_run()
-    run.add_picture(str(image_path), width=A4_W, height=A4_H)
+    bleed = 36000
+    run.add_picture(str(image_path), width=Emu(A4_CX + 2 * bleed), height=Emu(A4_CY + 2 * bleed))
+    drawing = run._r.find(qn("w:drawing"))
+    if drawing is not None:
+        inline_to_anchor(
+            drawing,
+            doc_pr_id,
+            name,
+            behind=False,
+            cx=str(A4_CX + 2 * bleed),
+            cy=str(A4_CY + 2 * bleed),
+            offset=-bleed,
+        )
 
 
 def insert_cover(doc: Document, image_path: Path) -> None:
     first = doc.paragraphs[0]
     cover = first.insert_paragraph_before()
-    add_full_page_picture(cover, image_path)
+    make_empty_bleed_paragraph(cover)
     cover._p.get_or_add_pPr().append(make_fullbleed_sectpr())
 
 
@@ -808,6 +1015,9 @@ def setup_headers(doc: Document, watermark: Path) -> None:
         clear_container(section.header)
         clear_container(section.footer)
 
+    add_full_page_header_image(cover, COVER, 9101, "cover")
+    add_full_page_header_image(back, BACK, 9102, "back")
+
     body.header.is_linked_to_previous = False
     body.footer.is_linked_to_previous = False
     clear_container(body.header)
@@ -819,10 +1029,10 @@ def setup_headers(doc: Document, watermark: Path) -> None:
     header_p.paragraph_format.space_after = Pt(4)
     header_p.paragraph_format.tab_stops.add_tab_stop(Cm(16), WD_TAB_ALIGNMENT.RIGHT)
     left = header_p.add_run(HEADER_LEFT)
-    run_font(left, SONG, 9)
+    run_font(left, FANG, 9)
     header_p.add_run("\t")
     right = header_p.add_run(HEADER_RIGHT)
-    run_font(right, SONG, 9)
+    run_font(right, FANG, 9)
     add_bottom_border(header_p, "8")
     add_watermark(body, watermark)
 
@@ -1156,9 +1366,9 @@ def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
     first_item = None
     for level, text, mark in entries:
         item = anchor.insert_paragraph_before()
-        east = HEI if level == 1 else SONG
+        east = FANG
         size = {1: 12, 2: 11, 3: 10.5}[level]
-        bold = level == 1
+        bold = False
         left = {1: 0, 2: 360, 3: 720}[level]
         before = {1: 160, 2: 40, 3: 20}[level]
         after = {1: 40, 2: 20, 3: 10}[level]
@@ -1212,7 +1422,7 @@ def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
     title = rule.insert_paragraph_before("目　录")
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in title.runs:
-        run_font(run, HEI, 18, True)
+        run_font(run, FANG, 18, False)
         r_pr = run._element.get_or_add_rPr()
         spacing = r_pr.find(qn("w:spacing"))
         if spacing is None:
@@ -1343,6 +1553,19 @@ def polish_layout(doc: Document) -> None:
         name = paragraph.style.name if paragraph.style is not None else "Normal"
         text = paragraph.text.strip()
         xml = paragraph._p.xml
+        if paragraph._p.find(f".//{{{MATH_NS}}}oMathPara") is not None:
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                before=160,
+                after=160,
+                line=276,
+            )
+            set_bool_prop(paragraph._p.get_or_add_pPr(), "w:keepLines", True)
+            set_bool_prop(paragraph._p.get_or_add_pPr(), "w:keepNext", False)
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            continue
         if name == "Heading 1":
             in_refs = text.startswith("参考文献")
             page_break = text not in {"摘要", "Abstract"}
@@ -1449,6 +1672,414 @@ def polish_layout(doc: Document) -> None:
             after=0,
             line=BODY_LINE,
         )
+
+
+def math_run_style(run) -> str:
+    r_pr = run.find(f"{{{MATH_NS}}}rPr")
+    if r_pr is None:
+        return "i"
+    sty = r_pr.find(f"{{{MATH_NS}}}sty")
+    if sty is None:
+        return "i"
+    return sty.get(qn("m:val")) or "i"
+
+
+def merge_roman_math_runs(doc: Document) -> None:
+    for omath in doc.element.body.iter(f"{{{MATH_NS}}}oMath"):
+        children = list(omath)
+        index = 0
+        while index < len(children) - 1:
+            left, right = children[index], children[index + 1]
+            if left.tag != f"{{{MATH_NS}}}r" or right.tag != f"{{{MATH_NS}}}r":
+                index += 1
+                continue
+            if math_run_style(left) != "p" or math_run_style(right) != "p":
+                index += 1
+                continue
+            left_t = left.find(f"{{{MATH_NS}}}t")
+            right_t = right.find(f"{{{MATH_NS}}}t")
+            if left_t is None or right_t is None:
+                index += 1
+                continue
+            left_t.text = (left_t.text or "") + (right_t.text or "")
+            omath.remove(right)
+            children.pop(index + 1)
+
+
+def wrap_display_math(doc: Document) -> None:
+    for paragraph in doc.paragraphs:
+        p_el = paragraph._p
+        if p_el.getparent() is not None and p_el.getparent().tag == qn("w:tc"):
+            continue
+        if p_el.find(f"{{{MATH_NS}}}oMathPara") is not None:
+            continue
+        maths = p_el.findall(f"{{{MATH_NS}}}oMath")
+        if not maths:
+            continue
+        texts = [node.text or "" for node in p_el.iter(qn("w:t"))]
+        if "".join(texts).strip():
+            continue
+        for math in list(maths):
+            wrapper = OxmlElement("m:oMathPara")
+            props = OxmlElement("m:oMathParaPr")
+            jc = OxmlElement("m:jc")
+            jc.set(qn("m:val"), "center")
+            props.append(jc)
+            wrapper.append(props)
+            parent = math.getparent()
+            idx = list(parent).index(math)
+            parent.remove(math)
+            wrapper.append(math)
+            parent.insert(idx, wrapper)
+
+
+def keep_math_with_leadin(doc: Document) -> None:
+    paragraphs = list(doc.paragraphs)
+    for index, paragraph in enumerate(paragraphs[:-1]):
+        nxt = paragraphs[index + 1]
+        if nxt._p.find(f".//{{{MATH_NS}}}oMathPara") is None:
+            continue
+        name = paragraph.style.name if paragraph.style is not None else ""
+        if name.startswith("Heading"):
+            continue
+        text = paragraph.text.strip()
+        if not text or len(text) > 24 or text.endswith("。"):
+            continue
+        if paragraph._p.find(f".//{DRAWING_NS}") is not None:
+            continue
+        set_bool_prop(paragraph._p.get_or_add_pPr(), "w:keepNext", True)
+
+
+def drawing_rid(drawing) -> str | None:
+    if drawing is None:
+        return None
+    blip = drawing.find(f".//{{{A_NS}}}blip")
+    if blip is None:
+        return None
+    rid = blip.get(qn("r:embed"))
+    if rid:
+        return rid
+    for key, value in blip.attrib.items():
+        if key.endswith("embed") or key.endswith("}embed"):
+            return value
+    return None
+
+
+def demo_image_rids(doc: Document) -> set[str]:
+    found: set[str] = set()
+    for rel in doc.part.rels.values():
+        if "image" not in rel.reltype:
+            continue
+        target = (rel.target_ref or "") + " " + str(getattr(rel, "target_part", ""))
+        try:
+            image = Image.open(io.BytesIO(rel.target_part.blob))
+        except Exception:
+            continue
+        name = ""
+        try:
+            name = rel.target_part.partname
+        except Exception:
+            name = rel.target_ref or ""
+        if image.size == DEMO_PX or "E_demo" in str(name) or "E_demo" in target:
+            found.add(rel.rId)
+    return found
+
+
+def is_caption_paragraph(paragraph) -> bool:
+    name = paragraph.style.name if paragraph.style is not None else ""
+    if name in {"Image Caption", "Table Caption", "Captioned Figure"}:
+        return True
+    text = paragraph.text.strip()
+    return text.startswith("图") and len(text) < 80
+
+
+def split_mixed_image_paragraph(paragraph) -> None:
+    p_el = paragraph._p
+    extras = []
+    for child in list(p_el):
+        if child.tag == qn("w:pPr"):
+            continue
+        if child.tag == qn("w:r") and child.find(qn("w:drawing")) is not None:
+            continue
+        extras.append(child)
+    if not extras:
+        return
+    cap = OxmlElement("w:p")
+    p_pr = OxmlElement("w:pPr")
+    jc = OxmlElement("w:jc")
+    jc.set(qn("w:val"), "center")
+    p_pr.append(jc)
+    cap.append(p_pr)
+    for child in extras:
+        p_el.remove(child)
+        cap.append(child)
+    p_el.addnext(cap)
+
+
+def is_subcaption_paragraph(paragraph) -> bool:
+    name = paragraph.style.name if paragraph.style is not None else ""
+    if name.startswith("Heading"):
+        return False
+    if name in {"Image Caption", "Table Caption", "Captioned Figure"}:
+        return False
+    if paragraph._p.find(f".//{DRAWING_NS}") is not None:
+        return False
+    text = paragraph.text.strip()
+    if not text or len(text) > 90:
+        return False
+    if text.startswith("图") or text.startswith("表"):
+        return False
+    return True
+
+
+def resize_demo_shape(paragraph, max_width: int) -> None:
+    drawing = paragraph._p.find(f".//{DRAWING_NS}")
+    if drawing is None:
+        return
+    inline = drawing.find(qn("wp:inline"))
+    if inline is None:
+        return
+    extent = inline.find(qn("wp:extent"))
+    if extent is None:
+        return
+    width = int(extent.get("cx"))
+    height = int(extent.get("cy"))
+    if width <= max_width:
+        return
+    new_height = int(height * (max_width / width))
+    extent.set("cx", str(max_width))
+    extent.set("cy", str(new_height))
+    for ext in drawing.iter(f"{{{A_NS}}}ext"):
+        ext.set("cx", str(max_width))
+        ext.set("cy", str(new_height))
+
+
+def set_invisible_table_borders(tbl_pr) -> None:
+    borders = tbl_pr.find(qn("w:tblBorders"))
+    if borders is None:
+        borders = OxmlElement("w:tblBorders")
+        tbl_pr.append(borders)
+    for child in list(borders):
+        borders.remove(child)
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        node = OxmlElement(f"w:{edge}")
+        node.set(qn("w:val"), "nil")
+        node.set(qn("w:sz"), "0")
+        node.set(qn("w:space"), "0")
+        node.set(qn("w:color"), "auto")
+        borders.append(node)
+
+
+DEMO_GROUP_CAPTIONS = [
+    "组合档、对偶策略、肉糜 30 mm、种子 7。页面读取同一数值核写出的状态流。",
+    "开门全貌、30 mm 停机附近与 50 mm 时域终点。页面读取已经写出的状态流。",
+]
+
+
+def chapter_id_before(paragraphs: list, target) -> str:
+    current = "1"
+    target_el = target._p
+    for paragraph in paragraphs:
+        if paragraph._p is target_el:
+            return current
+        name = paragraph.style.name if paragraph.style is not None else ""
+        if name != "Heading 1":
+            continue
+        text = paragraph.text.strip()
+        if text.startswith("第") and "章" in text:
+            try:
+                current = str(int(text[1 : text.index("章")]))
+            except ValueError:
+                pass
+        elif text.startswith("附录"):
+            match = re.search(r"附录\s*([A-Z])", text)
+            if match:
+                current = match.group(1)
+    return current
+
+
+def add_spanning_caption_row(tbl, text: str, number: str) -> None:
+    row = OxmlElement("w:tr")
+    tr_pr = OxmlElement("w:trPr")
+    cant = OxmlElement("w:cantSplit")
+    tr_pr.append(cant)
+    row.append(tr_pr)
+    cell = OxmlElement("w:tc")
+    tc_pr = OxmlElement("w:tcPr")
+    span = OxmlElement("w:gridSpan")
+    span.set(qn("w:val"), "2")
+    tc_pr.append(span)
+    cell.append(tc_pr)
+    paragraph = OxmlElement("w:p")
+    p_pr = OxmlElement("w:pPr")
+    jc = OxmlElement("w:jc")
+    jc.set(qn("w:val"), "center")
+    p_pr.append(jc)
+    spacing = OxmlElement("w:spacing")
+    spacing.set(qn("w:before"), "80")
+    spacing.set(qn("w:after"), "80")
+    spacing.set(qn("w:line"), "240")
+    spacing.set(qn("w:lineRule"), "auto")
+    p_pr.append(spacing)
+    paragraph.append(p_pr)
+
+    def add_run(content: str, east: str, size_pt: float, bold: bool) -> None:
+        run = OxmlElement("w:r")
+        r_pr = OxmlElement("w:rPr")
+        set_rfonts(r_pr, east)
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(size_pt * 2)))
+        r_pr.append(sz)
+        sz_cs = OxmlElement("w:szCs")
+        sz_cs.set(qn("w:val"), str(int(size_pt * 2)))
+        r_pr.append(sz_cs)
+        if bold:
+            r_pr.append(OxmlElement("w:b"))
+            r_pr.append(OxmlElement("w:bCs"))
+        run.append(r_pr)
+        node = OxmlElement("w:t")
+        node.set(qn("xml:space"), "preserve")
+        node.text = content
+        run.append(node)
+        paragraph.append(run)
+
+    add_run(f"图 {number}  ", HEI, 10.5, True)
+    add_run(text, KAI, 10.5, False)
+    cell.append(paragraph)
+    row.append(cell)
+    tbl.append(row)
+
+
+def pack_demo_group(doc: Document, group: list[tuple], caption: str | None = None, number: str | None = None) -> object | None:
+    if len(group) < 2:
+        return None
+    count = len(group)
+    rows = (count + 1) // 2
+    table = doc.add_table(rows=rows, cols=2)
+    tbl = table._tbl
+    group[0][0]._p.addprevious(tbl)
+    tbl_pr = tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        tbl.insert(0, tbl_pr)
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    tbl_w.set(qn("w:type"), "pct")
+    tbl_w.set(qn("w:w"), "5000")
+    jc = tbl_pr.find(qn("w:jc"))
+    if jc is None:
+        jc = OxmlElement("w:jc")
+        tbl_pr.append(jc)
+    jc.set(qn("w:val"), "center")
+    set_invisible_table_borders(tbl_pr)
+    mar = tbl_pr.find(qn("w:tblCellMar"))
+    if mar is None:
+        mar = OxmlElement("w:tblCellMar")
+        tbl_pr.append(mar)
+    for edge, val in (("top", "40"), ("left", "80"), ("bottom", "40"), ("right", "80")):
+        node = mar.find(qn(f"w:{edge}"))
+        if node is None:
+            node = OxmlElement(f"w:{edge}")
+            mar.append(node)
+        node.set(qn("w:w"), val)
+        node.set(qn("w:type"), "dxa")
+    if count % 2 == 1:
+        table.cell(rows - 1, 0).merge(table.cell(rows - 1, 1))
+    for index, (image_p, caption_p) in enumerate(group):
+        row, col = divmod(index, 2)
+        if count % 2 == 1 and index == count - 1:
+            col = 0
+        cell = table.cell(row, col)
+        cell_p = cell.paragraphs[0]
+        set_paragraph_layout(cell_p, justify=False, first_line_chars=0, before=40, after=20, line=240)
+        cell_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for child in list(image_p._p):
+            if child.tag == qn("w:pPr"):
+                continue
+            cell_p._p.append(child)
+        if caption_p is not None:
+            cap = cell.add_paragraph()
+            set_paragraph_layout(cap, justify=False, first_line_chars=0, before=20, after=60, line=240)
+            cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for child in list(caption_p._p):
+                if child.tag == qn("w:pPr"):
+                    continue
+                cap._p.append(child)
+            for run in cap.runs:
+                run_font(run, KAI, 9, False)
+            delete_paragraph(caption_p)
+        delete_paragraph(image_p)
+    if caption and number:
+        add_spanning_caption_row(tbl, caption, number)
+    all_rows = tbl.findall(qn("w:tr"))
+    for index, row in enumerate(all_rows):
+        tr_pr = row.find(qn("w:trPr"))
+        if tr_pr is None:
+            tr_pr = OxmlElement("w:trPr")
+            row.insert(0, tr_pr)
+        if tr_pr.find(qn("w:cantSplit")) is None:
+            tr_pr.append(OxmlElement("w:cantSplit"))
+        if index >= len(all_rows) - 1:
+            continue
+        for paragraph in row.iter(qn("w:p")):
+            p_pr = paragraph.find(qn("w:pPr"))
+            if p_pr is None:
+                p_pr = OxmlElement("w:pPr")
+                paragraph.insert(0, p_pr)
+            set_bool_prop(p_pr, "w:keepNext", True)
+    return tbl
+
+
+def pack_demo_figures(doc: Document) -> None:
+    demo_ids = demo_image_rids(doc)
+    if not demo_ids:
+        return
+    max_width = int(DEMO_WIDTH)
+    paragraphs = list(doc.paragraphs)
+    blocks: list[tuple] = []
+    index = 0
+    while index < len(paragraphs):
+        paragraph = paragraphs[index]
+        drawing = paragraph._p.find(f".//{DRAWING_NS}")
+        rid = drawing_rid(drawing) if drawing is not None else None
+        if rid in demo_ids:
+            resize_demo_shape(paragraph, max_width)
+            split_mixed_image_paragraph(paragraph)
+            paragraphs = list(doc.paragraphs)
+            caption = None
+            if index + 1 < len(paragraphs) and is_subcaption_paragraph(paragraphs[index + 1]):
+                caption = paragraphs[index + 1]
+                index += 1
+            blocks.append((paragraph, caption))
+        index += 1
+    groups: list[list[tuple]] = []
+    current: list[tuple] = []
+    for block in blocks:
+        if not current:
+            current = [block]
+            continue
+        prev_end = current[-1][1]._p if current[-1][1] is not None else current[-1][0]._p
+        nxt = prev_end.getnext()
+        if nxt is block[0]._p:
+            current.append(block)
+        else:
+            groups.append(current)
+            current = [block]
+    if current:
+        groups.append(current)
+    paragraphs = list(doc.paragraphs)
+    fig_n = 0
+    last_chapter = None
+    for group in groups:
+        chapter = chapter_id_before(paragraphs, group[0][0])
+        if chapter != last_chapter:
+            fig_n = 0
+            last_chapter = chapter
+        fig_n += 1
+        caption = DEMO_GROUP_CAPTIONS[min(fig_n - 1, len(DEMO_GROUP_CAPTIONS) - 1)]
+        pack_demo_group(doc, group, caption, f"{chapter}.{fig_n}")
 
 
 def resize_body_figures(doc: Document) -> None:
@@ -1727,14 +2358,18 @@ def build() -> None:
         toc_entries = add_heading_bookmarks(doc)
         number_captions(doc)
         restyle_runs(doc)
+        merge_roman_math_runs(doc)
+        wrap_display_math(doc)
         polish_layout(doc)
+        keep_math_with_leadin(doc)
         resize_body_figures(doc)
+        pack_demo_figures(doc)
         center_figure_paragraphs(doc)
         insert_toc(doc, toc_entries)
         insert_cover(doc, COVER)
         back_section = doc.add_section(WD_SECTION.NEW_PAGE)
         configure_section(back_section, True)
-        add_full_page_picture(doc.add_paragraph(), BACK)
+        make_empty_bleed_paragraph(doc.add_paragraph())
         setup_headers(doc, watermark)
 
         SUBMIT_DIR.mkdir(exist_ok=True)

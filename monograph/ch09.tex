@@ -61,26 +61,33 @@ time, t1, t2, hat, m, alpha, rHat, varR, heat, heatReq, steam, fan, exhaust, mod
 
 \begin{figure}[htbp]
 \centering
-\begin{subfigure}[t]{0.48\textwidth}
+\begin{subfigure}[t]{0.47\textwidth}
 \centering
 \includegraphics[width=\linewidth]{E_demo_start.png}
 \caption{起始帧。色带接近初温，蒸汽为基线。}
 \label{fig:demo1}
 \end{subfigure}
 \hfill
-\begin{subfigure}[t]{0.48\textwidth}
+\begin{subfigure}[t]{0.47\textwidth}
 \centering
 \includegraphics[width=\linewidth]{E_demo_probe.png}
 \caption{探针窗前半段。蒸汽从喷嘴喷出。}
 \label{fig:demo2}
 \end{subfigure}
 
-\vspace{0.55em}
-\begin{subfigure}[t]{0.72\textwidth}
+\vspace{0.35em}
+\begin{subfigure}[t]{0.47\textwidth}
 \centering
 \includegraphics[width=\linewidth]{E_demo_late.png}
 \caption{1680 s 品质段。冷点 \(70.21^\circ\mathrm{C}\)，进度 0.558。}
 \label{fig:demo3}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.47\textwidth}
+\centering
+\includegraphics[width=\linewidth]{E_demo_compare.png}
+\caption{对照开环。虚线为菜单切断后的冷点与进度。}
+\label{fig:democmp}
 \end{subfigure}
 \caption{组合档、对偶策略、肉糜 30 mm、种子 7。页面读取同一数值核写出的状态流。}
 \label{fig:demo}
@@ -88,34 +95,33 @@ time, t1, t2, hat, m, alpha, rHat, varR, heat, heatReq, steam, fan, exhaust, mod
 
 对照开环时，底部曲线用虚线叠出菜单切断后的冷点与进度，右栏同时给出对照本帧，见图\ref{fig:democmp}。开环在 1170 s 切断加热，冷点停在 \(16^\circ\mathrm{C}\) 量级；对偶在同一时刻仍走品质加热。事件条把滑条送到探针窗、1680 s 和当前轨迹的停机时刻。默认 30 mm 对偶组合显示 1864 s，核日志为 1866 s；厚度切到 50 mm 时停机跳到 3298 s。跳转读的是评分，不是固定在 1866。
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{E_demo_compare.png}
-\caption{对照开环菜单。虚线为开环冷点与进度；实线为对偶。组合档、30 mm、1680 s。}
-\label{fig:democmp}
-\end{figure}
-
-图\ref{fig:demoopen}给出门打开时的腔体：顶部六根 U 形加热管带陶瓷端帽、后壁十叶深色扭曲风机与近黑挡板、十六块几乎贴合的圆角食品薄片（第 5 片为脂肪夹层的更深色带）和底部带双轴标注的曲线。这一帧是开环菜单、组合档、起始时刻。拖动旋转、滚轮缩放；默认方位角 \(-0.36\)、俯角 \(0.27\)、距离 \(7.85\)。加热管自发光跟加热条走，探针窗前半段蒸汽粒子从左侧喷嘴喷出，风机叶片转速跟风机条走，排汽百叶随排汽条张开。水位只出现在水箱液面，门只出现在铰链开度。
+图\ref{fig:demoopen}给出门打开时的腔体：顶部六根 U 形加热管带陶瓷端帽、后壁十叶深色扭曲风机与近黑挡板、十六块几乎贴合的圆角食品薄片（第 5 片为脂肪夹层的更深色带）和底部带双轴标注的曲线。这一帧是开环菜单、组合档、起始时刻。拖动旋转、滚轮缩放；默认方位角 \(-0.36\)、俯角 \(0.27\)、距离 \(7.85\)。加热管自发光跟加热条走，探针窗前半段蒸汽粒子从左侧喷嘴喷出，风机叶片转速跟风机条走，排汽百叶随排汽条张开。水位只出现在水箱液面，门只出现在铰链开度。停机帧与 50 mm 时域终点见图\ref{fig:demostop}、图\ref{fig:demothick}。
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{E_demo_open.png}
-\caption{门打开时的腔体。开环菜单、组合档、起始帧。页面读取已经写出的状态流。}
+\begin{subfigure}[t]{0.47\textwidth}
+\centering
+\includegraphics[width=\linewidth]{E_demo_open.png}
+\caption{门打开时的腔体。开环菜单、组合档、起始帧。}
 \label{fig:demoopen}
-\end{figure}
-
-\begin{figure}[htbp]
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.47\textwidth}
 \centering
-\includegraphics[width=0.92\textwidth]{E_demo_stop.png}
-\caption{停机附近。组合档、对偶、30 mm。页面显示 1864 s、\(e_{\alpha}=+0.145\)；核日志停机 1866 s。}
+\includegraphics[width=\linewidth]{E_demo_stop.png}
+\caption{停机附近。页面显示 1864 s、\(e_{\alpha}=+0.145\)。}
 \label{fig:demostop}
-\end{figure}
+\end{subfigure}
 
-\begin{figure}[htbp]
+\vspace{0.35em}
+\begin{subfigure}[t]{0.47\textwidth}
 \centering
-\includegraphics[width=0.92\textwidth]{E_demo_thick.png}
-\caption{厚度 50 mm、对偶、组合档、时域终点。停机 3298 s，\(e_{\alpha}=-0.782\)，低于设计线；方差已是 0.224。}
+\includegraphics[width=\linewidth]{E_demo_thick.png}
+\caption{50 mm 时域终点。停机 3298 s，\(e_{\alpha}=-0.782\)。}
 \label{fig:demothick}
+\end{subfigure}
+\caption{开门全貌、30 mm 停机附近与 50 mm 时域终点。页面读取已经写出的状态流。}
+\label{fig:demoextra}
 \end{figure}
 
 读这七张截图时，零件和数字要同时核对。起始帧加热请求与指令重合为 1，蒸汽为基线 0.15，十六块薄片接近初温。探针窗约 160 s，蒸汽粒子从左侧喷嘴喷出，表面已经显著高于冷点，估计仍接近零，模式芯片切到“探针”。1680 s 品质段加热请求 0.476，冷点 \(70.21^\circ\mathrm{C}\)，进度 0.558，蒸汽回到基线。停机帧按 8 s 抽样取切入保持前一帧，显示 1864 s、\(e_{\alpha}=+0.145\)；核日志停机是 1866 s。50 mm 时域终点色带冷点一侧几乎仍停在初温附近，停机 3298 s，\(e_{\alpha}=-0.782\)，方差已经是 0.224。开门帧只改铰链。对照开环时，虚线在 1170 s 附近折平，冷点停在 \(16^\circ\mathrm{C}\) 量级，进度停在 \(-0.849\) 附近；实线在同一时刻仍走品质加热。蒸档把加热条夹在约四分之一，蒸汽粒子仍可喷出，方差留在 0.64：允许集合把探针窗的表面温差夹住了。烤档粒子消失，百叶张开，表面先干。组合档四个量都离开零。开门按钮只改铰链，温度数组不动；真值开门扰动写在 S2 的 480 行里，中位从 \(-0.112\) 降到 \(-0.151\)。页面把零件画出来，是为了让硬切断的自变量出现在同一台机器上。

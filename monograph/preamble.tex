@@ -70,10 +70,12 @@
 \captionsetup{font=small,labelfont=bf,skip=5pt,justification=centering}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small 基于信息感知的智能蒸烤一体机}
-\fancyhead[R]{\small 庄颂\quad 20241334\quad 信息2402}
+\fancyhead[L]{\small\fangsong 基于信息感知的智能蒸烤一体机}
+\fancyhead[R]{\small\fangsong 庄颂\quad 20241334\quad 信息2402}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.35pt}
+\AtBeginDocument{\renewcommand{\contentsname}{目　录}}
+\captionsetup[subfigure]{skip=3pt,font=footnotesize,labelfont=bf}
 \newtheorem{definition}{定义}[chapter]
 \newtheorem{proposition}{命题}[chapter]
 \newtheorem{theorem}{定理}[chapter]
