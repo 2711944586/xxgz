@@ -6,6 +6,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 const T_MIN = 8;
 const T_MAX = 170;
 const N_CELL = 16;
+const CAM = { yaw: -0.36, pitch: 0.27, dist: 7.85, min: 3.8, max: 9.2 };
 
 function heatColor(value) {
   const x = Math.min(1, Math.max(0, (value - T_MIN) / (T_MAX - T_MIN)));
@@ -564,12 +565,19 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     scene.add(steam.points);
 
     const target = new THREE.Vector3(0.04, 1.36, 0.22);
-    let yaw = -0.36;
-    let pitch = 0.27;
-    let dist = 7.85;
+    let yaw = CAM.yaw;
+    let pitch = CAM.pitch;
+    let dist = CAM.dist;
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    const canvas = renderer.domElement;
+    canvas.style.position = "absolute";
+    canvas.style.inset = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.touchAction = "none";
+    canvas.style.cursor = "grab";
     const place = () => {
       camera.position.set(
         target.x + dist * Math.cos(pitch) * Math.sin(yaw),
@@ -579,36 +587,52 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       camera.lookAt(target);
     };
     place();
+    const clampDist = (value) => Math.min(CAM.max, Math.max(CAM.min, value));
     window.__actsCam = {
       set(nextYaw, nextPitch, nextDist) {
         if (Number.isFinite(nextYaw)) yaw = nextYaw;
         if (Number.isFinite(nextPitch)) pitch = nextPitch;
-        if (Number.isFinite(nextDist)) dist = nextDist;
+        if (Number.isFinite(nextDist)) dist = clampDist(nextDist);
         place();
       },
       get() {
         return { yaw, pitch, dist };
       },
+      reset() {
+        yaw = CAM.yaw;
+        pitch = CAM.pitch;
+        dist = CAM.dist;
+        place();
+      },
     };
 
     const onDown = (ev) => {
+      if (ev.pointerType === "mouse" && ev.button !== 0) return;
       dragging = true;
       lastX = ev.clientX;
       lastY = ev.clientY;
+      canvas.style.cursor = "grabbing";
+      canvas.setPointerCapture?.(ev.pointerId);
     };
     const onMove = (ev) => {
       if (!dragging) return;
+      if (ev.cancelable) ev.preventDefault();
       yaw -= (ev.clientX - lastX) * 0.007;
       pitch = Math.min(0.82, Math.max(-0.04, pitch + (ev.clientY - lastY) * 0.007));
       lastX = ev.clientX;
       lastY = ev.clientY;
       place();
     };
-    const onUp = () => {
+    const onUp = (ev) => {
       dragging = false;
+      canvas.style.cursor = "grab";
+      if (ev?.pointerId != null) canvas.releasePointerCapture?.(ev.pointerId);
     };
     const onWheel = (ev) => {
-      dist = Math.min(9.2, Math.max(3.8, dist + ev.deltaY * 0.003));
+      ev.preventDefault();
+      ev.stopPropagation();
+      const pixels = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaMode === 2 ? ev.deltaY * el.clientHeight : ev.deltaY;
+      dist = clampDist(dist + pixels * 0.003);
       place();
     };
     const onResize = () => {
@@ -618,11 +642,17 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
-    el.addEventListener("pointerdown", onDown);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    el.addEventListener("wheel", onWheel, { passive: true });
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove, { passive: false });
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    const onMenu = (ev) => ev.preventDefault();
+    canvas.addEventListener("contextmenu", onMenu);
     window.addEventListener("resize", onResize);
+    const ro = new ResizeObserver(onResize);
+    ro.observe(el);
+    onResize();
 
     state.current = {
       renderer, scene, camera, food, cavity, steam, rim, interior, lampLight, el, place,
@@ -672,12 +702,15 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       alive = false;
       renderer.dispose();
       pmrem.dispose();
-      el.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      el.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("contextmenu", onMenu);
       window.removeEventListener("resize", onResize);
-      if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement);
+      ro.disconnect();
+      if (canvas.parentNode === el) el.removeChild(canvas);
     };
   }, []);
 
@@ -730,5 +763,21 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     s.renderer.render(s.scene, s.camera);
   }, [frame, length, doorOpen, cook]);
 
-  return <div ref={host} style={{ height: "100%", minHeight: 560, position: "relative" }} />;
+  function zoomBy(step) {
+    const cam = window.__actsCam;
+    if (!cam) return;
+    const now = cam.get();
+    cam.set(now.yaw, now.pitch, now.dist + step);
+  }
+
+  return (
+    <div className="scene-host" ref={host}>
+      <div className="cam-tools" onPointerDown={(ev) => ev.stopPropagation()}>
+        <button type="button" aria-label="拉近" onClick={() => zoomBy(-0.55)}>+</button>
+        <button type="button" aria-label="拉远" onClick={() => zoomBy(0.55)}>−</button>
+        <button type="button" className="cam-reset" aria-label="复位视角" onClick={() => window.__actsCam?.reset()}>复位</button>
+      </div>
+      <p className="cam-hint">拖拽旋转 · 滚轮缩放</p>
+    </div>
+  );
 }

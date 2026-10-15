@@ -18,7 +18,11 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; }
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+html { overscroll-behavior: none; }
 body {
   margin: 0;
   background:
@@ -27,12 +31,15 @@ body {
     var(--bg);
   color: var(--ink);
   font-family: var(--font);
+  overscroll-behavior: none;
 }
 
 .app {
-  min-height: 100%;
+  height: 100%;
+  height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
 }
 
 .topbar {
@@ -243,6 +250,12 @@ h1 {
   gap: 12px;
   padding: 12px 16px 8px;
   min-height: 0;
+  overflow: hidden;
+}
+.workspace > aside {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 
 .panel {
@@ -379,11 +392,66 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
   padding: 0;
   overflow: hidden;
-  min-height: 620px;
+  min-height: 0;
+  height: 100%;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overscroll-behavior: contain;
 }
 .viewport canvas { width: 100%; height: 100%; display: block; }
+.scene-host {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+.cam-tools {
+  position: absolute;
+  top: 36px;
+  right: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 6px;
+  width: 40px;
+}
+.cam-tools button {
+  width: 40px;
+  margin: 0;
+  padding: 7px 0;
+  background: rgba(16, 21, 24, 0.82);
+  color: var(--ink);
+  border: 1px solid rgba(196, 165, 116, 0.45);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  backdrop-filter: blur(8px);
+}
+.cam-tools button.cam-reset {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 8px 0;
+}
+.cam-tools button:hover:not(:disabled) {
+  border-color: var(--brass);
+  color: var(--brass);
+  filter: none;
+}
+.cam-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 3;
+  margin: 0;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-shadow: 0 1px 8px #000;
+}
 .hud {
   position: absolute;
   left: 18px;
@@ -517,10 +585,11 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .chartbar {
-  padding: 8px 16px 16px;
+  padding: 6px 16px 10px;
+  min-height: 0;
 }
 .chart {
-  height: 196px;
+  height: 156px;
   width: 100%;
   display: block;
   background: var(--panel);
@@ -544,8 +613,26 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 @media (max-width: 1080px) {
-  .workspace { grid-template-columns: 1fr; }
-  .viewport { min-height: 480px; }
+  html, body, #root {
+    height: auto;
+    overflow: auto;
+  }
+  body, html { overscroll-behavior: auto; }
+  .app {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    grid-template-rows: auto auto auto auto;
+  }
+  .workspace {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .workspace > aside { overflow: visible; }
+  .viewport {
+    min-height: 380px;
+    height: 48vh;
+  }
   .topbar { flex-direction: column; align-items: flex-start; }
   .fascia { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 12px; }
 }
