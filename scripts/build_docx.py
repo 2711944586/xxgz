@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from docx import Document
 from docx.enum.section import WD_ORIENT, WD_SECTION
@@ -36,6 +37,9 @@ HEI = "黑体"
 KAI = "楷体"
 TIMES = "Times New Roman"
 TOC_TAB_TWIPS = "9072"
+BODY_LINE = 360
+HEAD_LINE = 276
+TOC_LINE = 280
 HEADER_LEFT = "基于信息感知的智能蒸烤一体机"
 HEADER_RIGHT = "庄颂  20241334  信息2402"
 
@@ -450,7 +454,7 @@ def set_doc_defaults(doc: Document) -> None:
     if spacing is None:
         spacing = OxmlElement("w:spacing")
         p_pr.append(spacing)
-    spacing.set(qn("w:line"), "331")
+    spacing.set(qn("w:line"), str(BODY_LINE))
     spacing.set(qn("w:lineRule"), "auto")
     ind = p_pr.find(qn("w:ind"))
     if ind is None:
@@ -476,19 +480,19 @@ def build_reference_doc(path: Path) -> None:
 
     normal = doc.styles["Normal"]
     style_font(normal, SONG, 12)
-    set_style_spacing(normal, 0, 3, 1.38, 200)
+    set_style_spacing(normal, 0, 0, 1.5, 200)
 
     heading_specs = {
-        "Heading 1": (HEI, 16, True, 12, 10, True),
-        "Heading 2": (HEI, 14, True, 11, 6, False),
-        "Heading 3": (HEI, 12, True, 10, 6, False),
+        "Heading 1": (HEI, 16, True, 18, 14, True),
+        "Heading 2": (HEI, 14, True, 14, 6, False),
+        "Heading 3": (HEI, 12, True, 10, 4, False),
         "Title": (HEI, 16, True, 0, 6, True),
         "Author": (SONG, 12, False, 0, 12, True),
     }
     for name, (east, size, bold, before, after, center) in heading_specs.items():
         style = ensure_style(doc, name)
         style_font(style, east, size, bold)
-        set_style_spacing(style, before, after, 1.38, 0)
+        set_style_spacing(style, before, after, 1.15, 0)
         if center:
             style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -505,7 +509,7 @@ def build_reference_doc(path: Path) -> None:
         style = ensure_style(doc, name)
         style_font(style, SONG, 12, bold=(name == "Definition Term"))
         indent = 0 if name in {"Compact", "Definition Term"} else 200
-        set_style_spacing(style, 0, 3, 1.38, indent)
+        set_style_spacing(style, 0, 0, 1.5, indent)
 
     for name in ("Image Caption", "Table Caption", "Captioned Figure"):
         style = ensure_style(doc, name)
@@ -610,9 +614,12 @@ def add_bottom_border(paragraph, sz: str = "6") -> None:
 
 def add_page_field(paragraph) -> None:
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
     run = paragraph.add_run()
     begin = OxmlElement("w:fldChar")
     begin.set(qn("w:fldCharType"), "begin")
+    begin.set(qn("w:dirty"), "true")
     run._r.append(begin)
     instr = paragraph.add_run()._r
     text = OxmlElement("w:instrText")
@@ -622,7 +629,7 @@ def add_page_field(paragraph) -> None:
     sep = OxmlElement("w:fldChar")
     sep.set(qn("w:fldCharType"), "separate")
     paragraph.add_run()._r.append(sep)
-    paragraph.add_run(" ")
+    result = paragraph.add_run("1")
     end = OxmlElement("w:fldChar")
     end.set(qn("w:fldCharType"), "end")
     paragraph.add_run()._r.append(end)
@@ -809,14 +816,14 @@ def setup_headers(doc: Document, watermark: Path) -> None:
     header_p = body.header.paragraphs[0] if body.header.paragraphs else body.header.add_paragraph()
     header_p.paragraph_format.first_line_indent = Pt(0)
     header_p.paragraph_format.space_before = Pt(0)
-    header_p.paragraph_format.space_after = Pt(2)
+    header_p.paragraph_format.space_after = Pt(4)
     header_p.paragraph_format.tab_stops.add_tab_stop(Cm(16), WD_TAB_ALIGNMENT.RIGHT)
     left = header_p.add_run(HEADER_LEFT)
-    run_font(left, SONG, 10.5)
+    run_font(left, SONG, 9)
     header_p.add_run("\t")
     right = header_p.add_run(HEADER_RIGHT)
-    run_font(right, SONG, 10.5)
-    add_bottom_border(header_p, "6")
+    run_font(right, SONG, 9)
+    add_bottom_border(header_p, "8")
     add_watermark(body, watermark)
 
     footer_p = body.footer.paragraphs[0] if body.footer.paragraphs else body.footer.add_paragraph()
@@ -919,6 +926,39 @@ def set_paragraph_layout(
                 del ind.attrib[qn("w:firstLineChars")]
 
 
+def spaced_cn(text: str) -> str:
+    if len(text) == 2 and all("\u4e00" <= ch <= "\u9fff" for ch in text):
+        return text[0] + "　" + text[1]
+    return text
+
+
+def heading_toc_text(paragraph) -> str:
+    chunks = []
+    for run in paragraph.runs:
+        raw = (run.text or "").replace("\n", "").replace("\r", "").replace("\t", "")
+        chunks.append(raw)
+        if run._r.find(qn("w:br")) is not None:
+            chunks.append("　")
+    text = re.sub(r"　+", "　", "".join(chunks)).strip()
+    return text or re.sub(r"\s+", "　", paragraph.text).strip()
+
+
+def write_chapter_heading(paragraph, kicker: str, title: str) -> None:
+    paragraph.clear()
+    kicker_run = paragraph.add_run(kicker)
+    run_font(kicker_run, HEI, 14, True)
+    kicker_run._r.append(OxmlElement("w:br"))
+    title_run = paragraph.add_run(spaced_cn(title))
+    run_font(title_run, HEI, 18, True)
+    r_pr = title_run._element.get_or_add_rPr()
+    spacing = r_pr.find(qn("w:spacing"))
+    if spacing is None:
+        spacing = OxmlElement("w:spacing")
+        r_pr.append(spacing)
+    spacing.set(qn("w:val"), "60")
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+
 def add_bookmark(paragraph, name: str, bookmark_id: int) -> None:
     start = OxmlElement("w:bookmarkStart")
     start.set(qn("w:id"), str(bookmark_id))
@@ -947,7 +987,7 @@ def add_heading_bookmarks(doc: Document) -> list[tuple[int, str, str]]:
             continue
         mark = f"_Toc{bookmark_id:04d}"
         add_bookmark(paragraph, mark, bookmark_id)
-        entries.append((level, text, mark))
+        entries.append((level, heading_toc_text(paragraph) or text, mark))
         bookmark_id += 1
     return entries
 
@@ -990,6 +1030,7 @@ def append_field_runs(parent, instruction: str, east: str, size_pt: float, bold:
 
     def placeholder(run) -> None:
         text = OxmlElement("w:t")
+        text.set(qn("xml:space"), "preserve")
         text.text = " "
         run.append(text)
 
@@ -1027,15 +1068,13 @@ def number_headings(doc: Document) -> None:
                 current = body_map[title]
                 sec = 0
                 sub = 0
-                paragraph.text = f"第{current}章　{title}"
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                write_chapter_heading(paragraph, f"第{current}章", title)
                 continue
             if title in app_map:
                 current = app_map[title]
                 sec = 0
                 sub = 0
-                paragraph.text = f"附录{current}　{title}"
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                write_chapter_heading(paragraph, f"附录 {current}", title)
                 continue
         if name == "Heading 2" and current is not None:
             sec += 1
@@ -1064,8 +1103,9 @@ def number_captions(doc: Document) -> None:
                 except ValueError:
                     current = None
                 fig = tab = 0
-            elif text.startswith("附录") and len(text) >= 3:
-                current = text[2]
+            elif text.startswith("附录"):
+                match = re.search(r"附录\s*([A-Z])", text)
+                current = match.group(1) if match else None
                 fig = tab = 0
             else:
                 current = None
@@ -1079,6 +1119,28 @@ def number_captions(doc: Document) -> None:
         elif name == "Table Caption" and text and not text.startswith("表"):
             tab += 1
             prepend_run(paragraph, f"表 {current}.{tab}  ", HEI, 10.5, True)
+
+
+def toc_run_props(east: str, size_pt: float, bold: bool) -> OxmlElement:
+    r_pr = OxmlElement("w:rPr")
+    set_rfonts(r_pr, east)
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), str(int(size_pt * 2)))
+    r_pr.append(sz)
+    sz_cs = OxmlElement("w:szCs")
+    sz_cs.set(qn("w:val"), str(int(size_pt * 2)))
+    r_pr.append(sz_cs)
+    if bold:
+        r_pr.append(OxmlElement("w:b"))
+        b_cs = OxmlElement("w:bCs")
+        r_pr.append(b_cs)
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "000000")
+    r_pr.append(color)
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "none")
+    r_pr.append(underline)
+    return r_pr
 
 
 def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
@@ -1095,18 +1157,19 @@ def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
     for level, text, mark in entries:
         item = anchor.insert_paragraph_before()
         east = HEI if level == 1 else SONG
-        size = 12 if level < 3 else 10.5
+        size = {1: 12, 2: 11, 3: 10.5}[level]
         bold = level == 1
-        left = {1: 0, 2: 240, 3: 480}[level]
-        before = 120 if level == 1 else 20
+        left = {1: 0, 2: 360, 3: 720}[level]
+        before = {1: 160, 2: 40, 3: 20}[level]
+        after = {1: 40, 2: 20, 3: 10}[level]
         set_paragraph_layout(
             item,
             justify=False,
             first_line_chars=0,
             left_twips=left,
             before=before,
-            after=20,
-            line=276,
+            after=after,
+            line=TOC_LINE,
         )
         item.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p_pr = item._p.get_or_add_pPr()
@@ -1119,46 +1182,53 @@ def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
         tab.set(qn("w:leader"), "dot")
         tab.set(qn("w:pos"), TOC_TAB_TWIPS)
         tabs.append(tab)
+        ind = p_pr.find(qn("w:ind"))
+        if ind is None:
+            ind = OxmlElement("w:ind")
+            p_pr.append(ind)
+        ind.set(qn("w:right"), "200")
 
         hyper = OxmlElement("w:hyperlink")
         hyper.set(qn("w:anchor"), mark)
         hyper.set(qn("w:history"), "1")
         title_run = OxmlElement("w:r")
-        r_pr = OxmlElement("w:rPr")
-        set_rfonts(r_pr, east)
-        sz = OxmlElement("w:sz")
-        sz.set(qn("w:val"), str(int(size * 2)))
-        r_pr.append(sz)
-        if bold:
-            r_pr.append(OxmlElement("w:b"))
-        color = OxmlElement("w:color")
-        color.set(qn("w:val"), "000000")
-        r_pr.append(color)
-        underline = OxmlElement("w:u")
-        underline.set(qn("w:val"), "none")
-        r_pr.append(underline)
-        title_run.append(r_pr)
+        title_run.append(toc_run_props(east, size, bold))
         title_text = OxmlElement("w:t")
         title_text.set(qn("xml:space"), "preserve")
         title_text.text = text
         title_run.append(title_text)
         hyper.append(title_run)
         tab_run = OxmlElement("w:r")
-        tab_rpr = OxmlElement("w:rPr")
-        set_rfonts(tab_rpr, east)
-        tab_run.append(tab_rpr)
+        tab_run.append(toc_run_props(east, size, bold))
         tab_run.append(OxmlElement("w:tab"))
         hyper.append(tab_run)
         append_field_runs(hyper, f" PAGEREF {mark} \\h ", east, size, bold)
         item._p.append(hyper)
         if first_item is None:
             first_item = item
-    title = first_item.insert_paragraph_before("目录")
-    title.style = doc.styles["Heading 1"]
+    rule = first_item.insert_paragraph_before()
+    set_paragraph_layout(rule, justify=False, first_line_chars=0, before=0, after=80, line=240)
+    add_bottom_border(rule, "6")
+    title = rule.insert_paragraph_before("目　录")
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in title.runs:
-        run_font(run, HEI, 16, True)
-    set_paragraph_layout(title, justify=False, first_line_chars=0, page_break=True, keep_next=True, before=240, after=200)
+        run_font(run, HEI, 18, True)
+        r_pr = run._element.get_or_add_rPr()
+        spacing = r_pr.find(qn("w:spacing"))
+        if spacing is None:
+            spacing = OxmlElement("w:spacing")
+            r_pr.append(spacing)
+        spacing.set(qn("w:val"), "160")
+    set_paragraph_layout(
+        title,
+        justify=False,
+        first_line_chars=0,
+        page_break=True,
+        keep_next=True,
+        before=360,
+        after=80,
+        line=HEAD_LINE,
+    )
 
 
 def restyle_runs(doc: Document) -> None:
@@ -1166,6 +1236,16 @@ def restyle_runs(doc: Document) -> None:
     caption_names = {"Image Caption", "Table Caption", "Captioned Figure"}
     for paragraph in doc.paragraphs:
         name = paragraph.style.name if paragraph.style is not None else "Normal"
+        if name == "Heading 1":
+            runs = paragraph.runs
+            if len(runs) >= 2 and runs[0]._r.find(qn("w:br")) is not None:
+                run_font(runs[0], HEI, 14, True)
+                for run in runs[1:]:
+                    run_font(run, HEI, 18, True)
+            else:
+                for run in runs:
+                    run_font(run, HEI, 16, True)
+            continue
         if name in heading_sizes:
             east, size, bold = heading_sizes[name]
             for run in paragraph.runs:
@@ -1264,17 +1344,18 @@ def polish_layout(doc: Document) -> None:
         text = paragraph.text.strip()
         xml = paragraph._p.xml
         if name == "Heading 1":
-            in_refs = text == "参考文献"
+            in_refs = text.startswith("参考文献")
             page_break = text not in {"摘要", "Abstract"}
+            two_line = any(run._r.find(qn("w:br")) is not None for run in paragraph.runs)
             set_paragraph_layout(
                 paragraph,
                 justify=False,
                 first_line_chars=0,
                 page_break=page_break,
                 keep_next=True,
-                before=240,
-                after=200,
-                line=276,
+                before=480 if two_line else 280,
+                after=280 if two_line else 200,
+                line=320 if two_line else HEAD_LINE,
             )
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             continue
@@ -1284,9 +1365,9 @@ def polish_layout(doc: Document) -> None:
                 justify=False,
                 first_line_chars=0,
                 keep_next=True,
-                before=220,
-                after=120,
-                line=276,
+                before=260,
+                after=80,
+                line=HEAD_LINE,
             )
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
             continue
@@ -1297,8 +1378,8 @@ def polish_layout(doc: Document) -> None:
                 first_line_chars=0,
                 keep_next=True,
                 before=180,
-                after=100,
-                line=276,
+                after=60,
+                line=HEAD_LINE,
             )
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
             continue
@@ -1308,9 +1389,9 @@ def polish_layout(doc: Document) -> None:
                 justify=False,
                 first_line_chars=0,
                 keep_next=(name == "Table Caption"),
-                before=80,
-                after=120,
-                line=276,
+                before=80 if name == "Image Caption" else 160,
+                after=160 if name == "Image Caption" else 80,
+                line=HEAD_LINE,
             )
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             continue
@@ -1320,7 +1401,7 @@ def polish_layout(doc: Document) -> None:
                 justify=False,
                 first_line_chars=0,
                 keep_next=True,
-                before=160,
+                before=180,
                 after=40,
                 line=240,
             )
@@ -1331,9 +1412,9 @@ def polish_layout(doc: Document) -> None:
                 paragraph,
                 justify=False,
                 first_line_chars=0,
-                before=80,
-                after=80,
-                line=276,
+                before=100,
+                after=100,
+                line=HEAD_LINE,
             )
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             continue
@@ -1344,7 +1425,7 @@ def polish_layout(doc: Document) -> None:
                 hanging_twips=420,
                 before=40,
                 after=40,
-                line=276,
+                line=HEAD_LINE,
             )
             for run in paragraph.runs:
                 run_font(run, TIMES, 10.5)
@@ -1357,7 +1438,7 @@ def polish_layout(doc: Document) -> None:
                 left_twips=420,
                 before=40,
                 after=40,
-                line=331,
+                line=BODY_LINE,
             )
             continue
         set_paragraph_layout(
@@ -1365,8 +1446,8 @@ def polish_layout(doc: Document) -> None:
             justify=True,
             first_line_chars=200,
             before=0,
-            after=60,
-            line=331,
+            after=0,
+            line=BODY_LINE,
         )
 
 
@@ -1450,9 +1531,143 @@ def run_pandoc(tex_path: Path, docx_path: Path, reference: Path, media: Path) ->
                 print(line)
 
 
-def verify_native(docx_path: Path) -> None:
-    from zipfile import ZipFile
+def extract_toc_pages(xml: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for match in re.finditer(r"PAGEREF\s+(_Toc\d+)", xml):
+        mark = match.group(1)
+        sep = xml.find('w:fldCharType="separate"', match.end())
+        if sep < 0 or sep - match.end() > 1200:
+            continue
+        t_open = xml.find("<w:t", sep)
+        if t_open < 0 or t_open - sep > 800:
+            continue
+        t_gt = xml.find(">", t_open)
+        t_end = xml.find("</w:t>", t_gt)
+        if t_gt < 0 or t_end < 0:
+            continue
+        value = xml[t_gt + 1 : t_end].strip()
+        if re.fullmatch(r"\d+", value):
+            mapping[mark] = value
+    return mapping
 
+
+def patch_toc_pages(xml: str, mapping: dict[str, str]) -> str:
+    out = xml
+    for mark, number in mapping.items():
+        needle = f"PAGEREF {mark} \\h "
+        start = 0
+        while True:
+            index = out.find(needle, start)
+            if index < 0:
+                break
+            sep = out.find('w:fldCharType="separate"', index)
+            if sep < 0:
+                break
+            t_open = out.find("<w:t", sep)
+            if t_open < 0 or t_open - sep > 800:
+                break
+            t_gt = out.find(">", t_open)
+            t_end = out.find("</w:t>", t_gt)
+            if t_gt < 0 or t_end < 0:
+                break
+            out = out[: t_gt + 1] + number + out[t_end:]
+            start = t_gt + 1 + len(number)
+    return out
+
+
+def rewrite_zip_entry(docx_path: Path, name: str, xml: str) -> None:
+    tmp_path = docx_path.with_name(docx_path.name + ".tmp")
+    with ZipFile(docx_path, "r") as source, ZipFile(tmp_path, "w") as dest:
+        for info in source.infolist():
+            data = source.read(info.filename)
+            if info.filename == name:
+                data = xml.encode("utf-8")
+            copied = ZipInfo(filename=info.filename, date_time=info.date_time)
+            copied.compress_type = info.compress_type or ZIP_DEFLATED
+            dest.writestr(copied, data)
+    tmp_path.replace(docx_path)
+
+
+def update_fields_with_word(docx_path: Path) -> None:
+    import pythoncom
+    import win32com.client
+
+    abs_path = str(docx_path.resolve())
+    pythoncom.CoInitialize()
+    word = None
+    document = None
+    try:
+        word = win32com.client.DispatchEx("Word.Application")
+        word.Visible = False
+        word.DisplayAlerts = 0
+        try:
+            word.ScreenUpdating = False
+        except Exception:
+            pass
+        document = word.Documents.Open(
+            abs_path,
+            ConfirmConversions=False,
+            ReadOnly=False,
+            AddToRecentFiles=False,
+        )
+        document.Repaginate()
+        document.Fields.Update()
+        for section in document.Sections:
+            for header in section.Headers:
+                header.Range.Fields.Update()
+            for footer in section.Footers:
+                footer.Range.Fields.Update()
+        document.Repaginate()
+        document.Fields.Update()
+        document.Save()
+        document.Close(False)
+        document = None
+    finally:
+        if document is not None:
+            try:
+                document.Close(False)
+            except Exception:
+                pass
+        if word is not None:
+            try:
+                word.Quit()
+            except Exception:
+                pass
+        pythoncom.CoUninitialize()
+
+
+def bake_toc_pages(docx_path: Path, work: Path) -> None:
+    worded = work / "worded.docx"
+    shutil.copy2(docx_path, worded)
+    print("updating Word fields for TOC page numbers...")
+    update_fields_with_word(worded)
+    with ZipFile(worded) as archive:
+        baked = archive.read("word/document.xml").decode("utf-8")
+    mapping = extract_toc_pages(baked)
+    with ZipFile(docx_path) as archive:
+        original = archive.read("word/document.xml").decode("utf-8")
+    marks = re.findall(r'w:anchor="(_Toc\d+)"', original)
+    last = "1"
+    for mark in marks:
+        value = mapping.get(mark, "").strip()
+        if re.fullmatch(r"\d+", value):
+            last = value
+        else:
+            mapping[mark] = last
+    if len(mapping) < 20:
+        raise SystemExit(f"Word filled only {len(mapping)} TOC page numbers")
+    patched = patch_toc_pages(original, mapping)
+    filled = extract_toc_pages(patched)
+    missing = [mark for mark in marks if mark not in filled]
+    if missing:
+        raise SystemExit(f"patched TOC missing pages: {missing[:8]}")
+    rewrite_zip_entry(docx_path, "word/document.xml", patched)
+    numbers = sorted(int(value) for value in filled.values())
+    sample = ", ".join(f"{mark}={filled[mark]}" for mark in list(filled)[:4])
+    print(f"TOC pages baked: {len(filled)} entries, {numbers[0]}–{numbers[-1]} ({sample})")
+
+
+def verify_native(docx_path: Path) -> None:
     with ZipFile(docx_path) as archive:
         xml = archive.read("word/document.xml").decode("utf-8")
         names = archive.namelist()
@@ -1472,12 +1687,20 @@ def verify_native(docx_path: Path) -> None:
         raise SystemExit("docx TOC lost hyperlinks")
     if xml.count("w:bookmarkStart") < 20:
         raise SystemExit("docx lost heading bookmarks")
+    if "目　录" not in xml:
+        raise SystemExit("docx lost TOC title")
+    pages = extract_toc_pages(xml)
+    marks = re.findall(r'w:anchor="(_Toc\d+)"', xml)
+    missing = [mark for mark in marks if mark not in pages]
+    if missing:
+        raise SystemExit(f"docx TOC page numbers empty: {missing[:8]}")
     print(
         "native docx ok:",
         f"w:t={xml.count('<w:t')}",
         f"omml={xml.count('m:oMath')}",
         f"media={len(media)}",
         f"hyper={xml.count('w:hyperlink')}",
+        f"toc_pages={len(pages)}",
         f"size={size_mb:.1f}MB",
     )
 
@@ -1518,7 +1741,8 @@ def build() -> None:
         if PDF.exists():
             SUBMIT_PDF.write_bytes(PDF.read_bytes())
         doc.save(SUBMIT_DOCX)
-        doc.save(LOCAL_DOCX)
+        bake_toc_pages(SUBMIT_DOCX, work)
+        shutil.copy2(SUBMIT_DOCX, LOCAL_DOCX)
         verify_native(SUBMIT_DOCX)
         print("wrote", SUBMIT_DOCX)
         print("wrote", LOCAL_DOCX)
