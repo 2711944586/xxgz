@@ -17,6 +17,7 @@ monograph/*.synctex.gz
 monograph/_page_images/
 monograph/_preview/
 monograph/_qa/
+monograph/_docx_work/
 monograph/book.pdf
 monograph/ACTS-MCDT.docx
 *.fdb_latexmk
