@@ -17,8 +17,8 @@ acts-mcdt/
 │   ├── book.tex            主文件（两次 xelatex，jobname=ACTS-MCDT）
 │   ├── ch01.tex–ch15.tex
 │   ├── refs.tex
-│   ├── figures/            400 DPI 封面 cover.png、水印 bg.png、封底 back.png
-│   ├── figures/_src_*.png  封面重绘用的原始海报
+│   ├── figures/            封面 cover.png、水印 bg.png、封底 back.png
+│   ├── figures/_src_*.png  提交的三张原图
 │   └── ACTS-MCDT.pdf       编译产物
 ├── demo/                   浏览器实验台（Vite + Three.js）
 │   └── public/catalog.json 已写出的状态流，页面不重跑积分
@@ -52,13 +52,13 @@ xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
 xelatex -interaction=nonstopmode -jobname=ACTS-MCDT book.tex
 ```
 
-封面、封底与正文水印若需重绘（A4、400 DPI、矢量文字）：
+封面、封底与正文水印只用提交的三张原图（`_src_cover.png`、`_src_back.png`、`_src_bg.png`），画面不改。打印件按 A4 400 DPI 放大：
 
 ```
 python scripts/draw_covers.py
 ```
 
-源海报是 `monograph/figures/_src_cover.png` 等三张。然后在仓库根目录导出 Word，并覆盖 `submit/`：
+然后在仓库根目录导出 Word，并覆盖 `submit/`：
 
 ```
 python scripts/build_docx.py
