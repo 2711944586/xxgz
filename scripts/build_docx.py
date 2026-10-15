@@ -33,7 +33,9 @@ A4_H = Mm(297)
 BODY_FIG_MAX = Mm(148)
 SONG = "宋体"
 HEI = "黑体"
+KAI = "楷体"
 TIMES = "Times New Roman"
+TOC_TAB_TWIPS = "9072"
 HEADER_LEFT = "基于信息感知的智能蒸烤一体机"
 HEADER_RIGHT = "庄颂  20241334  信息2402"
 
@@ -341,6 +343,17 @@ def set_rfonts(r_pr, east: str, ascii_font: str = TIMES) -> None:
     r_fonts.set(qn("w:hAnsi"), ascii_font)
     r_fonts.set(qn("w:eastAsia"), east)
     r_fonts.set(qn("w:cs"), ascii_font)
+    kern = r_pr.find(qn("w:kern"))
+    if kern is None:
+        kern = OxmlElement("w:kern")
+        r_pr.append(kern)
+    kern.set(qn("w:val"), "32")
+    lang = r_pr.find(qn("w:lang"))
+    if lang is None:
+        lang = OxmlElement("w:lang")
+        r_pr.append(lang)
+    lang.set(qn("w:val"), "en-US")
+    lang.set(qn("w:eastAsia"), "zh-CN")
 
 
 def style_font(style, east: str, size_pt: float, bold: bool = False) -> None:
@@ -513,6 +526,30 @@ def disable_auto_compress(doc: Document) -> None:
         update = OxmlElement("w:updateFields")
         settings.append(update)
     update.set(qn("w:val"), "true")
+    spacing = settings.find(qn("w:characterSpacingControl"))
+    if spacing is None:
+        spacing = OxmlElement("w:characterSpacingControl")
+        settings.append(spacing)
+    spacing.set(qn("w:val"), "compressPunctuation")
+
+
+def configure_hyperlink_style(doc: Document) -> None:
+    try:
+        style = doc.styles["Hyperlink"]
+    except KeyError:
+        style = doc.styles.add_style("Hyperlink", WD_STYLE_TYPE.CHARACTER)
+    r_pr = style.element.get_or_add_rPr()
+    set_rfonts(r_pr, SONG)
+    color = r_pr.find(qn("w:color"))
+    if color is None:
+        color = OxmlElement("w:color")
+        r_pr.append(color)
+    color.set(qn("w:val"), "000000")
+    underline = r_pr.find(qn("w:u"))
+    if underline is None:
+        underline = OxmlElement("w:u")
+        r_pr.append(underline)
+    underline.set(qn("w:val"), "none")
 
 
 def run_font(run, east: str, size_pt: float | None = None, bold: bool | None = None) -> None:
@@ -704,6 +741,11 @@ def configure_section(section, full_bleed: bool) -> None:
         start = OxmlElement("w:type")
         section._sectPr.append(start)
     start.set(qn("w:val"), "nextPage")
+    grid = section._sectPr.find(qn("w:docGrid"))
+    if grid is None:
+        grid = OxmlElement("w:docGrid")
+        section._sectPr.append(grid)
+    grid.set(qn("w:type"), "none")
 
 
 def make_fullbleed_sectpr() -> OxmlElement:
@@ -789,6 +831,180 @@ def delete_paragraph(paragraph) -> None:
         parent.remove(element)
 
 
+def set_bool_prop(p_pr, tag: str, enabled: bool = True) -> None:
+    node = p_pr.find(qn(tag))
+    if not enabled:
+        if node is not None:
+            p_pr.remove(node)
+        return
+    if node is None:
+        node = OxmlElement(tag)
+        p_pr.append(node)
+
+
+def set_paragraph_layout(
+    paragraph,
+    *,
+    justify: bool | None = None,
+    first_line_chars: int | None = None,
+    left_twips: int | None = None,
+    hanging_twips: int | None = None,
+    page_break: bool = False,
+    keep_next: bool = False,
+    before: int | None = None,
+    after: int | None = None,
+    line: int | None = 331,
+) -> None:
+    p_pr = paragraph._p.get_or_add_pPr()
+    set_bool_prop(p_pr, "w:autoSpaceDE", False)
+    auto_de = p_pr.find(qn("w:autoSpaceDE"))
+    if auto_de is None:
+        auto_de = OxmlElement("w:autoSpaceDE")
+        p_pr.append(auto_de)
+    auto_de.set(qn("w:val"), "0")
+    auto_dn = p_pr.find(qn("w:autoSpaceDN"))
+    if auto_dn is None:
+        auto_dn = OxmlElement("w:autoSpaceDN")
+        p_pr.append(auto_dn)
+    auto_dn.set(qn("w:val"), "0")
+    set_bool_prop(p_pr, "w:kinsoku", True)
+    set_bool_prop(p_pr, "w:wordWrap", True)
+    set_bool_prop(p_pr, "w:overflowPunct", True)
+    set_bool_prop(p_pr, "w:widowControl", True)
+    snap = p_pr.find(qn("w:snapToGrid"))
+    if snap is None:
+        snap = OxmlElement("w:snapToGrid")
+        p_pr.append(snap)
+    snap.set(qn("w:val"), "0")
+    if justify is True:
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    elif justify is False:
+        pass
+    if page_break:
+        set_bool_prop(p_pr, "w:pageBreakBefore", True)
+    if keep_next:
+        set_bool_prop(p_pr, "w:keepNext", True)
+        set_bool_prop(p_pr, "w:keepLines", True)
+    spacing = p_pr.find(qn("w:spacing"))
+    if spacing is None:
+        spacing = OxmlElement("w:spacing")
+        p_pr.append(spacing)
+    if line is not None:
+        spacing.set(qn("w:line"), str(line))
+        spacing.set(qn("w:lineRule"), "auto")
+    if before is not None:
+        spacing.set(qn("w:before"), str(before))
+    if after is not None:
+        spacing.set(qn("w:after"), str(after))
+    ind = p_pr.find(qn("w:ind"))
+    if ind is None and (
+        first_line_chars is not None or left_twips is not None or hanging_twips is not None
+    ):
+        ind = OxmlElement("w:ind")
+        p_pr.append(ind)
+    if ind is not None:
+        if first_line_chars is not None:
+            ind.set(qn("w:firstLineChars"), str(first_line_chars))
+            ind.set(qn("w:firstLine"), str(int(first_line_chars * 2.4)))
+            if qn("w:hanging") in ind.attrib:
+                del ind.attrib[qn("w:hanging")]
+        if left_twips is not None:
+            ind.set(qn("w:left"), str(left_twips))
+        if hanging_twips is not None:
+            ind.set(qn("w:left"), str(hanging_twips))
+            ind.set(qn("w:hanging"), str(hanging_twips))
+            if qn("w:firstLine") in ind.attrib:
+                del ind.attrib[qn("w:firstLine")]
+            if qn("w:firstLineChars") in ind.attrib:
+                del ind.attrib[qn("w:firstLineChars")]
+
+
+def add_bookmark(paragraph, name: str, bookmark_id: int) -> None:
+    start = OxmlElement("w:bookmarkStart")
+    start.set(qn("w:id"), str(bookmark_id))
+    start.set(qn("w:name"), name)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), str(bookmark_id))
+    p_el = paragraph._p
+    p_pr = p_el.find(qn("w:pPr"))
+    if p_pr is not None:
+        p_pr.addnext(start)
+    else:
+        p_el.insert(0, start)
+    p_el.append(end)
+
+
+def add_heading_bookmarks(doc: Document) -> list[tuple[int, str, str]]:
+    entries: list[tuple[int, str, str]] = []
+    bookmark_id = 1
+    for paragraph in doc.paragraphs:
+        name = paragraph.style.name if paragraph.style is not None else ""
+        text = paragraph.text.strip()
+        if not text:
+            continue
+        level = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3}.get(name)
+        if level is None:
+            continue
+        mark = f"_Toc{bookmark_id:04d}"
+        add_bookmark(paragraph, mark, bookmark_id)
+        entries.append((level, text, mark))
+        bookmark_id += 1
+    return entries
+
+
+def append_field_runs(parent, instruction: str, east: str, size_pt: float, bold: bool) -> None:
+    def add_run(build) -> None:
+        run = OxmlElement("w:r")
+        r_pr = OxmlElement("w:rPr")
+        set_rfonts(r_pr, east)
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(size_pt * 2)))
+        r_pr.append(sz)
+        if bold:
+            r_pr.append(OxmlElement("w:b"))
+        color = OxmlElement("w:color")
+        color.set(qn("w:val"), "000000")
+        r_pr.append(color)
+        underline = OxmlElement("w:u")
+        underline.set(qn("w:val"), "none")
+        r_pr.append(underline)
+        run.append(r_pr)
+        build(run)
+        parent.append(run)
+
+    def begin(run) -> None:
+        node = OxmlElement("w:fldChar")
+        node.set(qn("w:fldCharType"), "begin")
+        run.append(node)
+
+    def instr(run) -> None:
+        node = OxmlElement("w:instrText")
+        node.set(qn("xml:space"), "preserve")
+        node.text = instruction
+        run.append(node)
+
+    def separate(run) -> None:
+        node = OxmlElement("w:fldChar")
+        node.set(qn("w:fldCharType"), "separate")
+        run.append(node)
+
+    def placeholder(run) -> None:
+        text = OxmlElement("w:t")
+        text.text = " "
+        run.append(text)
+
+    def end(run) -> None:
+        node = OxmlElement("w:fldChar")
+        node.set(qn("w:fldCharType"), "end")
+        run.append(node)
+
+    add_run(begin)
+    add_run(instr)
+    add_run(separate)
+    add_run(placeholder)
+    add_run(end)
+
+
 def number_headings(doc: Document) -> None:
     body_map = {title: index + 1 for index, title in enumerate(BODY_CHAPTERS)}
     app_map = {title: chr(ord("A") + index) for index, title in enumerate(APPENDIX_CHAPTERS)}
@@ -859,31 +1075,13 @@ def number_captions(doc: Document) -> None:
             continue
         if name == "Image Caption" and text and not text.startswith("图"):
             fig += 1
-            prepend_run(paragraph, f"图 {current}.{fig}  ", SONG, 10.5, True)
+            prepend_run(paragraph, f"图 {current}.{fig}  ", HEI, 10.5, True)
         elif name == "Table Caption" and text and not text.startswith("表"):
             tab += 1
-            prepend_run(paragraph, f"表 {current}.{tab}  ", SONG, 10.5, True)
+            prepend_run(paragraph, f"表 {current}.{tab}  ", HEI, 10.5, True)
 
 
-def collect_toc_entries(doc: Document) -> list[tuple[int, str]]:
-    entries: list[tuple[int, str]] = []
-    for paragraph in doc.paragraphs:
-        if paragraph.style is None:
-            continue
-        name = paragraph.style.name
-        text = paragraph.text.strip()
-        if not text or text == "目录":
-            continue
-        if name == "Heading 1":
-            entries.append((1, text))
-        elif name == "Heading 2":
-            entries.append((2, text))
-        elif name == "Heading 3":
-            entries.append((3, text))
-    return entries
-
-
-def insert_toc(doc: Document, entries: list[tuple[int, str]]) -> None:
+def insert_toc(doc: Document, entries: list[tuple[int, str, str]]) -> None:
     anchor = None
     for paragraph in doc.paragraphs:
         if paragraph.style is None:
@@ -894,33 +1092,65 @@ def insert_toc(doc: Document, entries: list[tuple[int, str]]) -> None:
     if anchor is None or not entries:
         return
     first_item = None
-    for level, text in entries:
+    for level, text, mark in entries:
         item = anchor.insert_paragraph_before()
-        item.paragraph_format.first_line_indent = Pt(0)
-        item.paragraph_format.space_before = Pt(1)
-        item.paragraph_format.space_after = Pt(1)
-        item.paragraph_format.line_spacing = 1.38
+        east = HEI if level == 1 else SONG
+        size = 12 if level < 3 else 10.5
+        bold = level == 1
+        left = {1: 0, 2: 240, 3: 480}[level]
+        before = 120 if level == 1 else 20
+        set_paragraph_layout(
+            item,
+            justify=False,
+            first_line_chars=0,
+            left_twips=left,
+            before=before,
+            after=20,
+            line=276,
+        )
+        item.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p_pr = item._p.get_or_add_pPr()
-        ind = p_pr.find(qn("w:ind"))
-        if ind is None:
-            ind = OxmlElement("w:ind")
-            p_pr.append(ind)
-        ind.set(qn("w:firstLine"), "0")
-        ind.set(qn("w:firstLineChars"), "0")
-        if level == 1:
-            item.paragraph_format.left_indent = Pt(0)
-            run = item.add_run(text)
-            run_font(run, HEI, 12, True)
-        elif level == 2:
-            item.paragraph_format.left_indent = Pt(24)
-            ind.set(qn("w:left"), "480")
-            run = item.add_run(text)
-            run_font(run, SONG, 12, False)
-        else:
-            item.paragraph_format.left_indent = Pt(48)
-            ind.set(qn("w:left"), "960")
-            run = item.add_run(text)
-            run_font(run, SONG, 12, False)
+        tabs = p_pr.find(qn("w:tabs"))
+        if tabs is None:
+            tabs = OxmlElement("w:tabs")
+            p_pr.append(tabs)
+        tab = OxmlElement("w:tab")
+        tab.set(qn("w:val"), "right")
+        tab.set(qn("w:leader"), "dot")
+        tab.set(qn("w:pos"), TOC_TAB_TWIPS)
+        tabs.append(tab)
+
+        hyper = OxmlElement("w:hyperlink")
+        hyper.set(qn("w:anchor"), mark)
+        hyper.set(qn("w:history"), "1")
+        title_run = OxmlElement("w:r")
+        r_pr = OxmlElement("w:rPr")
+        set_rfonts(r_pr, east)
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(size * 2)))
+        r_pr.append(sz)
+        if bold:
+            r_pr.append(OxmlElement("w:b"))
+        color = OxmlElement("w:color")
+        color.set(qn("w:val"), "000000")
+        r_pr.append(color)
+        underline = OxmlElement("w:u")
+        underline.set(qn("w:val"), "none")
+        r_pr.append(underline)
+        title_run.append(r_pr)
+        title_text = OxmlElement("w:t")
+        title_text.set(qn("xml:space"), "preserve")
+        title_text.text = text
+        title_run.append(title_text)
+        hyper.append(title_run)
+        tab_run = OxmlElement("w:r")
+        tab_rpr = OxmlElement("w:rPr")
+        set_rfonts(tab_rpr, east)
+        tab_run.append(tab_rpr)
+        tab_run.append(OxmlElement("w:tab"))
+        hyper.append(tab_run)
+        append_field_runs(hyper, f" PAGEREF {mark} \\h ", east, size, bold)
+        item._p.append(hyper)
         if first_item is None:
             first_item = item
     title = first_item.insert_paragraph_before("目录")
@@ -928,6 +1158,7 @@ def insert_toc(doc: Document, entries: list[tuple[int, str]]) -> None:
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in title.runs:
         run_font(run, HEI, 16, True)
+    set_paragraph_layout(title, justify=False, first_line_chars=0, page_break=True, keep_next=True, before=240, after=200)
 
 
 def restyle_runs(doc: Document) -> None:
@@ -937,22 +1168,28 @@ def restyle_runs(doc: Document) -> None:
         name = paragraph.style.name if paragraph.style is not None else "Normal"
         if name in heading_sizes:
             east, size, bold = heading_sizes[name]
-            paragraph.paragraph_format.first_line_indent = Pt(0)
             for run in paragraph.runs:
                 run_font(run, east, size, bold)
             continue
         if name in caption_names:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            paragraph.paragraph_format.first_line_indent = Pt(0)
-            for run in paragraph.runs:
-                run_font(run, SONG, 10.5)
+            for index, run in enumerate(paragraph.runs):
+                if index == 0:
+                    run_font(run, HEI, 10.5, True)
+                else:
+                    run_font(run, KAI, 10.5, False)
             continue
         if name in {"Title", "Author"}:
             continue
         for run in paragraph.runs:
             run_font(run, SONG, 12)
+    style_tables(doc)
+
+
+def style_tables(doc: Document) -> None:
     for table in doc.tables:
-        tbl_pr = table._tbl.tblPr
+        tbl = table._tbl
+        tbl_pr = tbl.tblPr
         if tbl_pr is None:
             continue
         tbl_w = tbl_pr.find(qn("w:tblW"))
@@ -961,12 +1198,176 @@ def restyle_runs(doc: Document) -> None:
             tbl_pr.append(tbl_w)
         tbl_w.set(qn("w:type"), "pct")
         tbl_w.set(qn("w:w"), "5000")
-        for row in table.rows:
+        jc = tbl_pr.find(qn("w:jc"))
+        if jc is None:
+            jc = OxmlElement("w:jc")
+            tbl_pr.append(jc)
+        jc.set(qn("w:val"), "center")
+        borders = tbl_pr.find(qn("w:tblBorders"))
+        if borders is None:
+            borders = OxmlElement("w:tblBorders")
+            tbl_pr.append(borders)
+        for child in list(borders):
+            borders.remove(child)
+        for edge, size, val in (
+            ("top", "12", "single"),
+            ("left", "0", "nil"),
+            ("bottom", "12", "single"),
+            ("right", "0", "nil"),
+            ("insideH", "4", "single"),
+            ("insideV", "0", "nil"),
+        ):
+            node = OxmlElement(f"w:{edge}")
+            node.set(qn("w:val"), val)
+            node.set(qn("w:sz"), size)
+            node.set(qn("w:space"), "0")
+            node.set(qn("w:color"), "000000")
+            borders.append(node)
+        cell_mar = tbl_pr.find(qn("w:tblCellMar"))
+        if cell_mar is None:
+            cell_mar = OxmlElement("w:tblCellMar")
+            tbl_pr.append(cell_mar)
+        for edge, value in (("top", "40"), ("left", "80"), ("bottom", "40"), ("right", "80")):
+            node = cell_mar.find(qn(f"w:{edge}"))
+            if node is None:
+                node = OxmlElement(f"w:{edge}")
+                cell_mar.append(node)
+            node.set(qn("w:w"), value)
+            node.set(qn("w:type"), "dxa")
+        for row_index, row in enumerate(table.rows):
             for cell in row.cells:
+                tc = cell._tc
+                tc_pr = tc.get_or_add_tcPr()
+                v_align = tc_pr.find(qn("w:vAlign"))
+                if v_align is None:
+                    v_align = OxmlElement("w:vAlign")
+                    tc_pr.append(v_align)
+                v_align.set(qn("w:val"), "center")
                 for paragraph in cell.paragraphs:
-                    paragraph.paragraph_format.first_line_indent = Pt(0)
+                    set_paragraph_layout(
+                        paragraph,
+                        justify=False,
+                        first_line_chars=0,
+                        before=40,
+                        after=40,
+                        line=276,
+                    )
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     for run in paragraph.runs:
-                        run_font(run, SONG, 10.5)
+                        run_font(run, HEI if row_index == 0 else SONG, 10.5, row_index == 0)
+
+
+def polish_layout(doc: Document) -> None:
+    in_refs = False
+    for paragraph in doc.paragraphs:
+        name = paragraph.style.name if paragraph.style is not None else "Normal"
+        text = paragraph.text.strip()
+        xml = paragraph._p.xml
+        if name == "Heading 1":
+            in_refs = text == "参考文献"
+            page_break = text not in {"摘要", "Abstract"}
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                page_break=page_break,
+                keep_next=True,
+                before=240,
+                after=200,
+                line=276,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            continue
+        if name == "Heading 2":
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                keep_next=True,
+                before=220,
+                after=120,
+                line=276,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            continue
+        if name == "Heading 3":
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                keep_next=True,
+                before=180,
+                after=100,
+                line=276,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            continue
+        if name in {"Image Caption", "Table Caption"}:
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                keep_next=(name == "Table Caption"),
+                before=80,
+                after=120,
+                line=276,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            continue
+        if name == "Captioned Figure" or "<w:drawing" in xml:
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                keep_next=True,
+                before=160,
+                after=40,
+                line=240,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            continue
+        if "m:oMath" in xml and len(text) < 12:
+            set_paragraph_layout(
+                paragraph,
+                justify=False,
+                first_line_chars=0,
+                before=80,
+                after=80,
+                line=276,
+            )
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            continue
+        if in_refs and name != "Heading 1":
+            set_paragraph_layout(
+                paragraph,
+                justify=True,
+                hanging_twips=420,
+                before=40,
+                after=40,
+                line=276,
+            )
+            for run in paragraph.runs:
+                run_font(run, TIMES, 10.5)
+            continue
+        if name in {"Compact", "List Number", "List Bullet", "List Paragraph"}:
+            set_paragraph_layout(
+                paragraph,
+                justify=True,
+                first_line_chars=0,
+                left_twips=420,
+                before=40,
+                after=40,
+                line=331,
+            )
+            continue
+        set_paragraph_layout(
+            paragraph,
+            justify=True,
+            first_line_chars=200,
+            before=0,
+            after=60,
+            line=331,
+        )
 
 
 def resize_body_figures(doc: Document) -> None:
@@ -1067,11 +1468,16 @@ def verify_native(docx_path: Path) -> None:
     size_mb = docx_path.stat().st_size / 1e6
     if size_mb > 90:
         raise SystemExit(f"docx too large: {size_mb:.1f} MB")
+    if xml.count("w:hyperlink") < 20:
+        raise SystemExit("docx TOC lost hyperlinks")
+    if xml.count("w:bookmarkStart") < 20:
+        raise SystemExit("docx lost heading bookmarks")
     print(
         "native docx ok:",
         f"w:t={xml.count('<w:t')}",
         f"omml={xml.count('m:oMath')}",
         f"media={len(media)}",
+        f"hyper={xml.count('w:hyperlink')}",
         f"size={size_mb:.1f}MB",
     )
 
@@ -1093,10 +1499,12 @@ def build() -> None:
 
         doc = Document(str(body_path))
         disable_auto_compress(doc)
+        configure_hyperlink_style(doc)
         number_headings(doc)
-        toc_entries = collect_toc_entries(doc)
+        toc_entries = add_heading_bookmarks(doc)
         number_captions(doc)
         restyle_runs(doc)
+        polish_layout(doc)
         resize_body_figures(doc)
         center_figure_paragraphs(doc)
         insert_toc(doc, toc_entries)
