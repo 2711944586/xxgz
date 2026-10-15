@@ -12,9 +12,10 @@ from docx.shared import Mm, Pt
 ROOT = Path(__file__).resolve().parents[1]
 BOOK = ROOT / "monograph"
 PDF = BOOK / "ACTS-MCDT.pdf"
-OUT = BOOK / "ACTS-MCDT.docx"
-CN = BOOK / "基于信息感知的智能蒸烤一体机.docx"
-SUBMIT = ROOT / "20241334庄颂信息2402.docx"
+SUBMIT_DIR = ROOT / "submit"
+SUBMIT_PDF = SUBMIT_DIR / "20241334庄颂信息2402.pdf"
+SUBMIT_DOCX = SUBMIT_DIR / "20241334庄颂信息2402.docx"
+LOCAL_DOCX = BOOK / "ACTS-MCDT.docx"
 
 
 def set_run_font(run):
@@ -120,20 +121,12 @@ def build():
         run.add_picture(str(img_path), width=page_w, height=page_h)
 
     pdf.close()
-    pdf_bytes = PDF.read_bytes()
-    submit_pdf = ROOT / "20241334庄颂信息2402.pdf"
-    named_pdf = BOOK / "基于信息感知的智能蒸烤一体机.pdf"
-    root_cn_pdf = ROOT / "基于信息感知的智能蒸烤一体机.pdf"
-    submit_pdf.write_bytes(pdf_bytes)
-    named_pdf.write_bytes(pdf_bytes)
-    root_cn_pdf.write_bytes(pdf_bytes)
-    doc.save(OUT)
-    doc.save(CN)
-    doc.save(SUBMIT)
-    doc.save(ROOT / "基于信息感知的智能蒸烤一体机.docx")
-    print("wrote", OUT, "pages", i + 1)
-    print("wrote", submit_pdf)
-    print("wrote", named_pdf)
+    SUBMIT_DIR.mkdir(exist_ok=True)
+    SUBMIT_PDF.write_bytes(PDF.read_bytes())
+    doc.save(SUBMIT_DOCX)
+    doc.save(LOCAL_DOCX)
+    print("wrote", SUBMIT_DOCX, "pages", i + 1)
+    print("wrote", SUBMIT_PDF)
 
 
 if __name__ == "__main__":

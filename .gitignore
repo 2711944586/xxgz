@@ -1,9 +1,14 @@
-demo/node_modules/
-demo/dist/
+# Python
 **/__pycache__/
 *.pyc
 *.nbc
 *.nbi
+
+# Demo build
+demo/node_modules/
+demo/dist/
+
+# LaTeX scratch
 monograph/*.aux
 monograph/*.log
 monograph/*.out
@@ -12,17 +17,11 @@ monograph/*.synctex.gz
 monograph/_page_images/
 monograph/_preview/
 monograph/book.pdf
-monograph/book.aux
-monograph/book.log
-monograph/book.out
-monograph/book.toc
-outline/*.aux
-outline/*.log
-outline/*.out
-outline/*.toc
-outline/*.synctex.gz
-.DS_Store
-Thumbs.db
+monograph/ACTS-MCDT.docx
 *.fdb_latexmk
 *.fls
 *.xdv
+
+# OS
+.DS_Store
+Thumbs.db
