@@ -1,0 +1,105 @@
+{
+  "kind": "robustness of the campaign to the resistance-reference ceiling",
+  "old_ceiling": 8.0,
+  "new_ceiling": 20.0,
+  "s1_rows": [
+    {
+      "policy": "open",
+      "n": 4860,
+      "log_median_e": -0.8425,
+      "new_median_e": -0.8425,
+      "delta_median_e": 1.7e-05,
+      "log_median_var": 0.64,
+      "new_median_var": 0.64,
+      "max_abs_row_diff": 4.6e-05
+    },
+    {
+      "policy": "pid",
+      "n": 4860,
+      "log_median_e": 0.15,
+      "new_median_e": 0.15,
+      "delta_median_e": 0.0,
+      "log_median_var": 0.64,
+      "new_median_var": 0.64,
+      "max_abs_row_diff": 3.7e-05
+    },
+    {
+      "policy": "mpc",
+      "n": 4860,
+      "log_median_e": -0.4666,
+      "new_median_e": -0.4666,
+      "delta_median_e": 2.8e-05,
+      "log_median_var": 0.64,
+      "new_median_var": 0.64,
+      "max_abs_row_diff": 5e-05
+    },
+    {
+      "policy": "dual",
+      "n": 4860,
+      "log_median_e": -0.3127,
+      "new_median_e": -0.3127,
+      "delta_median_e": -5e-05,
+      "log_median_var": 0.224,
+      "new_median_var": 0.224,
+      "max_abs_row_diff": 5e-05
+    }
+  ],
+  "saturation_profile": {
+    "15mm_open": {
+      "raw_min": 1.238,
+      "raw_max": 10.695,
+      "share_at_8": 0.2012,
+      "share_at_20": 0.0
+    },
+    "15mm_mpc": {
+      "raw_min": 1.238,
+      "raw_max": 9.672,
+      "share_at_8": 0.1327,
+      "share_at_20": 0.0
+    },
+    "15mm_dual": {
+      "raw_min": 1.238,
+      "raw_max": 12.444,
+      "share_at_8": 0.1194,
+      "share_at_20": 0.0
+    },
+    "30mm_open": {
+      "raw_min": 1.238,
+      "raw_max": 14.361,
+      "share_at_8": 0.3533,
+      "share_at_20": 0.0
+    },
+    "30mm_mpc": {
+      "raw_min": 1.621,
+      "raw_max": 13.989,
+      "share_at_8": 0.4879,
+      "share_at_20": 0.0
+    },
+    "30mm_dual": {
+      "raw_min": 1.242,
+      "raw_max": 14.844,
+      "share_at_8": 0.4879,
+      "share_at_20": 0.0
+    },
+    "50mm_open": {
+      "raw_min": 1.443,
+      "raw_max": 18.364,
+      "share_at_8": 0.5255,
+      "share_at_20": 0.0
+    },
+    "50mm_mpc": {
+      "raw_min": 1.452,
+      "raw_max": 18.701,
+      "share_at_8": 0.9667,
+      "share_at_20": 0.0
+    },
+    "50mm_dual": {
+      "raw_min": 1.461,
+      "raw_max": 19.352,
+      "share_at_8": 0.9715,
+      "share_at_20": 0.0
+    }
+  },
+  "verdict": "The reference was saturated for up to 97% of the run under the old ceiling and 0% under the new one, yet every S1 row is unchanged to 1e-4. The campaign conclusions are therefore robust to the ceiling, and the fix removes a real methodological defect without invalidating the reported numbers.",
+  "unchanged": true
+}

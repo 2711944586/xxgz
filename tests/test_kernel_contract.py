@@ -25,6 +25,15 @@ def one(**kwargs):
     return rollout(**base)
 
 
+def one_traced(**kwargs):
+    """Same single case but with the history kept, for trajectory claims."""
+    base = dict(length=np.array([0.03]), proto=np.array([0]), t0=np.array([8.0]),
+                m0=np.array([0.72]), hetero=np.array([0]), seed=np.array([7.0]),
+                policy="dual", minutes=55.0, record_every=4, store_history=True)
+    base.update(kwargs)
+    return rollout(**base)
+
+
 class GenerationTests(unittest.TestCase):
     def test_presets_are_distinct(self):
         for key in ("cavity_air", "use_antoine", "shell_k", "moisture_bc", "steam_baseline"):
@@ -175,6 +184,108 @@ class SwitchIsolationTests(unittest.TestCase):
     def test_invalid_moisture_bc_rejected(self):
         with self.assertRaises(ValueError):
             one(**switches("baseline", moisture_bc="nonsense"))
+
+
+class EstimatorTests(unittest.TestCase):
+    """The two estimators share channels, seeds and stopping rule."""
+
+    def test_scalar_is_the_default_and_unchanged(self):
+        default = one(**DISPLAY)
+        explicit = one(**DISPLAY, estimator="scalar")
+        np.testing.assert_allclose(default["e_alpha"], explicit["e_alpha"])
+        np.testing.assert_allclose(default["stop"], explicit["stop"])
+
+    def test_unknown_estimator_rejected(self):
+        with self.assertRaises(ValueError):
+            one(**DISPLAY, estimator="kalman")
+
+    def test_ekf_produces_continuous_variance(self):
+        """The scalar tracker yields two variance values; the EKF yields many."""
+        scalar = one_traced(**DISPLAY)
+        ekf = one_traced(**DISPLAY, estimator="ekf")
+        n_scalar = len(np.unique(np.round(scalar["var_r"][:, 0], 5)))
+        n_ekf = len(np.unique(np.round(ekf["var_r"][:, 0], 5)))
+        self.assertEqual(n_scalar, 2)
+        self.assertGreater(n_ekf, 10)
+
+    def test_ekf_recovers_thickness_ordering(self):
+        """r(15) < r(30) < r(50) must hold for the EKF estimate."""
+        finals = []
+        for length in (0.015, 0.030, 0.050):
+            out = one_traced(**DISPLAY, length=np.array([length]), estimator="ekf")
+            finals.append(float(out["r_hat"][-1, 0]))
+        self.assertLess(finals[0], finals[1])
+        self.assertLess(finals[1], finals[2])
+
+    def test_ekf_stays_inside_the_box(self):
+        from acts_mcdt.physics import R_MAX, R_MIN
+        for length in (0.015, 0.030, 0.050):
+            out = one_traced(**DISPLAY, length=np.array([length]), estimator="ekf")
+            r = out["r_hat"][:, 0]
+            self.assertTrue(np.all(r >= R_MIN - 1e-9))
+            self.assertTrue(np.all(r <= R_MAX + 1e-9))
+
+    def test_ekf_does_not_drag_down_in_the_hold_phase(self):
+        """The resistance must not collapse after the probe closes."""
+        out = one_traced(**DISPLAY, estimator="ekf")
+        r = out["r_hat"][:, 0]
+        peak = float(np.max(r))
+        self.assertGreater(peak, 5.0)
+        self.assertGreater(float(r[-1]), peak * 0.5,
+                           "the hold phase dragged r down")
+
+
+class ProxyCeilingTests(unittest.TestCase):
+    """The resistance reference must not be pinned at its ceiling.
+
+    ``r`` is a lag multiplier; fits of the single-lag relation on the field put
+    its truth at 8.19 (15 mm) to 10.70 (50 mm) for the dual policy, and up to
+    13.79 for the open loop at 50 mm. The old R_MAX = 8.0 therefore saturated
+    the reference, and the probe acceptance test compared an update against a
+    constant for most of the run.
+    """
+
+    def test_box_covers_the_fitted_truth(self):
+        from acts_mcdt.physics import R_MAX, R_MIN
+        self.assertLess(R_MIN, 8.0)
+        self.assertGreater(R_MAX, 14.0)
+
+    def test_reference_is_not_saturated(self):
+        from acts_mcdt.physics import R_MAX, R_MIN
+        for length in (0.015, 0.030, 0.050):
+            out = one_traced(**DISPLAY, length=np.array([length]))
+            raw = out["r_true_proxy"][:, 0]
+            self.assertLess(float(np.mean(raw >= R_MAX - 1e-9)), 1e-9,
+                            f"{length*1000:.0f} mm reference saturates at R_MAX")
+            self.assertLess(float(np.mean(raw <= R_MIN + 1e-9)), 1e-9,
+                            f"{length*1000:.0f} mm reference saturates at R_MIN")
+
+    def test_fitted_lag_multiplier_matches_the_box(self):
+        """Re-derive the truth from the field and check the box contains it."""
+        from acts_mcdt.physics import R_MAX, R_MIN
+
+        def fit_tau(surf, core, dt=2.0):
+            taus = np.geomspace(20.0, 20000.0, 240)
+            prev = core[:-1]
+            drv = surf[:-1] - prev
+            targets = core[1:]
+            best_tau, best = None, np.inf
+            for tau in taus:
+                err = float(np.mean((prev + dt * drv / tau - targets) ** 2))
+                if err < best:
+                    best, best_tau = err, tau
+            return float(best_tau)
+
+        for length, lo, hi in ((0.015, 7.5, 9.0), (0.030, 8.0, 10.0),
+                               (0.050, 9.5, 12.0)):
+            out = one_traced(**DISPLAY, length=np.array([length]))
+            # one_traced records every 4 steps of 2 s, so the sample spacing is 8 s.
+            tau = fit_tau(out["t_surf"][:, 0], out["t_core"][:, 0], dt=8.0)
+            r_true = tau / ((length / 0.03) ** 2 * 280.0)
+            self.assertGreater(r_true, lo)
+            self.assertLess(r_true, hi)
+            self.assertGreater(R_MIN, 0.0)
+            self.assertLess(r_true, R_MAX)
 
 
 if __name__ == "__main__":

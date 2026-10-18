@@ -212,10 +212,11 @@ class DualEKF:
         var_t_prior: float = 4.0,
         q_t: float = 0.05,
         q_r: float = 1.0e-3,
-        r_obs: float = 0.16,
+        r_obs: float = 6.0,
         r_min: float = 0.8,
-        r_max: float = 8.0,
+        r_max: float = 20.0,
         var_r_cap: float = 0.64,
+        r_gain: float = 0.08,
         scale_length: float = 0.03,
         tau_scale: float = 280.0,
         tau_ref_length: float = 0.03,
@@ -229,6 +230,7 @@ class DualEKF:
         self.r_min = r_min
         self.r_max = r_max
         self.var_r_cap = var_r_cap
+        self.r_gain = r_gain
         self.scale_length = scale_length
         self.tau_scale = tau_scale
         self.tau_ref_length = tau_ref_length
@@ -246,11 +248,22 @@ class DualEKF:
     # -- filter -------------------------------------------------------------
     def step(self, *, y_t: float, dt: float, boundary_moved: bool,
              length: float = 0.03) -> tuple[float, float, float]:
-        """Advance one step. Returns ``(t_cold, r_hat, var_r)``."""
-        # The resistance is a slowly varying parameter; its process noise is
-        # raised only while the boundary is moving, which is when the gap is
-        # informative.
-        q_r = self.q_r * (30.0 if boundary_moved else 1.0)
+        """Advance one step. Returns ``(t_cold, r_hat, var_r)``.
+
+        ``boundary_moved`` must be True only while the boundary is *driving the
+        surface up*. The resistance is identifiable in that phase: the gap opens
+        monotonically and its size carries the lag. It is NOT identifiable while
+        the surface is falling (a hold or a door opening), because the gap
+        collapses toward zero regardless of ``r`` -- the pseudo-measurement then
+        reports a spurious negative innovation and drags ``r`` down. Gating on
+        the rising phase is the filter-level statement of proposition 4.2.2:
+        information is bought by leaving equilibrium, and only in one direction.
+        """
+        # The resistance is a slowly varying parameter. Its process noise is
+        # raised only during the driving phase, when the gap is informative; in
+        # the hold phase it is frozen, which keeps the posterior from inflating
+        # on information that does not exist.
+        q_r = self.q_r * (30.0 if boundary_moved else 1.0e-6)
         Q = np.diag([self.q_t, q_r])
 
         # Predict the cold spot through the same lag law the kernel uses.
@@ -260,13 +273,23 @@ class DualEKF:
         F = np.array([[1.0, 0.0], [0.0, 1.0]])
         P = F @ self.P @ F.T + Q
 
-        # Update with the pseudo-measurement.
-        H = np.array([1.0, self.GAP_PER_R])
+        # Update with the pseudo-measurement. The resistance column is only
+        # applied while the boundary drives the surface up.
+        if boundary_moved:
+            H = np.array([1.0, self.GAP_PER_R])
+        else:
+            H = np.array([1.0, 0.0])
         S = float(H @ P @ H.T + self.R)
         K = (P @ H) / S
         innovation = y_t - self.observe(f_t, self.r)
         t_cold = f_t + float(K[0]) * innovation
-        r = float(np.clip(self.r + float(K[1]) * innovation, self.r_min, self.r_max))
+        # The pseudo-measurement is a proxy, not a calibrated sensor: the 8 K
+        # per unit slope overstates the gap once r grows. Damp the resistance
+        # gain so the estimate tracks the slow parameter instead of chasing the
+        # instantaneous innovation, which otherwise walks it to the box ceiling
+        # on a long monotone ramp.
+        r_gain = float(K[1]) * self.r_gain
+        r = float(np.clip(self.r + r_gain * innovation, self.r_min, self.r_max))
         P = P - np.outer(K, H @ P)
         P = 0.5 * (P + P.T)
         P = np.maximum(P, 0.0)

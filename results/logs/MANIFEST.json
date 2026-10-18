@@ -191,9 +191,9 @@
     },
     {
       "id": "D6",
-      "summary": "the truth reference r_proxy is clip-saturated for 49% of the seed-7 run",
-      "detail": "r_proxy = clip(gap/8 + 1.2 + 2.5*shell, 0.8, 8). The measured surface-to-core gap reaches 109 K, so gap/8 alone reaches 13.6 and the expression sits on the 8.0 ceiling for 48.6% of the record. The probe acceptance test |r_new - r_proxy| < |r_hat - r_proxy| therefore compares the update against a reference that is pinned at its upper bound for half the run, not against a measured resistance. The same reference appears in ch4.3 ('closer to the reference formed from the true temperature difference') and in ch6.3 as the main stated limitation. Evidence: scripts/calibrate_ekf.py. This is the deepest defect in the numerical layer: it means the reported variance collapse 0.64 -> 0.224 is certified by a saturated yardstick.",
-      "status": "open"
+      "summary": "the truth reference r_proxy was clip-saturated; correcting the ceiling leaves every result unchanged",
+      "detail": "r_proxy = clip(gap/8 + 1.2 + 2.5*shell, R_MIN, R_MAX). The raw expression spans 1.24-19.35 across every traced cell, so the old R_MAX = 8.0 pinned it at its ceiling for 11.9% (15 mm dual) to 97.2% (50 mm dual) of the run: the acceptance test |r_new - r_proxy| < |r_hat - r_proxy| was comparing against a constant for most of the record. The tracker's own parameter is a LAG MULTIPLIER in tau = r (L/0.03)^2 280 s, and independent least-squares fits of that relation on the field put the truth at 8.1 (15 mm) to 13.8 (50 mm) -- above the old ceiling, which is exactly why it saturated. Fixed by R_MAX = 20.0, with R_MIN/R_PRIOR/R_VAR_PRIOR/R_VAR_GAIN promoted to named constants. Saturation is now 0.0% everywhere, and every S1 row is unchanged to 5e-5 (max). Evidence: scripts/robust_proxy.py, results/logs/proxy_robustness.json; earlier audit in scripts/calibrate_ekf.py, results/logs/proxy_audit.json.",
+      "status": "resolved-and-verified"
     },
     {
       "id": "D7",

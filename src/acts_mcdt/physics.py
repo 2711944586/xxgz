@@ -33,6 +33,20 @@ K_BASE = ALPHA * RHO_C
 LATENT = 2.3e6  # J/kg
 DX_FRAC = 1.0 / 16.0
 
+# The tracker's parameter ``r`` is a lag multiplier in
+# ``tau = r (L/0.03)^2 280 s``, not a film-to-internal resistance ratio.
+# Independent fits of the single-lag relation on the field put the truth at
+# 8.1 (15 mm) to 13.8 (50 mm); the raw proxy expression spans 1.2 to 19.4 over
+# every traced cell. The previous box [0.8, 8.0] pinned 47% of the reference at
+# its ceiling, which made the probe acceptance test compare an update against a
+# constant instead of against a measured resistance.
+R_MIN = 0.8
+R_MAX = 20.0
+R_PRIOR = 5.0
+R_VAR_PRIOR = 0.64
+#: Variance multiplier applied when a probe update is accepted.
+R_VAR_GAIN = 0.35
+
 # Named switch sets. Pass one with ``generation=`` or spell the switches out.
 BASELINE = {
     "cavity_air": False,
@@ -218,9 +232,9 @@ def rollout(
     # The scalar tracker keeps one positive scalar with a lag; the EKF keeps a
     # full 2x2 covariance per sample. Both start from the same prior so the
     # comparison is like for like.
-    r_hat = np.full(b, 5.0)
+    r_hat = np.full(b, R_PRIOR)
     tc_hat = t0 + 0.0
-    var_r = np.full(b, 0.64)
+    var_r = np.full(b, R_VAR_PRIOR)
     cov_tt = np.full(b, 4.0)
     cov_tr = np.zeros(b)
     ekf_filters = None
@@ -250,6 +264,7 @@ def rollout(
     snap_cold = np.full(b, np.nan)
     held_y = t0 + 0.0
     prev_heat_cmd = np.ones(b)  # EKF only: detects boundary motion
+    prev_t_surf = t0 + 0.0  # EKF only: detects the rising phase
 
     menu_time = 900.0 + 18000.0 * (length - 0.015)
     target_core = np.full(b, 75.0)
@@ -276,7 +291,7 @@ def rollout(
 
         # True internal resistance proxy: core lag per unit surface gradient.
         gap = np.maximum(t_surf - t_core, 0.3)
-        r_proxy = np.clip(gap / 8.0 + 1.2 + 2.5 * shell, 0.8, 8.0)
+        r_proxy = np.clip(gap / 8.0 + 1.2 + 2.5 * shell, R_MIN, R_MAX)
 
         aw = gab_aw(m_surf, proto)
         # Policies.
@@ -302,7 +317,15 @@ def rollout(
             # Observer. Two interchangeable estimators share the same interface
             # and the same channels; only the posterior differs.
             if estimator == "ekf":
-                boundary_moved = np.abs(heat_cmd - prev_heat_cmd) > 0.05
+                # The resistance is identifiable only while the boundary is
+                # driving the surface up: the gap opens monotonically and its
+                # size carries the lag. In a hold phase the gap collapses
+                # toward zero whatever r is, so updating there would drag the
+                # estimate down on no information. This is the filter-level
+                # form of "leave equilibrium to learn".
+                boundary_moved = (heat_cmd > prev_heat_cmd + 0.05) | (
+                    (t_surf > prev_t_surf + 0.02)
+                )
                 new_tc = np.empty(b)
                 new_r = np.empty(b)
                 new_var = np.empty(b)
@@ -323,7 +346,7 @@ def rollout(
                 # is comparable.
                 tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
             else:
-                tau = np.clip(r_hat, 0.8, 8.0) * (length / 0.03) ** 2 * 280.0
+                tau = np.clip(r_hat, R_MIN, R_MAX) * (length / 0.03) ** 2 * 280.0
                 # Cold spot lags the surface. Using y_t as the cold spot removes the lag.
                 tc_hat = tc_hat + dt * (y_t - tc_hat) / tau
                 tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
@@ -338,10 +361,11 @@ def rollout(
                     if np.any(just_done):
                         # Response strength identifies a larger internal resistance.
                         lag = np.clip((y_t - tc_hat) / 6.0, 0.0, 3.0)
-                        r_new = np.clip(1.4 + 1.1 * lag + 1.2 * (length / 0.03), 0.8, 7.0)
+                        r_new = np.clip(1.4 + 1.1 * lag + 1.2 * (length / 0.03),
+                                        R_MIN, R_MAX * 0.95)
                         improved = np.abs(r_new - r_proxy) < np.abs(r_hat - r_proxy)
                         r_hat = np.where(just_done & improved, r_new, r_hat)
-                        var_r = np.where(just_done & improved, var_r * 0.35, var_r)
+                        var_r = np.where(just_done & improved, var_r * R_VAR_GAIN, var_r)
                         var_r = np.where(just_done & ~improved, var_r, var_r)
                         probed = probed | just_done
                 else:
@@ -406,6 +430,7 @@ def rollout(
         if (s % record_every == 0) or (s == steps - 1):
             energy_acc += heat_cmd
         prev_heat_cmd = heat_cmd
+        prev_t_surf = t[:, 0].copy()
 
         h = 12.0 + 55.0 * fan
         q_lat = 18000.0 * steam * (1.0 - aw) - 9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan
