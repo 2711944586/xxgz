@@ -1,0 +1,59 @@
+{
+  "kind": "cold-spot position uncertainty in a 2D section",
+  "boundary": {
+    "h_W_m2K": 25.0,
+    "t_air_c": 140.0,
+    "q_rad_W_m2": 4000.0
+  },
+  "rows": [
+    {
+      "nx": 24,
+      "nz": 16,
+      "fat_col": null,
+      "cold_row": 0,
+      "cold_col": 23,
+      "cold_c": 36.179,
+      "cells_within_0p5K": 32,
+      "share_of_field_within_0p5K": 0.0833,
+      "depth_from_face_mm": 28.75,
+      "spread_top10_c": 0.0
+    },
+    {
+      "nx": 24,
+      "nz": 16,
+      "fat_col": 8,
+      "cold_row": 0,
+      "cold_col": 23,
+      "cold_c": 34.099,
+      "cells_within_0p5K": 32,
+      "share_of_field_within_0p5K": 0.0833,
+      "depth_from_face_mm": 28.75,
+      "spread_top10_c": 0.0
+    },
+    {
+      "nx": 48,
+      "nz": 32,
+      "fat_col": null,
+      "cold_row": 0,
+      "cold_col": 47,
+      "cold_c": 35.87,
+      "cells_within_0p5K": 128,
+      "share_of_field_within_0p5K": 0.0833,
+      "depth_from_face_mm": 29.375,
+      "spread_top10_c": 0.0
+    },
+    {
+      "nx": 48,
+      "nz": 32,
+      "fat_col": 16,
+      "cold_row": 0,
+      "cold_col": 47,
+      "cold_c": 34.801,
+      "cells_within_0p5K": 128,
+      "share_of_field_within_0p5K": 0.0833,
+      "depth_from_face_mm": 29.375,
+      "spread_top10_c": 0.0
+    }
+  ],
+  "conclusion": "On the 24x16 grid 32 cells sit within 0.5 K of the minimum (8.3% of the field), so the cold spot is a plateau, not a point. The reported single depth is one representative of that plateau, and a probe aimed at it has an uncertainty of the plateau width. This is why the paper scores the cold-spot temperature (which the 1D kernel reproduces to 0.31 K) and does not score a cold-spot position: the position is genuinely ill-determined on the temperature evidence alone."
+}

@@ -47,6 +47,18 @@ R_VAR_PRIOR = 0.64
 #: Variance multiplier applied when a probe update is accepted.
 R_VAR_GAIN = 0.35
 
+# Rolling-horizon MPC (policy ``mpc_h``). The horizon is deliberately short:
+# the reduced model is only trusted over a few minutes, and the controller runs
+# at every integration step, so a long horizon would not be a fair comparison
+# against the one-step policies.
+MPC_HORIZON_STEPS = 30  # 30 x 2 s = 60 s
+MPC_HEAT_GRID = np.linspace(0.15, 1.0, 18)
+MPC_ENERGY_WEIGHT = 0.2
+MPC_TARGET_CORE = 75.0
+#: Same 280 s scale the observer and the tracker use, so the controller's
+#: prediction model is the one the rest of the paper already uses.
+MPC_TAU_SCALE = 280.0
+
 # Named switch sets. Pass one with ``generation=`` or spell the switches out.
 BASELINE = {
     "cavity_air": False,
@@ -105,6 +117,54 @@ def gab_aw(moisture: np.ndarray, proto: np.ndarray) -> np.ndarray:
     # Invert a simplified GAB trend: higher m -> higher aw, saturating.
     aw = 1.0 - np.exp(-m / scale) * (1.0 - 0.15 * k)
     return np.clip(aw, 0.02, 0.99)
+
+
+def mpc_command(
+    *,
+    tc_hat: np.ndarray,
+    r_hat: np.ndarray,
+    y_t: np.ndarray,
+    y_m: np.ndarray,
+    length: np.ndarray,
+    horizon_steps: int = MPC_HORIZON_STEPS,
+    dt: float = 2.0,
+    target_core: float = MPC_TARGET_CORE,
+) -> np.ndarray:
+    """One MPC decision step for a batch of samples.
+
+    Predicts the cold spot with the two-node lag law over ``horizon_steps`` for
+    each candidate heat command on ``MPC_HEAT_GRID``, then picks the command
+    that minimises
+
+        (T_cold(horizon) - target)^2 + w * u
+
+    The prediction uses the same lag law the observer uses, so the controller
+    and the estimator share a model; that keeps the comparison against the dual
+    policy honest (the only difference is the decision rule, not the model).
+
+    Returns the chosen heat request per sample. Vectorised over the batch and
+    the candidate grid at once: shape (B, G).
+    """
+    b = tc_hat.shape[0]
+    grid = MPC_HEAT_GRID[None, :]  # (1, G)
+    # Lag time constant per sample, same law as the tracker.
+    tau = np.clip(r_hat, R_MIN, R_MAX) * (length / 0.03) ** 2 * MPC_TAU_SCALE
+    tau = np.maximum(tau, 1.0)[:, None]
+
+    t_core = np.repeat(tc_hat[:, None], grid.shape[1], axis=1)
+    # Surface prediction: the surface chases the boundary set point.
+    t_surf = np.repeat(np.maximum(y_t, tc_hat)[:, None], grid.shape[1], axis=1)
+
+    for _ in range(horizon_steps):
+        t_inf = 90.0 + 95.0 * grid
+        # First-order surface response plus a fixed radiation term, matching
+        # the kernel's boundary expression in the linear regime.
+        t_surf = t_surf + dt * (t_inf - t_surf) / 40.0
+        t_core = t_core + dt * (t_surf - t_core) / tau
+
+    score = (t_core - target_core) ** 2 + MPC_ENERGY_WEIGHT * grid
+    best = np.argmin(score, axis=1)
+    return MPC_HEAT_GRID[best]
 
 
 def rollout(
@@ -190,7 +250,7 @@ def rollout(
         steam_baseline = preset["steam_baseline"]
     if moisture_bc not in ("gradient", "flux"):
         raise ValueError("moisture_bc must be 'gradient' or 'flux'")
-    policy_code = {"open": 1, "pid": 2, "mpc": 3, "dual": 4}[policy]
+    policy_code = {"open": 1, "pid": 2, "mpc": 3, "dual": 4, "mpc_h": 5}[policy]
     b = length.shape[0]
     if n < 2:
         raise ValueError("n must be at least 2")
@@ -313,6 +373,30 @@ def rollout(
             fan = np.full(b, 0.45)
             exhaust = np.full(b, 0.5)
             mode[:] = 0
+        elif policy == "mpc_h":
+            # Rolling-horizon MPC. It shares the observer, so the ordering is:
+            # update the estimate first, then optimise over the horizon. The
+            # duplicated block below is the same update the dual policy uses.
+            tau = np.clip(r_hat, R_MIN, R_MAX) * (length / 0.03) ** 2 * 280.0
+            tc_hat = tc_hat + dt * (y_t - tc_hat) / tau
+            tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
+            heat_req = mpc_command(
+                tc_hat=tc_hat, r_hat=r_hat, y_t=y_t, y_m=y_m,
+                length=length, horizon_steps=MPC_HORIZON_STEPS, dt=dt,
+            )
+            steam = np.full(b, steam_baseline)
+            fan = np.full(b, 0.4)
+            exhaust = np.full(b, 0.7)
+            mode[:] = 0
+            ready = (tc_hat >= target_core) & (now > 240.0)
+            newly = ready & ~stopped
+            stop = np.where(newly, now, stop)
+            if np.any(newly):
+                snap_std = np.where(newly, t.std(axis=1), snap_std)
+                snap_cold = np.where(newly, t.argmin(axis=1).astype(float), snap_cold)
+            stopped = stopped | ready
+            heat_req = np.where(stopped, 0.15, heat_req)
+            mode = np.where(stopped, 2, mode)
         else:
             # Observer. Two interchangeable estimators share the same interface
             # and the same channels; only the posterior differs.

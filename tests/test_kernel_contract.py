@@ -288,5 +288,43 @@ class ProxyCeilingTests(unittest.TestCase):
             self.assertLess(r_true, R_MAX)
 
 
+class MPCHeuristicTests(unittest.TestCase):
+    """The rolling-horizon policy must be a real optimisation, not a relabel."""
+
+    def test_mpc_command_respects_the_grid(self):
+        from acts_mcdt.physics import MPC_HEAT_GRID, mpc_command
+        heat = mpc_command(
+            tc_hat=np.array([40.0, 70.0, 90.0]),
+            r_hat=np.array([5.0, 5.0, 5.0]),
+            y_t=np.array([80.0, 120.0, 130.0]),
+            y_m=np.array([0.7, 0.7, 0.7]),
+            length=np.full(3, 0.03),
+        )
+        self.assertEqual(heat.shape, (3,))
+        for value in heat:
+            self.assertTrue(np.any(np.isclose(value, MPC_HEAT_GRID)))
+
+    def test_mpc_commands_less_heat_when_target_is_close(self):
+        """A sample near target should get less heat than a cold one."""
+        from acts_mcdt.physics import mpc_command
+        heat = mpc_command(
+            tc_hat=np.array([20.0, 74.0]),
+            r_hat=np.array([5.0, 5.0]),
+            y_t=np.array([60.0, 90.0]),
+            y_m=np.array([0.7, 0.7]),
+            length=np.full(2, 0.03),
+        )
+        self.assertGreater(heat[0], heat[1])
+
+    def test_mpc_policy_runs_and_stops(self):
+        out = one(**DISPLAY, policy="mpc_h")
+        self.assertTrue(np.isfinite(float(out["stop"][0])))
+        self.assertGreater(float(out["stop"][0]), 240.0)
+
+    def test_unknown_policy_rejected(self):
+        with self.assertRaises(KeyError):
+            one(**DISPLAY, policy="no-such-policy")
+
+
 if __name__ == "__main__":
     unittest.main()
