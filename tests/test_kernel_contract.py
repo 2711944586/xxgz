@@ -326,5 +326,41 @@ class MPCHeuristicTests(unittest.TestCase):
             one(**DISPLAY, policy="no-such-policy")
 
 
+class FastKernelTests(unittest.TestCase):
+    """fast.py must stay a compiled path for the baseline, not drift into a third kernel.
+
+    s1_wide.jsonl and ensemble.json were produced by it, so if it stops
+    matching the baseline those two artifacts silently change meaning.
+    """
+
+    def test_fast_matches_baseline_stop_times(self):
+        from acts_mcdt.fast import integrate
+        seeds = np.array([7.0, 1000.0, 1001.0])
+        for length in (0.015, 0.030, 0.050):
+            args = dict(length=np.full(3, length), proto=np.zeros(3),
+                        t0=np.full(3, 8.0), m0=np.full(3, 0.72),
+                        hetero=np.zeros(3), seed=seeds)
+            base = rollout(policy="dual", minutes=55.0, store_history=False,
+                           **args, **BASELINE)
+            fast = integrate(args["length"], args["proto"], args["t0"], args["m0"],
+                             args["hetero"], seeds, 4, 55.0, 2.0, 5, 0)
+            np.testing.assert_allclose(np.median(fast[0]), np.median(base["stop"]),
+                                       atol=1.0,
+                                       err_msg=f"fast diverges at {length*1000:.0f} mm")
+
+    def test_fast_differs_from_display(self):
+        """It must NOT match the display generation; that is what makes it the baseline path."""
+        from acts_mcdt.fast import integrate
+        seeds = np.array([7.0, 1000.0, 1001.0])
+        args = dict(length=np.full(3, 0.030), proto=np.zeros(3),
+                    t0=np.full(3, 8.0), m0=np.full(3, 0.72),
+                    hetero=np.zeros(3), seed=seeds)
+        disp = rollout(policy="dual", minutes=55.0, store_history=False,
+                       **args, **DISPLAY)
+        fast = integrate(args["length"], args["proto"], args["t0"], args["m0"],
+                         args["hetero"], seeds, 4, 55.0, 2.0, 5, 0)
+        self.assertGreater(abs(np.median(fast[0]) - np.median(disp["stop"])), 50.0)
+
+
 if __name__ == "__main__":
     unittest.main()

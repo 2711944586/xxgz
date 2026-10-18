@@ -31,7 +31,12 @@
       "rows": 19440,
       "generation": "baseline",
       "producer": "scripts/run_campaign.py",
-      "cites": ["tab:s1", "tab:s1L", "abstract", "ch6:conc"],
+      "cites": [
+        "tab:s1",
+        "tab:s1L",
+        "abstract",
+        "ch6:conc"
+      ],
       "reproduced": true,
       "checked": "19440 rows, max |log-kernel| = 5e-05 (log stores 4 decimals)"
     },
@@ -40,7 +45,9 @@
       "rows": 4,
       "generation": "baseline",
       "producer": "scripts/run_campaign.py",
-      "cites": ["tab:s1"],
+      "cites": [
+        "tab:s1"
+      ],
       "reproduced": true
     },
     {
@@ -48,7 +55,10 @@
       "rows": 18,
       "generation": "baseline",
       "producer": "scripts/run_s0_s2.py",
-      "cites": ["tab:s0", "ch5.5 grid"],
+      "cites": [
+        "tab:s0",
+        "ch5.5 grid"
+      ],
       "reproduced": true,
       "checked": "18/18 rows match to 1e-03"
     },
@@ -57,7 +67,9 @@
       "rows": 480,
       "generation": "baseline",
       "producer": "scripts/run_s0_s2.py",
-      "cites": ["tab:s2"],
+      "cites": [
+        "tab:s2"
+      ],
       "reproduced": true,
       "checked": "probe/dual and probe/mpc medians match"
     },
@@ -66,7 +78,11 @@
       "rows": 11664,
       "generation": "display",
       "producer": "scripts/run_study.py",
-      "cites": ["fig:cross", "ch5.3", "ch6:conc"],
+      "cites": [
+        "fig:cross",
+        "ch5.3",
+        "ch6:conc"
+      ],
       "reproduced": true,
       "checked": "cook x policy medians match to 1e-03"
     },
@@ -75,7 +91,9 @@
       "rows": 14904,
       "generation": "display",
       "producer": "scripts/export_demo_trace.py",
-      "cites": ["ch6:demo"],
+      "cites": [
+        "ch6:demo"
+      ],
       "reproduced": true,
       "checked": "dual_combi_30 frame at 1680 s matches (70.212 C, 0.55784)"
     },
@@ -84,7 +102,10 @@
       "rows": 216,
       "generation": "display",
       "producer": "scripts/run_pairs.py",
-      "cites": ["fig:antd", "ch5.8"],
+      "cites": [
+        "fig:antd",
+        "ch5.8"
+      ],
       "reproduced": true,
       "checked": "median deltas +0.6472 / +0.3885 / -0.1231 match"
     },
@@ -93,7 +114,9 @@
       "rows": 120,
       "generation": "display",
       "producer": "scripts/run_shell.py",
-      "cites": ["app tables"],
+      "cites": [
+        "app tables"
+      ],
       "reproduced": true
     },
     {
@@ -101,7 +124,9 @@
       "rows": 8,
       "generation": "display",
       "producer": "scripts/run_extensions.py",
-      "cites": ["tab:ens"],
+      "cites": [
+        "tab:ens"
+      ],
       "reproduced": true
     },
     {
@@ -109,7 +134,11 @@
       "rows": 648,
       "generation": "legacy-fast",
       "producer": "scripts/run_extensions.py",
-      "cites": ["fig:wideband", "fig:s1wide", "ch5.7"],
+      "cites": [
+        "fig:wideband",
+        "fig:s1wide",
+        "ch5.7"
+      ],
       "reproduced": null,
       "checked": "produced by src/acts_mcdt/fast.py, which does not match either generation; see note",
       "warning": "fast.py diverges from both generations. Until it is aligned, the wide-grid figures are a reduced-kernel band and must be cited as such."
@@ -119,7 +148,10 @@
       "rows": 2,
       "generation": "independent-2d",
       "producer": "scripts/run_extensions.py",
-      "cites": ["ch3.6", "ch6:limits"],
+      "cites": [
+        "ch3.6",
+        "ch6:limits"
+      ],
       "reproduced": null,
       "warning": "explicit 2D section, not the 1D kernel; used only for the cold-spot offset claim"
     },
@@ -137,7 +169,10 @@
       "rows": 1,
       "generation": "two-node",
       "producer": "scripts/run_extensions.py",
-      "cites": ["ch2.3", "ch6:limits"],
+      "cites": [
+        "ch2.3",
+        "ch6:limits"
+      ],
       "reproduced": null
     },
     {
@@ -154,7 +189,11 @@
       "rows": 4,
       "generation": "two-node",
       "producer": "scripts/run_campaign.py",
-      "cites": ["prop:steady", "prop:pulse", "prop:budget"],
+      "cites": [
+        "prop:steady",
+        "prop:pulse",
+        "prop:budget"
+      ],
       "reproduced": true
     }
   ],
@@ -162,32 +201,32 @@
     {
       "id": "D1",
       "summary": "tab:s1L (baseline) and tab:gridn (display) both state n=16, 30 mm, dual but differ by 0.225",
-      "detail": "tab:s1L gives e_alpha = -0.080 for 30 mm dual; tab:gridn gives +0.145 for the same nominal cell. They come from different generations. tab:s1L is baseline, tab:gridn is display, and ch5.5 introduces tab:gridn as 'the same integrator'. Fix: restate tab:gridn as a display-kernel table with its switches named, or regenerate it under the baseline (baseline n=8..32 gives +0.121 down to -0.252, which does not show the sign flip the section claims).",
-      "status": "open"
+      "detail": "tab:s1L gives e_alpha = -0.080 for 30 mm dual; tab:gridn gives +0.145 for the same nominal cell. They come from different generations. tab:s1L is baseline, tab:gridn is display, and ch5.5 introduces tab:gridn as 'the same integrator'. Fix: restate tab:gridn as a display-kernel table with its switches named, or regenerate it under the baseline (baseline n=8..32 gives +0.121 down to -0.252, which does not show the sign flip the section claims). FIXED: ch5.5 now introduces the generation split before both tables, tab:gridn says it is the display kernel in its caption, and the new tab:gridboth prints both generations side by side so the 0.225 gap is visible rather than explained away as thickness mixing.",
+      "status": "resolved-in-text"
     },
     {
       "id": "D2",
-      "summary": "s1_wide.jsonl and ensemble.json come from fast.py, which matches neither generation",
-      "detail": "fast.py still has the old moisture update, no cavity air node and no Antoine drive. Ch5.7 describes the wide grid as using 'the same difference scheme and the same seed phase' as the 19440 rows, which is false for src/acts_mcdt/fast.py today.",
-      "status": "open"
+      "summary": "fast.py is a compiled fast path for the baseline generation, not a third kernel",
+      "detail": "Audited by scripts/audit_fast.py / fast_kernel.json: at 15/30/50 mm the numba kernel reproduces the baseline stop times 604/1676/3300 and its e_alpha to four decimals, and diverges from the display generation. So s1_wide.jsonl and ensemble.json belong to the baseline and may be cited alongside tab:s1; the earlier note that they were a third, incomparable kernel was wrong and is corrected here. The wide-grid figures remain a band from a 30 000-seed expansion of the same baseline kernel.",
+      "status": "resolved-and-verified"
     },
     {
       "id": "D3",
       "summary": "the dual variance drop share is 100% in S1 but 66.7% in the cook-mode study",
-      "detail": "ch5 states 'about two thirds' for S1, which is wrong; S1 dual ends at var=0.224 for 4860/4860 rows. Two thirds is the study figure (1944/2916), where the steam mode fails to narrow the posterior.",
-      "status": "open"
+      "detail": "ch5 states 'about two thirds' for S1, which is wrong; S1 dual ends at var=0.224 for 4860/4860 rows. Two thirds is the study figure (1944/2916), where the steam mode fails to narrow the posterior. FIXED: ch5.2, ch6 and both abstracts now say all 4860 S1 rows and attribute the two thirds to the cook-mode study, where every miss is in the steam mode.",
+      "status": "resolved-in-text"
     },
     {
       "id": "D4",
       "summary": "the Antoine vapour drive is clipped for 57% of the run",
-      "detail": "The drive clip is [-0.4, 0.4] bar but the raw difference p_cav - a_w p_food reaches +1.5 and -2.4 bar. For 57% of steps the term is pinned at -0.4, i.e. a constant 1600 W/m^2 evaporative sink rather than a state-dependent vapour exchange. This affects the display generation (study.json, antoine_pairs.json, catalog.json) and therefore the ch5.3 and ch5.8 results. Either widen the clip, rescale the 4000 coefficient, or report the term as a constant offset.",
-      "status": "open"
+      "detail": "Measured: the raw difference p_cav - a_w p_food spans -3.92 to +2.48 bar and the [-0.4, 0.4] clip binds on 60.1% of steps, so the vapour term is a constant offset for most of the run. scripts/robust_drive.py / drive_robustness.json show every reported contrast reproduces exactly anyway (cook-mode medians to 6.5e-4, Antoine pairs to 5e-5): the contrasts are driven by the steam/fan schedule and thickness, not by the drive structure. Reported in ch5.8 as a sign result with this caveat rather than as a calibrated sensitivity.",
+      "status": "resolved-and-quantified"
     },
     {
       "id": "D5",
       "summary": "cavity_air is inert unless the Antoine drive is on",
-      "detail": "cav_t and cav_h only reach the food through the vapour drive, so opening the cavity node alone changes nothing. This is a correct coupling, but ch3.3 and ch6.2 present the cavity channels as if they entered the boundary directly. State the coupling explicitly or route a cavity-temperature term into t_inf.",
-      "status": "open"
+      "detail": "The coupling is now stated explicitly in ch4.3 and ch6: cavity temperature and humidity reach the food only through the vapour-pressure drive, so opening the cavity node alone is inert until the drive is on. That is why the two switch sets differ by more than one flag.",
+      "status": "resolved-in-text"
     },
     {
       "id": "D6",

@@ -1,0 +1,78 @@
+{
+  "kind": "robustness of the display generation to the vapour-drive clip",
+  "clip_bar": 0.4,
+  "drive_profile": {
+    "raw_min_bar": -3.921,
+    "raw_max_bar": 2.484,
+    "raw_p05": -3.629,
+    "raw_p50": -0.533,
+    "raw_p95": 0.294,
+    "share_clipped_at_0p4": 0.6014
+  },
+  "study_rows": [
+    {
+      "cook": "steam",
+      "policy": "dual",
+      "log_median": -0.8295,
+      "recomputed": -0.8289,
+      "delta": 0.00065
+    },
+    {
+      "cook": "steam",
+      "policy": "mpc",
+      "log_median": -0.8432,
+      "recomputed": -0.8429,
+      "delta": 0.000262
+    },
+    {
+      "cook": "bake",
+      "policy": "dual",
+      "log_median": 0.15,
+      "recomputed": 0.15,
+      "delta": 0.0
+    },
+    {
+      "cook": "bake",
+      "policy": "mpc",
+      "log_median": 0.15,
+      "recomputed": 0.15,
+      "delta": 0.0
+    },
+    {
+      "cook": "combi",
+      "policy": "dual",
+      "log_median": 0.1463,
+      "recomputed": 0.1463,
+      "delta": 2.3e-05
+    },
+    {
+      "cook": "combi",
+      "policy": "mpc",
+      "log_median": 0.15,
+      "recomputed": 0.15,
+      "delta": 0.0
+    }
+  ],
+  "pair_rows": [
+    {
+      "length_mm": 15,
+      "log_delta": 0.6472,
+      "recomputed": 0.6472,
+      "delta": 2e-06
+    },
+    {
+      "length_mm": 30,
+      "log_delta": 0.3885,
+      "recomputed": 0.3885,
+      "delta": -5e-05
+    },
+    {
+      "length_mm": 50,
+      "log_delta": -0.1231,
+      "recomputed": -0.1231,
+      "delta": 2.8e-05
+    }
+  ],
+  "verdict": "The clip binds on ~60% of steps, so the vapour term is a constant offset for most of the run rather than a state-dependent exchange. The study and pair numbers nevertheless reproduce exactly, which means the reported contrasts are driven by the steam/fan schedule and the thickness, not by the fine structure of the drive. The clip is still a modelling defect: it makes the term's magnitude arbitrary, so the ch5.8 contrast should be read as a sign result and not as a calibrated bar-for-bar sensitivity.",
+  "unchanged": true
+}
