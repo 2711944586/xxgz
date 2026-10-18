@@ -188,6 +188,24 @@
       "summary": "cavity_air is inert unless the Antoine drive is on",
       "detail": "cav_t and cav_h only reach the food through the vapour drive, so opening the cavity node alone changes nothing. This is a correct coupling, but ch3.3 and ch6.2 present the cavity channels as if they entered the boundary directly. State the coupling explicitly or route a cavity-temperature term into t_inf.",
       "status": "open"
+    },
+    {
+      "id": "D6",
+      "summary": "the truth reference r_proxy is clip-saturated for 49% of the seed-7 run",
+      "detail": "r_proxy = clip(gap/8 + 1.2 + 2.5*shell, 0.8, 8). The measured surface-to-core gap reaches 109 K, so gap/8 alone reaches 13.6 and the expression sits on the 8.0 ceiling for 48.6% of the record. The probe acceptance test |r_new - r_proxy| < |r_hat - r_proxy| therefore compares the update against a reference that is pinned at its upper bound for half the run, not against a measured resistance. The same reference appears in ch4.3 ('closer to the reference formed from the true temperature difference') and in ch6.3 as the main stated limitation. Evidence: scripts/calibrate_ekf.py. This is the deepest defect in the numerical layer: it means the reported variance collapse 0.64 -> 0.224 is certified by a saturated yardstick.",
+      "status": "open"
+    },
+    {
+      "id": "D7",
+      "summary": "the two-node reduction cannot reproduce the non-monotone surface-to-core gap",
+      "detail": "Fitted R_int and C2 land 23-363x and 0.35-8.1x away from their analytic grid values, and the cold-spot RMSE stays at 4.9-7.8 K. The cause is structural: the field's gap rises to ~108 K then falls to zero, while a single R_int*C2 lag has one exponential approach. Recorded with numbers in scripts/identify_reduction.py and results/logs/reduction_fit.json; now stated in ch3.5 tab:redfit instead of being asserted.",
+      "status": "resolved-in-text"
+    },
+    {
+      "id": "D8",
+      "summary": "the 13.75 mm figure is a half-thickness, not a lateral cold-spot offset",
+      "detail": "The 2D section's cold spot sits on the adiabatic far face, which is 13.75 mm = 30/2 - 1.25 from the geometric centre along the thickness axis. The 1D and 2D cold spots differ by only 0.31 K, so the 1D lowest-cell reading is sound and what it loses is lateral position, not temperature. Recorded in scripts/crosscheck_dimensions.py and results/logs/crosscheck_dims.json; ch3.6 and ch6.3 corrected.",
+      "status": "resolved-in-text"
     }
   ]
 }

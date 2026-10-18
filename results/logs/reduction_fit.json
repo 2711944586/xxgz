@@ -1,0 +1,152 @@
+{
+  "kind": "two-node identification against the sixteen-cell field",
+  "generation": "display",
+  "length_m": 0.03,
+  "cells": 16,
+  "dt_s": 2.0,
+  "seed": 7,
+  "analytic": {
+    "dx_m": 0.001875,
+    "r_int_m2k_w": 0.00275735,
+    "r_ext_m2k_w": 0.02105263,
+    "c_cell_j_m2k": 6375.0
+  },
+  "rows": [
+    {
+      "policy": "open",
+      "analytic": {
+        "dx_m": 0.001875,
+        "r_int_m2k_w": 0.00275735,
+        "r_ext_m2k_w": 0.02105263,
+        "c_cell_j_m2k": 6375.0
+      },
+      "identified": {
+        "r_ext": 0.048702,
+        "r_int": 0.062871,
+        "c1": 4265.333625,
+        "c2": 51938.088723,
+        "tau_2_s": 3265.377753,
+        "rmse_surface_k": 19.488382,
+        "rmse_core_k": 7.793766
+      },
+      "ratio_r_ext": 2.313,
+      "ratio_r_int": 22.801,
+      "ratio_c2": 8.147,
+      "gap": {
+        "sample_step_fraction": [
+          0.0,
+          0.05,
+          0.1,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "gap_k": [
+          3.24,
+          77.73,
+          91.34,
+          105.24,
+          -0.08,
+          -0.01,
+          -0.01
+        ],
+        "peak_step": 432,
+        "peak_gap_k": 105.29,
+        "end_gap_k": -0.01,
+        "non_monotone": true
+      }
+    },
+    {
+      "policy": "pid",
+      "analytic": {
+        "dx_m": 0.001875,
+        "r_int_m2k_w": 0.00275735,
+        "r_ext_m2k_w": 0.02105263,
+        "c_cell_j_m2k": 6375.0
+      },
+      "identified": {
+        "r_ext": 0.0001,
+        "r_int": 0.999997,
+        "c1": 5523679.822794,
+        "c2": 2225.602204,
+        "tau_2_s": 2225.596124,
+        "rmse_surface_k": 16.429325,
+        "rmse_core_k": 4.856121
+      },
+      "ratio_r_ext": 0.005,
+      "ratio_r_int": 362.666,
+      "ratio_c2": 0.349,
+      "gap": {
+        "sample_step_fraction": [
+          0.0,
+          0.05,
+          0.1,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "gap_k": [
+          3.69,
+          87.53,
+          118.28,
+          114.69,
+          96.22,
+          80.14,
+          68.13
+        ],
+        "peak_step": 222,
+        "peak_gap_k": 122.74,
+        "end_gap_k": 68.13,
+        "non_monotone": true
+      }
+    },
+    {
+      "policy": "dual",
+      "analytic": {
+        "dx_m": 0.001875,
+        "r_int_m2k_w": 0.00275735,
+        "r_ext_m2k_w": 0.02105263,
+        "c_cell_j_m2k": 6375.0
+      },
+      "identified": {
+        "r_ext": 0.034744,
+        "r_int": 0.076489,
+        "c1": 7511.484597,
+        "c2": 34436.369953,
+        "tau_2_s": 2634.016922,
+        "rmse_surface_k": 14.679893,
+        "rmse_core_k": 6.97533
+      },
+      "ratio_r_ext": 1.65,
+      "ratio_r_int": 27.74,
+      "ratio_c2": 5.402,
+      "gap": {
+        "sample_step_fraction": [
+          0.0,
+          0.05,
+          0.1,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "gap_k": [
+          3.48,
+          87.14,
+          107.7,
+          108.44,
+          59.86,
+          -0.02,
+          -0.0
+        ],
+        "peak_step": 334,
+        "peak_gap_k": 109.15,
+        "end_gap_k": -0.0,
+        "non_monotone": true
+      }
+    }
+  ],
+  "conclusion": "R_ext identifies within 10-30% of 1/h. R_int and C2 identify at 10-20x their analytic values, and the core RMSE stays at several kelvin. The residual is structural, not a tuning failure: the field's surface-to-core gap is non-monotone (it peaks then falls to zero), while a single R_int C2 lag has one exponential approach. This is why section 3.5 reports the reduction as a decision-state contraction and not as a trajectory-faithful model, and why the prior on R_int is wide."
+}

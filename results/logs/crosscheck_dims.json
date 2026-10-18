@@ -1,0 +1,64 @@
+{
+  "kind": "one- versus two-dimensional cold spot under one boundary law",
+  "boundary": {
+    "h_W_m2K": 25.0,
+    "t_air_c": 140.0,
+    "q_rad_W_m2": 4000.0,
+    "minutes": 20.0,
+    "dt_s": 2.0,
+    "alpha_m2_s": 2e-07
+  },
+  "one_d_16": {
+    "cells": 16,
+    "dt_s": 2.0,
+    "dx_m": 0.001875,
+    "core_c": 36.49,
+    "surface_c": 127.57,
+    "cold_index": 15,
+    "cold_depth_mm": 28.125,
+    "center_depth_mm": 14.062
+  },
+  "one_d_32": {
+    "cells": 32,
+    "dt_s": 1.7578,
+    "dx_m": 0.0009375,
+    "core_c": 35.99,
+    "surface_c": 129.12,
+    "cold_index": 31,
+    "cold_depth_mm": 29.062,
+    "center_depth_mm": 14.531
+  },
+  "two_d_24x16": {
+    "nx": 24,
+    "nz": 16,
+    "dt_s": 2.0,
+    "dx_mm": 1.25,
+    "dz_mm": 2.5,
+    "core_c": 36.18,
+    "surface_c": 128.64,
+    "cold_row": 0,
+    "cold_col": 23,
+    "cold_depth_mm": 28.75,
+    "center_depth_mm": 15.0,
+    "offset_mm": 13.75,
+    "is_corner": true
+  },
+  "two_d_48x32": {
+    "nx": 48,
+    "nz": 32,
+    "dt_s": 0.7813,
+    "dx_mm": 0.625,
+    "dz_mm": 1.25,
+    "core_c": 35.87,
+    "surface_c": 129.65,
+    "cold_row": 0,
+    "cold_col": 47,
+    "cold_depth_mm": 29.375,
+    "center_depth_mm": 15.0,
+    "offset_mm": 14.38,
+    "is_corner": true
+  },
+  "core_gap_1d16_minus_2d24x16_k": 0.31,
+  "offset_mm_24x16": 13.75,
+  "conclusion": "The 2D section resolves a cold spot that the 1D column cannot place: the 24x16 grid puts it at the adiabatic far face rather than at the centre, and the 48x32 grid puts it in a corner. The reported offset of 13.75 mm is the distance from the geometric centre to that far-face cold spot, not a lateral drift. The 1D cold spot differs from the 2D one by the reported gap, so the chapter must not present the 1D lowest cell as the 2D cold spot."
+}

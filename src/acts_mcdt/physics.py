@@ -24,6 +24,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from acts_mcdt.estimator import DualEKF
+
 # Thermal diffusivity scale (m^2/s): lean tissue order.
 ALPHA = 2.0e-7
 RHO_C = 3.4e6  # J/(m^3 K)
@@ -122,6 +124,12 @@ def rollout(
     shell_k: float = 0.0,
     moisture_bc: str = "gradient",
     steam_baseline: float = 0.0,
+    # --- estimator switch ---------------------------------------------------
+    # "scalar" is the frozen baseline tracker: one positive scalar ``r_hat``
+    # with a lag, and a binary covariance collapse at the end of the probe
+    # window. "ekf" runs a two-state extended Kalman filter per sample, so the
+    # posterior variance is continuous. The truth field never reads either.
+    estimator: str = "scalar",
 ) -> dict:
     """Integrate a batch of slabs.
 
@@ -149,7 +157,14 @@ def rollout(
     ``steam_baseline``
         The steam command outside the probe window. The baseline holds the
         valve shut, which is what s1_summary.json was produced with.
+    ``estimator``
+        ``"scalar"`` keeps the frozen tracker; ``"ekf"`` runs the two-state
+        filter from :mod:`acts_mcdt.estimator`. The estimator only reads the
+        same channels, so the two runs differ in the posterior, not in the
+        physics.
     """
+    if estimator not in ("scalar", "ekf"):
+        raise ValueError("estimator must be 'scalar' or 'ekf'")
     if generation is not None:
         if generation not in GENERATIONS:
             raise ValueError(f"unknown generation {generation!r}")
@@ -200,9 +215,20 @@ def rollout(
     door = np.zeros(b)
     leak = np.zeros(b)
     # Estimator state. Prior R is deliberately wrong.
+    # The scalar tracker keeps one positive scalar with a lag; the EKF keeps a
+    # full 2x2 covariance per sample. Both start from the same prior so the
+    # comparison is like for like.
     r_hat = np.full(b, 5.0)
     tc_hat = t0 + 0.0
     var_r = np.full(b, 0.64)
+    cov_tt = np.full(b, 4.0)
+    cov_tr = np.zeros(b)
+    ekf_filters = None
+    if estimator == "ekf":
+        ekf_filters = [
+            DualEKF(t0=float(t0[i]), r_prior=5.0, var_r_prior=0.64, var_t_prior=4.0)
+            for i in range(b)
+        ]
     probed = np.zeros(b, dtype=bool)
     probe_locked = np.zeros(b, dtype=bool)
     stop = np.full(b, minutes * 60.0)
@@ -223,6 +249,7 @@ def rollout(
     snap_std = np.full(b, np.nan)
     snap_cold = np.full(b, np.nan)
     held_y = t0 + 0.0
+    prev_heat_cmd = np.ones(b)  # EKF only: detects boundary motion
 
     menu_time = 900.0 + 18000.0 * (length - 0.015)
     target_core = np.full(b, 75.0)
@@ -272,27 +299,56 @@ def rollout(
             exhaust = np.full(b, 0.5)
             mode[:] = 0
         else:
-            # Observer.
-            tau = np.clip(r_hat, 0.8, 8.0) * (length / 0.03) ** 2 * 280.0
-            # Cold spot lags the surface. Using y_t as the cold spot removes the lag.
-            tc_hat = tc_hat + dt * (y_t - tc_hat) / tau
-            tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
+            # Observer. Two interchangeable estimators share the same interface
+            # and the same channels; only the posterior differs.
+            if estimator == "ekf":
+                boundary_moved = np.abs(heat_cmd - prev_heat_cmd) > 0.05
+                new_tc = np.empty(b)
+                new_r = np.empty(b)
+                new_var = np.empty(b)
+                for i in range(b):
+                    tc_i, r_i, vr_i = ekf_filters[i].step(
+                        y_t=float(y_t[i]), dt=dt,
+                        boundary_moved=bool(boundary_moved[i]),
+                        length=float(length[i]),
+                    )
+                    new_tc[i] = tc_i
+                    new_r[i] = r_i
+                    new_var[i] = vr_i
+                tc_hat = new_tc
+                r_hat = new_r
+                var_r = new_var
+                # The EKF's cold spot is a filtered estimate; keep the same
+                # lower clamp the scalar tracker uses so the stopping threshold
+                # is comparable.
+                tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
+            else:
+                tau = np.clip(r_hat, 0.8, 8.0) * (length / 0.03) ** 2 * 280.0
+                # Cold spot lags the surface. Using y_t as the cold spot removes the lag.
+                tc_hat = tc_hat + dt * (y_t - tc_hat) / tau
+                tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
             if policy == "dual":
                 in_probe = (now >= 150.0) & (now < 190.0) & (var_r > 0.25) & (~probe_locked)
                 steam = np.where(in_probe & (now < 170.0), 1.0, steam_baseline)
                 fan = np.where(in_probe & (now >= 170.0), 1.3, 0.4)
                 exhaust = np.where(in_probe & (now < 170.0), 0.05, 0.55)
                 mode = np.where(in_probe, 1, 0)
-                just_done = (now >= 190.0) & (~probed) & (var_r > 0.25)
-                if np.any(just_done):
-                    # Response strength identifies a larger internal resistance.
-                    lag = np.clip((y_t - tc_hat) / 6.0, 0.0, 3.0)
-                    r_new = np.clip(1.4 + 1.1 * lag + 1.2 * (length / 0.03), 0.8, 7.0)
-                    improved = np.abs(r_new - r_proxy) < np.abs(r_hat - r_proxy)
-                    r_hat = np.where(just_done & improved, r_new, r_hat)
-                    var_r = np.where(just_done & improved, var_r * 0.35, var_r)
-                    var_r = np.where(just_done & ~improved, var_r, var_r)
-                    probed = probed | just_done
+                if estimator == "scalar":
+                    just_done = (now >= 190.0) & (~probed) & (var_r > 0.25)
+                    if np.any(just_done):
+                        # Response strength identifies a larger internal resistance.
+                        lag = np.clip((y_t - tc_hat) / 6.0, 0.0, 3.0)
+                        r_new = np.clip(1.4 + 1.1 * lag + 1.2 * (length / 0.03), 0.8, 7.0)
+                        improved = np.abs(r_new - r_proxy) < np.abs(r_hat - r_proxy)
+                        r_hat = np.where(just_done & improved, r_new, r_hat)
+                        var_r = np.where(just_done & improved, var_r * 0.35, var_r)
+                        var_r = np.where(just_done & ~improved, var_r, var_r)
+                        probed = probed | just_done
+                else:
+                    # The EKF needs no post-window rewrite: the window already
+                    # entered through the covariance. Only the bookkeeping flag
+                    # is set, so the mode column stays comparable.
+                    probed = probed | ((now >= 190.0) & (~probed))
             else:
                 steam = np.zeros(b)
                 fan = np.full(b, 0.4)
@@ -349,6 +405,7 @@ def rollout(
             cav_p = 1.0 + 0.04 * cav_h + 0.0004 * np.maximum(cav_t - 100.0, 0.0)
         if (s % record_every == 0) or (s == steps - 1):
             energy_acc += heat_cmd
+        prev_heat_cmd = heat_cmd
 
         h = 12.0 + 55.0 * fan
         q_lat = 18000.0 * steam * (1.0 - aw) - 9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan
