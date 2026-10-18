@@ -457,6 +457,9 @@ function makeFood() {
       new RoundedBoxGeometry(w * (fat ? 0.96 : 0.99), fat ? 0.48 : 0.40, fat ? 1.26 : 1.16, 4, 0.012),
       mat,
     );
+    // Keep the base tint so browning can be re-applied each frame without
+    // compounding the previous mix.
+    mesh.userData.baseColor = mat.color.clone();
     mesh.position.set(-0.84 + (i + 0.5) * w, 0.93, 0.08);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -668,6 +671,20 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
         const showSteam = steamOn > 0.5;
         s.steam.points.visible = showSteam;
         s.cavity.jet.visible = showSteam;
+        // Probe window: the information action is an event in the process, so
+        // it gets a visible cue rather than only a caption. Inside 150-190 s
+        // the plume is tinted gold and the jet widens slightly.
+        const t = s.frame?.time ?? 0;
+        const inProbe = t >= 150 && t < 190;
+        if (showSteam) {
+          const gold = new THREE.Color("#c4a574");
+          const cool = new THREE.Color("#cfe3ea");
+          s.steam.points.material.color.copy(inProbe ? gold : cool);
+          s.steam.points.material.opacity = inProbe
+            ? 0.55 + 0.30 * steamOn
+            : 0.22 + 0.42 * steamOn;
+          s.cavity.jet.scale.setScalar(inProbe ? 1.45 : 1.0);
+        }
         if (showSteam) {
           s.steam.points.material.opacity = 0.22 + 0.42 * steamOn;
           s.steam.points.material.size = 0.14 + 0.14 * steamOn;
@@ -720,12 +737,26 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     s.frame = frame;
     const slabs = s.food.userData.slabs || [];
     const span = Math.max(frame.t1 - frame.t2, 1);
+    // Surface browning proxy in [0, 1]; the log carries shell and the panel
+    // carries no alpha_b, so shell is used as the visible browning proxy.
+    const brown = Math.min(1, Math.max(0, (frame.shell ?? 0) * 14 + Math.max(frame.t1 - 120, 0) / 90));
     slabs.forEach((mesh, i) => {
       const u = i / Math.max(N_CELL - 1, 1);
       const value = frame.t1 - span * u ** 1.15;
       const color = heatColor(value);
       if (mesh.userData.fat) color.offsetHSL(0.02, 0.12, -0.12);
-      mesh.material.color.copy(color);
+      if (mesh.userData.baseColor) {
+        mesh.material.color.copy(color);
+        // Mix toward a toasted brown; only the outer slices see the surface.
+        const outer = Math.max(0, 1 - u * 6);
+        const mix = brown * outer * 0.55;
+        if (mix > 0.001) {
+          const toasted = new THREE.Color("#6b3a18");
+          mesh.material.color.lerp(toasted, mix);
+        }
+      } else {
+        mesh.material.color.copy(color);
+      }
     });
     s.food.scale.set(length / 0.03, 1, 1);
     s.cavity.coilMat.emissiveIntensity = 0.16 + 1.55 * frame.heat;
