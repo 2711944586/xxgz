@@ -56,21 +56,25 @@ def setup_style():
         "xtick.color": INK,
         "ytick.color": INK,
         "text.color": INK,
-        "axes.linewidth": 0.8,
+        "axes.linewidth": 0.85,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.grid": True,
         "grid.color": LINE,
-        "grid.linewidth": 0.55,
-        "grid.alpha": 0.9,
+        "grid.linewidth": 0.5,
+        "grid.alpha": 0.85,
         "legend.frameon": False,
-        "legend.fontsize": 9.0,
-        "savefig.dpi": 220,
+        "legend.fontsize": 8.6,
+        "savefig.dpi": 240,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.14,
-        "font.size": 10.4,
-        "axes.titlesize": 11.4,
-        "axes.labelsize": 10.4,
+        "savefig.pad_inches": 0.06,
+        "font.size": 9.6,
+        "axes.titlesize": 10.4,
+        "axes.labelsize": 9.8,
+        "xtick.labelsize": 8.6,
+        "ytick.labelsize": 8.6,
+        "lines.solid_capstyle": "round",
+        "lines.solid_joinstyle": "round",
     })
 
 
@@ -98,6 +102,52 @@ def ink_or_white(val, vmin, vmax, cmap):
     r, g, b = to_rgb(cmap(t))
     lum = 0.299 * r + 0.587 * g + 0.114 * b
     return INK if lum > 0.55 else "white"
+
+
+def heatmap(ax, grid, rows, cols, vmin, vmax, cmap, fmt="{:+.2f}"):
+    ax.grid(False)
+    ny, nx = grid.shape
+    im = ax.imshow(
+        grid, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto",
+        interpolation="nearest", rasterized=False,
+    )
+    ax.set_xticks(range(nx), cols)
+    ax.set_yticks(range(ny), rows)
+    ax.set_xticks(np.arange(-0.5, nx, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, ny, 1), minor=True)
+    ax.grid(which="minor", color="white", linestyle="-", linewidth=1.15, zorder=3)
+    ax.tick_params(which="minor", bottom=False, left=False, length=0)
+    ax.set_xlim(-0.5, nx - 0.5)
+    ax.set_ylim(ny - 0.5, -0.5)
+    for sp in ax.spines.values():
+        sp.set_visible(True)
+        sp.set_linewidth(0.7)
+        sp.set_color(INK)
+    fs = 8.8 if max(nx, ny) >= 4 else 9.4
+    for i in range(ny):
+        for j in range(nx):
+            ax.text(
+                j, i, fmt.format(grid[i, j]), ha="center", va="center",
+                color=ink_or_white(grid[i, j], vmin, vmax, cmap),
+                fontsize=fs, zorder=4,
+            )
+    return im
+
+
+def slim_cbar(fig, im, ax, label):
+    cb = fig.colorbar(im, ax=ax, fraction=0.034, pad=0.014, shrink=0.88)
+    cb.set_label(label, fontsize=8.8)
+    cb.outline.set_linewidth(0.55)
+    cb.ax.tick_params(length=2.0, width=0.55, labelsize=7.8)
+    return cb
+
+
+def line_kw(color, ms=5.0, lw=1.45):
+    return dict(
+        color=color, lw=lw, marker="o", ms=ms,
+        markerfacecolor=color, markeredgecolor="white",
+        markeredgewidth=0.9, zorder=3, solid_capstyle="round",
+    )
 
 
 def run_one(**kw):
@@ -276,29 +326,19 @@ def draw_s1_heatmap(s1):
             grid[i, j] = med(
                 s1, lambda r, p=p, L=L: r["policy"] == p and r["length_mm"] == L, "e_alpha"
             )
-    fig, ax = plt.subplots(figsize=(6.2, 4.0))
-    ax.grid(False)
-    im = ax.imshow(grid, cmap=DIVERGE, vmin=-0.9, vmax=0.16)
-    ax.set_xticks(range(3), [f"{L} mm" for L in Ls])
-    ax.set_yticks(range(4), [POL_N[p] for p in pols])
-    for i in range(4):
-        for j in range(3):
-            ax.text(
-                j, i, f"{grid[i, j]:+.3f}", ha="center", va="center",
-                color=ink_or_white(grid[i, j], -0.9, 0.16, DIVERGE), fontsize=10.5,
-            )
-    cb = fig.colorbar(im, ax=ax, pad=0.02)
-    cb.set_label(r"中位 $e_\alpha$")
-    ax.set_title("S1：策略 × 厚度")
-    ax.spines["top"].set_visible(True)
-    ax.spines["right"].set_visible(True)
+    fig, ax = plt.subplots(figsize=(5.35, 3.25))
+    im = heatmap(
+        ax, grid, [POL_N[p] for p in pols], [f"{L} mm" for L in Ls],
+        -0.9, 0.16, DIVERGE, fmt="{:+.3f}",
+    )
+    slim_cbar(fig, im, ax, r"中位进度偏差 $e_\alpha$")
     save(fig, "X_s1_heat_policy_thick.png")
 
 
 def draw_s1_violin(s1):
     pols = ("open", "pid", "mpc", "dual")
     data = [[r["e_alpha"] for r in s1 if r["policy"] == p] for p in pols]
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    fig, ax = plt.subplots(figsize=(5.85, 3.25))
     parts = ax.violinplot(data, showmedians=True, showextrema=False, widths=0.82)
     for body, p in zip(parts["bodies"], pols):
         body.set_facecolor(POL_C[p])
@@ -308,16 +348,16 @@ def draw_s1_violin(s1):
     ax.axhline(0, color=MUTED, lw=0.8, ls="--")
     ax.set_xticks(range(1, 5), [POL_N[p] for p in pols])
     ax.set_ylabel(r"$e_\alpha$")
-    ax.set_title("S1 四个策略的进度偏差分布（各 4860 条）")
+    ax.set_title("")
     save(fig, "X_s1_violin.png")
 
 
 def draw_s1_ecdf(s1):
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    fig, ax = plt.subplots(figsize=(5.85, 3.25))
     for p in ("open", "pid", "mpc", "dual"):
         v = np.sort([r["e_alpha"] for r in s1 if r["policy"] == p])
         y = np.linspace(0, 1, len(v), endpoint=True)
-        ax.plot(v, y, color=POL_C[p], lw=1.8, label=POL_N[p])
+        ax.plot(v, y, color=POL_C[p], lw=1.45, label=POL_N[p], solid_capstyle="round")
     ax.axvline(0, color=MUTED, lw=0.8, ls="--", zorder=0)
     ax.annotate(
         r"设计线 $e_\alpha=0$", xy=(0, 0.18), xytext=(0.12, 0.18),
@@ -327,12 +367,12 @@ def draw_s1_ecdf(s1):
     ax.set_xlabel(r"$e_\alpha$")
     ax.set_ylabel("经验分布")
     ax.legend(loc="upper left", fontsize=8.4, frameon=False)
-    ax.set_title("S1 进度偏差的经验分布函数")
+    ax.set_title("")
     save(fig, "X_s1_ecdf.png")
 
 
 def draw_s1_pareto(s1):
-    fig, ax = plt.subplots(figsize=(6.5, 4.0))
+    fig, ax = plt.subplots(figsize=(5.85, 3.40))
     rng = np.random.default_rng(7)
     for p in ("open", "pid", "mpc", "dual"):
         sub = [r for r in s1 if r["policy"] == p]
@@ -344,12 +384,12 @@ def draw_s1_pareto(s1):
     ax.set_xlabel("累计加热")
     ax.set_ylabel(r"$e_\alpha$")
     ax.legend(markerscale=2.4, loc="lower right", fontsize=8.4, frameon=False)
-    ax.set_title("S1：能量–进度平面（每策抽样 900）")
+    ax.set_title("")
     save(fig, "X_s1_pareto.png")
 
 
 def draw_s1_factors(s1):
-    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.4), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(8.6, 3.15), sharey=True)
     dual = [r for r in s1 if r["policy"] == "dual"]
     # food
     foods = ("mince", "potato", "dough")
@@ -373,29 +413,28 @@ def draw_s1_factors(s1):
                     medianprops=dict(color=HEAT, lw=1.5), boxprops=dict(color=INK))
     axes[2].axhline(0, color=MUTED, lw=0.7, ls="--")
     axes[2].set_title("初始含水")
-    fig.suptitle("S1 对偶策略：食品、初温、含水（箱线不含离群点）", y=1.02)
+    fig.tight_layout()
     save(fig, "X_s1_factors.png")
 
 
 def draw_s1_hetero(s1):
-    fig, ax = plt.subplots(figsize=(6.4, 3.7))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     names = {0: "均匀", 1: "厚度抖动", 2: "脂肪层"}
     for h, color in zip((0, 1, 2), (SAGE, GOLD, HEAT)):
         ys = [
             med(s1, lambda r, h=h, L=L: r["policy"] == "dual" and r["hetero"] == h and r["length_mm"] == L, "e_alpha")
             for L in (15, 30, 50)
         ]
-        ax.plot([15, 30, 50], ys, marker="o", color=color, lw=1.9, label=names[h])
+        ax.plot([15, 30, 50], ys, label=names[h], **line_kw(color))
     ax.axhline(0, color=MUTED, lw=0.8, ls="--")
     ax.set_xlabel("厚度 / mm")
     ax.set_ylabel(r"中位 $e_\alpha$")
     ax.legend(loc="lower left", fontsize=8.4, frameon=False)
-    ax.set_title("S1 对偶：非均质类型随厚度")
     save(fig, "X_s1_hetero.png")
 
 
 def draw_s1_under_bars(s1):
-    fig, ax = plt.subplots(figsize=(6.6, 3.8))
+    fig, ax = plt.subplots(figsize=(5.55, 3.25))
     x = np.arange(3)
     w = 0.18
     Ls = (15, 30, 50)
@@ -407,9 +446,14 @@ def draw_s1_under_bars(s1):
         ax.bar(x + (i - 1.5) * w, ys, width=w, color=POL_C[p], label=POL_N[p], edgecolor=INK, lw=0.4)
     ax.set_xticks(x, [f"{L} mm" for L in Ls])
     ax.set_ylabel(r"$P(e_\alpha<0)$")
-    ax.set_ylim(0, 1.05)
-    ax.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, 1.16), fontsize=8.4)
-    ax.set_title("S1：未达设计线的比例", pad=22)
+    ax.set_ylim(0, 1.08)
+    ax.legend(
+        ncol=2, loc="lower center", bbox_to_anchor=(0.5, 1.02),
+        fontsize=8.2, frameon=True, fancybox=False, edgecolor=LINE,
+        framealpha=0.92, columnspacing=1.05, handlelength=1.4,
+    )
+    ax.set_title("")
+    fig.subplots_adjust(top=0.82)
     save(fig, "X_s1_under.png")
 
 
@@ -421,13 +465,12 @@ def draw_study_facet(study):
                 med(study, lambda r, p=p, c=c, L=L: r["policy"] == p and r["cook"] == c and r["length_mm"] == L, "e_alpha")
                 for L in (15, 30, 50)
             ]
-            ax.plot([15, 30, 50], ys, marker="o", color=POL_C[p], lw=1.7, label=POL_N[p])
+            ax.plot([15, 30, 50], ys, label=POL_N[p], **line_kw(POL_C[p], ms=4.6, lw=1.35))
         ax.axhline(0, color=MUTED, lw=0.7, ls="--")
         ax.set_title(COOK_N[c])
         ax.set_xlabel("厚度 / mm")
     axes[0].set_ylabel(r"中位 $e_\alpha$")
     axes[2].legend(fontsize=8)
-    fig.suptitle("档位研究：三档上策略随厚度", y=1.03)
     save(fig, "X_study_facet.png")
 
 
@@ -439,29 +482,19 @@ def draw_study_t0_m0(study):
     for i, t0 in enumerate(t0s):
         for j, m0 in enumerate(m0s):
             grid[i, j] = med(dual, lambda r, t0=t0, m0=m0: r["t0"] == t0 and abs(r["m0"] - m0) < 1e-9, "e_alpha")
-    fig, ax = plt.subplots(figsize=(5.6, 3.8))
-    ax.grid(False)
-    im = ax.imshow(grid, cmap=DIVERGE, vmin=-0.9, vmax=0.16)
-    ax.set_xticks(range(len(m0s)), [f"{m:.2f}" for m in m0s])
-    ax.set_yticks(range(len(t0s)), [f"{t:.0f} °C" for t in t0s])
-    for i in range(len(t0s)):
-        for j in range(len(m0s)):
-            ax.text(
-                j, i, f"{grid[i, j]:+.2f}", ha="center", va="center",
-                color=ink_or_white(grid[i, j], -0.9, 0.16, DIVERGE), fontsize=10,
-            )
+    fig, ax = plt.subplots(figsize=(5.15, 3.15))
+    im = heatmap(
+        ax, grid, [f"{t:.0f} °C" for t in t0s], [f"{m:.2f}" for m in m0s],
+        -0.9, 0.16, DIVERGE,
+    )
     ax.set_xlabel("初始含水")
     ax.set_ylabel("初温")
-    cb = fig.colorbar(im, ax=ax, pad=0.02)
-    cb.set_label(r"中位 $e_\alpha$")
-    ax.set_title("档位研究、对偶、组合：初温 × 含水")
-    ax.spines["top"].set_visible(True)
-    ax.spines["right"].set_visible(True)
+    slim_cbar(fig, im, ax, r"中位 $e_\alpha$")
     save(fig, "X_study_t0m0.png")
 
 
 def draw_s0(s0):
-    fig, ax = plt.subplots(figsize=(6.2, 3.8))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     markers = {"mince": "o", "potato": "s", "dough": "D"}
     for food in ("mince", "potato", "dough"):
         sub = [r for r in s0 if r["food"] == food]
@@ -473,22 +506,22 @@ def draw_s0(s0):
     ax.set_xlabel(r"16 控制体 $e_\alpha$")
     ax.set_ylabel(r"8 控制体 $e_\alpha$")
     ax.legend(loc="lower right", fontsize=8.4, frameon=False)
-    ax.set_title("S0：同一条件上 16 与 8 控制体配对")
+    ax.set_title("")
     save(fig, "X_s0_pair.png")
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     foods = ("mince", "potato", "dough")
     data = [[r["delta_e"] for r in s0 if r["food"] == f] for f in foods]
     ax.boxplot(data, tick_labels=[FOOD_N[f] for f in foods], showfliers=False,
                medianprops=dict(color=HEAT, lw=1.6), boxprops=dict(color=INK))
     ax.set_ylabel(r"$e_8-e_{16}$")
-    ax.set_title("S0：网格减半引起的进度差")
+    ax.set_title("")
     save(fig, "X_s0_delta.png")
 
 
 def draw_s2(s2):
     # probe
-    fig, ax = plt.subplots(figsize=(5.4, 3.6))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     data = [
         [r["e_alpha"] for r in s2 if r["factor"] == "probe" and r["level"] == lv]
         for lv in ("dual", "mpc")
@@ -500,10 +533,10 @@ def draw_s2(s2):
     vp["cmedians"].set_color(INK)
     ax.set_xticks([1, 2], ["对偶探针", "无探针"])
     ax.set_ylabel(r"$e_\alpha$")
-    ax.set_title("S2：探针开闭（40 种子，30 mm 肉糜）")
+    ax.set_title("")
     save(fig, "X_s2_probe.png")
 
-    fig, ax = plt.subplots(figsize=(6.6, 3.9))
+    fig, ax = plt.subplots(figsize=(5.45, 3.20))
     levels = ("0", "15", "30", "60")
     xs = [int(lv) for lv in levels]
     p50, p10, p90, stops = [], [], [], []
@@ -514,12 +547,15 @@ def draw_s2(s2):
         p10.append(float(np.quantile(v, 0.1)))
         p90.append(float(np.quantile(v, 0.9)))
         stops.append(float(np.median([r["stop_s"] for r in sub])))
-    ax.plot(xs, p50, color=STEAM, marker="o", ms=7, lw=1.9, label=r"$e_\alpha$ 中位")
-    ax.plot(xs, p10, color=STEAM, marker="v", ms=5, lw=0.9, ls=":", label="十分位")
-    ax.plot(xs, p90, color=STEAM, marker="^", ms=5, lw=0.9, ls=":", label="九十分位")
+    ax.plot(xs, p50, label=r"$e_\alpha$ 中位", **line_kw(STEAM, ms=5.4, lw=1.5))
+    ax.plot(xs, p10, color=STEAM, marker="v", ms=4.4, lw=0.9, ls=":",
+            markerfacecolor=STEAM, markeredgecolor="white", markeredgewidth=0.7, label="十分位")
+    ax.plot(xs, p90, color=STEAM, marker="^", ms=4.4, lw=0.9, ls=":",
+            markerfacecolor=STEAM, markeredgecolor="white", markeredgewidth=0.7, label="九十分位")
     ax2 = ax.twinx()
     ax2.spines["right"].set_visible(True)
-    ax2.plot(xs, np.array(stops) / 60.0, color=HEAT, marker="s", lw=1.5, ls="--", label="停机中位")
+    ax2.plot(xs, np.array(stops) / 60.0, color=HEAT, marker="s", ms=4.8, lw=1.35, ls="--",
+             markerfacecolor=HEAT, markeredgecolor="white", markeredgewidth=0.7, label="停机中位")
     ax.set_xticks(xs, [f"{x} s" for x in xs])
     ax.set_xlabel("开局保持表面读数的时长 / s")
     ax.set_ylabel(r"$e_\alpha$")
@@ -530,10 +566,10 @@ def draw_s2(s2):
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h1 + h2, l1 + l2, loc="upper left", fontsize=8.2)
-    ax.set_title("S2：表面读数保持时长")
+    ax.set_title("")
     save(fig, "X_s2_occlude.png")
 
-    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.4), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(8.6, 3.15), sharey=True)
     specs = [
         ("fat", ("off", "on"), ("关", "开"), "脂肪层"),
         ("door", ("closed", "at300"), ("关闭", "300 s 开门"), "门"),
@@ -546,7 +582,7 @@ def draw_s2(s2):
         ax.axhline(0, color=MUTED, lw=0.6, ls="--")
         ax.set_title(title)
     axes[0].set_ylabel(r"$e_\alpha$")
-    fig.suptitle("S2：脂肪、开门、质量通道（各 40 种子）", y=1.03)
+    fig.tight_layout()
     save(fig, "X_s2_three.png")
 
     base = float(np.median([r["e_alpha"] for r in s2 if r["factor"] == "probe" and r["level"] == "dual"]))
@@ -561,7 +597,7 @@ def draw_s2(s2):
     order = np.argsort(vals)
     labels = [labels[i] for i in order]
     vals = [vals[i] for i in order]
-    fig, ax = plt.subplots(figsize=(6.8, 3.7))
+    fig, ax = plt.subplots(figsize=(5.55, 3.20))
     colors = [HEAT if v < 0 else SAGE for v in vals]
     ax.barh(labels, vals, color=colors, edgecolor=INK, lw=0.45, height=0.62)
     ax.axvline(0, color=MUTED, lw=0.8, ls="--")
@@ -577,13 +613,13 @@ def draw_s2(s2):
     lo, hi = min(vals), max(vals)
     ax.set_xlim(lo - 0.04, hi + 0.08)
     ax.set_xlabel(r"相对对偶基线的中位 $\Delta e_\alpha$")
-    ax.set_title("S2：各边界相对对偶基线")
+    ax.set_title("")
     save(fig, "X_s2_radar.png")
 
 
 def draw_ensemble(ens):
     rows = ens["rows"] if isinstance(ens, dict) else ens
-    fig, ax = plt.subplots(figsize=(6.6, 3.8))
+    fig, ax = plt.subplots(figsize=(5.45, 3.20))
     for members, marker in ((32, "o"), (128, "s")):
         sub = [r for r in rows if r["members"] == members]
         ax.scatter(
@@ -596,10 +632,10 @@ def draw_ensemble(ens):
     ax.set_xlabel("厚度 / mm")
     ax.set_ylabel("成员最大散布")
     ax.legend()
-    ax.set_title("集合：同一核的成员散布")
+    ax.set_title("")
     save(fig, "X_ens_spread.png")
 
-    fig, ax = plt.subplots(figsize=(6.6, 3.8))
+    fig, ax = plt.subplots(figsize=(5.45, 3.20))
     width = 0.36
     xs = np.arange(6)
     labels = []
@@ -618,7 +654,7 @@ def draw_ensemble(ens):
     ax.axhline(0, color=MUTED, lw=0.7, ls="--")
     ax.set_xticks(xs, labels, fontsize=8.5)
     ax.set_ylabel(r"$e_\alpha$ 分位")
-    ax.set_title("32 成员：十分位–中位–九十分位")
+    ax.set_title("")
     save(fig, "X_ens_quantile.png")
 
 
@@ -632,25 +668,15 @@ def draw_wide(wide):
             sub = [r for r in wide if r["policy"] == p and r["length_mm"] == L]
             grid[i, j] = float(np.median([r["e50"] for r in sub]))
             under[i, j] = float(np.median([r["under"] for r in sub]))
-    fig, ax = plt.subplots(figsize=(6.2, 4.0))
-    ax.grid(False)
-    im = ax.imshow(grid, cmap=DIVERGE, vmin=-0.9, vmax=0.16)
-    ax.set_xticks(range(3), ["15 mm", "30 mm", "50 mm"])
-    ax.set_yticks(range(4), [POL_N[p] for p in pols])
-    for i in range(4):
-        for j in range(3):
-            ax.text(
-                j, i, f"{grid[i, j]:+.2f}", ha="center", va="center",
-                color=ink_or_white(grid[i, j], -0.9, 0.16, DIVERGE),
-            )
-    cb = fig.colorbar(im, ax=ax, pad=0.02)
-    cb.set_label("格子中位 $e_{50}$ 再取中位")
-    ax.set_title("S1-wide：648 格 × 30000 种子")
-    ax.spines["top"].set_visible(True)
-    ax.spines["right"].set_visible(True)
+    fig, ax = plt.subplots(figsize=(5.35, 3.25))
+    im = heatmap(
+        ax, grid, [POL_N[p] for p in pols], ["15 mm", "30 mm", "50 mm"],
+        -0.9, 0.16, DIVERGE,
+    )
+    slim_cbar(fig, im, ax, r"格子中位 $e_{50}$")
     save(fig, "X_wide_heat.png")
 
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     for p in pols:
         sub = [r for r in wide if r["policy"] == p]
         byL = []
@@ -661,31 +687,20 @@ def draw_wide(wide):
             byL.append(float(np.median([r["e50"] for r in sl])))
             lo.append(float(np.median([r["e10"] for r in sl])))
             hi.append(float(np.median([r["e90"] for r in sl])))
-        ax.fill_between(Ls, lo, hi, color=POL_C[p], alpha=0.14)
-        ax.plot(Ls, byL, color=POL_C[p], marker="o", lw=1.8, label=POL_N[p])
+        ax.fill_between(Ls, lo, hi, color=POL_C[p], alpha=0.16)
+        ax.plot(Ls, byL, label=POL_N[p], **line_kw(POL_C[p]))
     ax.axhline(0, color=MUTED, lw=0.8, ls="--")
     ax.set_xlabel("厚度 / mm")
     ax.set_ylabel(r"$e_{10}$–$e_{50}$–$e_{90}$")
-    ax.legend()
-    ax.set_title("S1-wide：跨格子分位带")
+    ax.legend(fontsize=8.2)
     save(fig, "X_wide_band.png")
 
-    fig, ax = plt.subplots(figsize=(6.2, 4.0))
-    ax.grid(False)
-    im = ax.imshow(under, cmap="YlOrBr", vmin=0, vmax=1)
-    ax.set_xticks(range(3), ["15 mm", "30 mm", "50 mm"])
-    ax.set_yticks(range(4), [POL_N[p] for p in pols])
-    for i in range(4):
-        for j in range(3):
-            ax.text(
-                j, i, f"{under[i, j]:.2f}", ha="center", va="center",
-                color=ink_or_white(under[i, j], 0, 1, plt.cm.YlOrBr),
-            )
-    cb = fig.colorbar(im, ax=ax, pad=0.02)
-    cb.set_label("格子未达比例的中位")
-    ax.set_title("S1-wide：未达设计线比例")
-    ax.spines["top"].set_visible(True)
-    ax.spines["right"].set_visible(True)
+    fig, ax = plt.subplots(figsize=(5.35, 3.25))
+    im = heatmap(
+        ax, under, [POL_N[p] for p in pols], ["15 mm", "30 mm", "50 mm"],
+        0, 1, plt.cm.YlOrBr, fmt="{:.2f}",
+    )
+    slim_cbar(fig, im, ax, "格子未达比例的中位")
     save(fig, "X_wide_under.png")
 
 
@@ -727,12 +742,12 @@ def draw_t2_t3(t2, t3):
     ax.set_xlabel("时间 / min")
     ax.set_ylabel("截面冷点 / °C")
     ax.legend(loc="lower right")
-    ax.set_title("T2：24×16 显式截面，固定边界，20 min")
+    ax.set_title("")
     save(fig, "X_t2_core.png")
 
     r0 = t2["rows"][0]
     field = reconstruct_section_field(r0["nx"], r0["nz"], fat=False)
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    fig, ax = plt.subplots(figsize=(5.55, 3.25))
     ax.grid(False)
     ax.spines["top"].set_visible(True)
     ax.spines["right"].set_visible(True)
@@ -747,24 +762,23 @@ def draw_t2_t3(t2, t3):
     ax.axvline(cold, color=STEAM, ls="-", lw=1.3, label="冷列")
     ax.set_xlabel("深度索引（表面 → 对称面）")
     ax.set_ylabel("横向索引")
-    ax.set_title(f"20 min 温度场：冷点偏离中心 {r0['offset_mm']:.2f} mm")
+    ax.set_title("")
     ax.legend(loc="upper left", fontsize=8.4)
-    cb = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.046)
-    cb.set_label("温度 / °C")
+    slim_cbar(fig, im, ax, "温度 / °C")
     save(fig, "X_t2_grid.png")
 
     fig, ax = plt.subplots(figsize=(6.2, 3.6))
     u = [r["speed_m_s"] for r in t3["rows"]]
     h = [r["h_W_m2K"] for r in t3["rows"]]
-    ax.plot(u, h, marker="o", color=STEAM, lw=1.9)
+    ax.plot(u, h, **line_kw(STEAM, ms=4.8, lw=1.45))
     ax.set_xlabel(r"通道风速 / m·s$^{-1}$")
     ax.set_ylabel(r"$h$ / W·m$^{-2}$·K$^{-1}$")
-    ax.set_title("T3：对流系数与风速（未接入数值核）")
+    ax.set_title("")
     save(fig, "X_t3_h.png")
 
 
 def draw_antoine_shell(ant, shell):
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     for L, color in zip((15, 30, 50), (STEAM, GOLD, HEAT)):
         on = [r["e_alpha"] for r in ant if r["length_mm"] == L and r["antoine"]]
         off = [r["e_alpha"] for r in ant if r["length_mm"] == L and not r["antoine"]]
@@ -774,20 +788,20 @@ def draw_antoine_shell(ant, shell):
     ax.axhline(0, color=MUTED, lw=0.8, ls="--")
     ax.set_xlabel("厚度 / mm")
     ax.set_ylabel(r"$\Delta e_\alpha$（开 − 关）")
-    ax.legend()
-    ax.set_title("Antoine 项成对积分：符号随厚度翻转")
+    ax.legend(fontsize=8.2, loc="upper right")
+    ax.set_title("")
     save(fig, "X_ant_delta.png")
 
-    fig, ax = plt.subplots(figsize=(6.4, 3.7))
+    fig, ax = plt.subplots(figsize=(5.35, 3.15))
     factors = sorted({r["factor"] for r in shell})
     for L, color in zip((15, 30, 50), (STEAM, GOLD, HEAT)):
         ys = [med(shell, lambda r, f=f, L=L: r["factor"] == f and r["length_mm"] == L, "e_alpha") for f in factors]
-        ax.plot(factors, ys, marker="o", color=color, lw=1.8, label=f"{L} mm")
+        ax.plot(factors, ys, label=f"{L} mm", **line_kw(color, ms=4.8, lw=1.4))
     ax.axhline(0, color=MUTED, lw=0.8, ls="--")
     ax.set_xlabel("结壳导热乘子")
     ax.set_ylabel(r"中位 $e_\alpha$")
     ax.legend()
-    ax.set_title("壳层扫描：15/30 mm 几乎不动，50 mm 略下移")
+    ax.set_title("")
     save(fig, "X_shell.png")
 
 
@@ -805,7 +819,7 @@ def draw_extra_traces(extra):
     axes[2].set_ylabel("加热指令")
     axes[2].set_xlabel("时间 / min")
     axes[0].legend(ncol=4, fontsize=8, loc="lower right")
-    axes[0].set_title("种子 7，30 mm，组合：四策略冷点、进度与加热")
+    axes[0].set_title("")
     save(fig, "X_trace_policy.png")
 
     fig, axes = plt.subplots(2, 1, figsize=(6.6, 5.4), sharex=True)
@@ -820,7 +834,7 @@ def draw_extra_traces(extra):
     axes[1].set_ylabel(r"$\alpha_m$")
     axes[1].set_xlabel("时间 / min")
     axes[0].legend()
-    axes[0].set_title("对偶、组合：三种厚度（实线冷点，点线表面）")
+    axes[0].set_title("")
     save(fig, "X_trace_thick.png")
 
     fig, axes = plt.subplots(2, 1, figsize=(6.6, 5.4), sharex=True)
@@ -833,24 +847,25 @@ def draw_extra_traces(extra):
     axes[1].set_ylabel("蒸汽指令")
     axes[1].set_xlabel("时间 / min")
     axes[0].legend()
-    axes[0].set_title("对偶、30 mm：三档冷点与蒸汽")
+    axes[0].set_title("")
     save(fig, "X_trace_cook.png")
 
     fig, ax = plt.subplots(figsize=(6.4, 3.7))
     ns = [r["n"] for r in extra["grid_rows"]]
     es = [r["e_alpha"] for r in extra["grid_rows"]]
     cores = [r["t_core_1680"] for r in extra["grid_rows"]]
-    ax.plot(ns, es, marker="o", color=NAVY, lw=1.8, label=r"$e_\alpha$")
+    ax.plot(ns, es, label=r"$e_\alpha$", **line_kw(NAVY, ms=5.2, lw=1.45))
     ax2 = ax.twinx()
     ax2.spines["right"].set_visible(True)
-    ax2.plot(ns, cores, marker="s", color=HEAT, lw=1.6, ls="--", label=r"1680 s 冷点")
+    ax2.plot(ns, cores, color=HEAT, marker="s", ms=4.8, lw=1.4, ls="--",
+             markerfacecolor=HEAT, markeredgecolor="white", markeredgewidth=0.7, label=r"1680 s 冷点")
     ax.set_xlabel("控制体条数")
     ax.set_ylabel(r"$e_\alpha$")
     ax2.set_ylabel("冷点 / °C")
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h1 + h2, l1 + l2, loc="center right")
-    ax.set_title("种子 7、30 mm、对偶：网格加密")
+    ax.set_title("")
     save(fig, "X_grid_n.png")
 
     fig, ax = plt.subplots(figsize=(6.4, 3.7))
@@ -861,8 +876,8 @@ def draw_extra_traces(extra):
     ax.axhline(0.85, color=MUTED, ls="--", lw=0.8)
     ax.set_xlabel("时间 / min")
     ax.set_ylabel(r"$\alpha_m$")
-    ax.legend()
-    ax.set_title("50 mm、对偶、组合：把时域从 55 min 延到 70 min")
+    ax.legend(fontsize=8.4, loc="upper left")
+    ax.set_title("")
     save(fig, "X_L50_horizon.png")
 
 
@@ -999,9 +1014,9 @@ def draw_bi_fo(extra=None):
     hconv = 12.0 + 55.0 * fan
     Bi = hconv * L / k
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.4, 3.6))
+    fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.20))
     ax, axb = axes
-    ax.plot(t / 60.0, Fo, color=NAVY, lw=1.9)
+    ax.plot(t / 60.0, Fo, color=NAVY, lw=1.55, solid_capstyle="round")
     ax.axvspan(150 / 60, 190 / 60, color=STEAM, alpha=0.16, lw=0)
     ax.scatter([40 / 60], [8.9e-3], color=STEAM, s=36, zorder=3)
     ax.scatter([1866 / 60], [alpha * 1866 / L**2], color=HEAT, s=36, zorder=3)
@@ -1010,9 +1025,9 @@ def draw_bi_fo(extra=None):
     ax.set_xlabel("时间 / min")
     ax.set_ylabel(r"Fourier 数（$L=30\,\mathrm{mm}$）")
     ax.set_ylim(-0.02, 0.82)
-    ax.set_title("导热时间尺度")
+    ax.set_title("")
 
-    axb.plot(fan, Bi, color=HEAT, lw=1.9)
+    axb.plot(fan, Bi, color=HEAT, lw=1.55, solid_capstyle="round")
     for u, lab in ((0.4, "品质段 0.4"), (1.3, "探针段 1.3")):
         b = (12.0 + 55.0 * u) * L / k
         axb.scatter([u], [b], color=NAVY, s=38, zorder=3)
@@ -1028,7 +1043,7 @@ def draw_bi_fo(extra=None):
     axb.set_ylabel("Biot 数")
     axb.set_xlim(-0.05, 1.4)
     axb.set_ylim(0.3, 4.4)
-    axb.set_title(r"$h=12+55u_{\mathrm{fan}}$")
+    axb.set_title("")
     save(fig, "X_fo_bi.png")
 
 
@@ -1097,6 +1112,32 @@ def main():
     print("done", FIG)
 
 
+def json_redraw():
+    """Redraw campaign figures from logs; skip extra_rollouts()."""
+    setup_style()
+    s1 = json.loads((LOG / "s1_summary.json").read_text(encoding="utf-8"))
+    s0 = json.loads((LOG / "s0_summary.json").read_text(encoding="utf-8"))
+    s2 = json.loads((LOG / "s2_summary.json").read_text(encoding="utf-8"))
+    wide = [json.loads(line) for line in (LOG / "s1_wide.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    ens = json.loads((LOG / "ensemble.json").read_text(encoding="utf-8"))
+    ant = json.loads((LOG / "antoine_pairs.json").read_text(encoding="utf-8"))
+    shell = json.loads((LOG / "shell_scan.json").read_text(encoding="utf-8"))
+    draw_s1_heatmap(s1)
+    draw_s1_violin(s1)
+    draw_s1_ecdf(s1)
+    draw_s1_pareto(s1)
+    draw_s1_factors(s1)
+    draw_s1_hetero(s1)
+    draw_s1_under_bars(s1)
+    draw_s0(s0)
+    draw_s2(s2)
+    draw_ensemble(ens)
+    draw_wide(wide)
+    draw_antoine_shell(ant, shell)
+    draw_bi_fo()
+    print("json redraw done", FIG)
+
+
 if __name__ == "__main__":
     if "--fast" in sys.argv:
         setup_style()
@@ -1107,5 +1148,7 @@ if __name__ == "__main__":
         draw_t2_t3(t2, t3)
         draw_bi_fo()
         print("fast redraw done", FIG)
+    elif "--json" in sys.argv:
+        json_redraw()
     else:
         main()

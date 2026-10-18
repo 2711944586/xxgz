@@ -1,9 +1,12 @@
 % !TeX program = xelatex
-\documentclass[a4paper,12pt,openany,oneside]{ctexbook}
-\usepackage{geometry}
-\geometry{left=2.5cm,right=2.5cm,top=2.45cm,bottom=2.45cm,headheight=14pt}
+\documentclass[a4paper,zihao=-4,twocolumn,openany,oneside,fontset=windows]{ctexbook}
+\usepackage[left=1.75cm,right=1.75cm,top=2.15cm,bottom=2.15cm,columnsep=0.68cm,headheight=13pt]{geometry}
+\xeCJKsetup{CJKmath=false}
 \usepackage{amsmath,amssymb,amsthm,bm,mathtools}
-\usepackage{booktabs,longtable,tabularx,multirow,array}
+\usepackage{newtxmath}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage{booktabs,longtable,tabularx,multirow,array,makecell}
 \usepackage{graphicx}
 \usepackage{eso-pic}
 \usepackage{xcolor}
@@ -15,6 +18,8 @@
 \usepackage{subcaption}
 \usepackage{setspace}
 \usepackage{placeins}
+\usepackage{stfloats}
+\usepackage{microtype}
 \usepackage{url}
 \usepackage{hyperref}
 \hypersetup{
@@ -31,51 +36,58 @@
     nameformat = {},
     titleformat = {},
     aftername = \quad,
-    beforeskip = 12pt,
-    afterskip = 10pt,
+    beforeskip = 10pt,
+    afterskip = 8pt,
     fixskip = true
   },
   section = {
     format = \heiti\zihao{4}\raggedright,
-    beforeskip = 11pt,
-    afterskip = 6pt
+    beforeskip = 9pt,
+    afterskip = 5pt
   },
   subsection = {
     format = \heiti\zihao{-4},
-    beforeskip = 10pt,
-    afterskip = 6pt
+    beforeskip = 8pt,
+    afterskip = 4pt
   }
 }
 \setlength{\parindent}{2em}
-\setlength{\parskip}{0.12em}
-\setstretch{1.38}
+\setlength{\parskip}{0.08em}
+\setstretch{1.22}
 \raggedbottom
 \clubpenalty=10000
 \widowpenalty=10000
 \displaywidowpenalty=10000
-\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\floatsep}{6pt plus 2pt minus 2pt}
-\setlength{\intextsep}{7pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{4pt}
+\setlength{\columnseprule}{0pt}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{5pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3pt}
 \setlength{\belowcaptionskip}{1pt}
+\setlength{\abovetopsep}{0pt}
 \renewcommand{\topfraction}{0.92}
-\renewcommand{\bottomfraction}{0.72}
-\renewcommand{\textfraction}{0.07}
-\renewcommand{\floatpagefraction}{0.82}
-\setcounter{topnumber}{3}
-\setcounter{bottomnumber}{2}
-\setcounter{totalnumber}{5}
-\setlist[itemize]{itemsep=0.22em,topsep=0.40em,leftmargin=2.2em}
-\setlist[enumerate]{itemsep=0.22em,topsep=0.40em,leftmargin=2.2em}
-\captionsetup{font=small,labelfont=bf,skip=5pt,justification=centering}
+\renewcommand{\bottomfraction}{0.78}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.84}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{6}
+\setlist[itemize]{itemsep=0.12em,topsep=0.28em,leftmargin=1.6em}
+\setlist[enumerate]{itemsep=0.12em,topsep=0.28em,leftmargin=1.6em}
+\captionsetup{font=small,labelfont=bf,skip=4pt,justification=centering}
+\captionsetup[subfigure]{skip=2pt,font=footnotesize,labelfont=bf}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small\fangsong 基于信息感知的智能蒸烤一体机}
-\fancyhead[R]{\small\fangsong 庄颂\quad 20241334\quad 信息2402}
+\fancyhead[R]{\small\fangsong 庄颂\quad 20241334}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.35pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
 \AtBeginDocument{\renewcommand{\contentsname}{目　录}}
-\captionsetup[subfigure]{skip=3pt,font=footnotesize,labelfont=bf}
 \newtheorem{definition}{定义}[chapter]
 \newtheorem{proposition}{命题}[chapter]
 \newtheorem{theorem}{定理}[chapter]
@@ -100,6 +112,9 @@
 \numberwithin{table}{chapter}
 \allowdisplaybreaks
 \graphicspath{{../results/figures/paper/}{../results/figures/study/}{../results/figures/}{figures/}}
+\newcommand{\colimg}[1]{\includegraphics[width=\columnwidth]{#1}}
+\newcommand{\spanimg}[1]{\includegraphics[width=0.96\textwidth]{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newif\ifBodyBg
 \newcommand{\FullBleedPage}[1]{%
   \clearpage
@@ -115,7 +130,7 @@
   \ifBodyBg
     \AtPageLowerLeft{%
       \begin{tikzpicture}[overlay]
-        \node[anchor=south west, inner sep=0, opacity=0.13]
+        \node[anchor=south west, inner sep=0, opacity=0.09]
           at (0,0) {\includegraphics[width=\paperwidth,height=\paperheight]{bg.png}};
       \end{tikzpicture}%
     }%

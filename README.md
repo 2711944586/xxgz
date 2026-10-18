@@ -6,6 +6,25 @@
 
 交互实验台：https://2711944586.github.io/xxgz/
 
+## 两套数值核
+
+同一个十六条积分器带着两套开关，项目里都用到过，日志按代际分别记录：
+
+| 代际 | 用于 | 开关 |
+|---|---|---|
+| `baseline` 主对照核 | S1/S0/S2、第 5 章前五节、摘要主结论 | 腔体空气、水箱、门互锁、结壳反馈关闭；探针窗外蒸汽阀关闭 |
+| `display` 演示版核 | 档位研究、演示页 `catalog.json`、Antoine 对照、网格表 | 腔温腔湿积分；表面蒸汽压差进潜热；结壳乘回导热；探针窗外蒸汽回 0.15 |
+
+`src/acts_mcdt/physics.py` 顶部定义 `BASELINE` 与 `DISPLAY` 两个字典，`rollout(..., generation="display")` 即可切换。**同一张表不允许混用两代核**；`results/logs/MANIFEST.json` 逐条记录日志属于哪一代，`scripts/verify_logs.py` 按代际重算抽样格子。
+
+```powershell
+$env:PYTHONPATH="src"
+python scripts/verify_logs.py      # 15 个抽样格子，全部应复现
+python -m pytest tests -q          # 20 条契约测试
+```
+
+已知缺陷见 `results/logs/MANIFEST.json` 的 `known_defects`。
+
 ## 目录
 
 ```
@@ -15,17 +34,30 @@ acts-mcdt/
 │   └── 20241334庄颂信息2402.docx
 ├── monograph/              论文 LaTeX 源
 │   ├── book.tex            主文件（两次 xelatex，jobname=ACTS-MCDT）
-│   ├── ch01.tex–ch15.tex
+│   ├── ch1.tex–ch6.tex
 │   ├── refs.tex
+│   ├── app_symbols.tex     附录 A 符号与日志字段
+│   ├── app_discrete.tex    附录 B 离散格式
+│   ├── app_trace.tex       附录 C 种子 7 抽样
+│   ├── app_scales.tex      附录 D 尺度
+│   ├── app_tables.tex      附录 E 长表（输入 gab_tables/s1_tables/s1_extra）
+│   ├── gab_subset.tex      等温线短表
 │   ├── figures/            封面 cover.png、水印 bg.png、封底 back.png
-│   ├── figures/_src_*.png  提交的三张原图
-│   └── ACTS-MCDT.pdf       编译产物
+│   └── figures/_src_*.png  提交的三张原图
 ├── demo/                   浏览器实验台（Vite + Three.js）
-│   └── public/catalog.json 已写出的状态流，页面不重跑积分
+│   ├── public/catalog.json 已写出的状态流（36 条轨迹），页面不重跑积分
+│   └── shot.mjs            截图脚本（需 playwright）
 ├── src/acts_mcdt/          数值核
-├── tests/                  命题核对
+│   ├── physics.py          rollout()，两套代际开关
+│   ├── fast.py             legacy 降阶核（宽格子用，与两代均不一致）
+│   ├── cavity.py           档位与安全投影的纯函数
+│   └── propositions.py     命题核对
+├── tests/
+│   ├── test_propositions.py
+│   └── test_kernel_contract.py   代际契约测试
 ├── scripts/                战役、绘图、封面、导出 Word
 ├── results/logs/           正文引用的数字以这里为准
+│   └── MANIFEST.json       每个日志的代际、行数、校验状态
 ├── results/figures/paper/  正文插图
 ├── results/figures/study/  档位研究附图
 ├── external/gab-fit.xlsx   已读入的公开等温线拟合
@@ -64,9 +96,13 @@ python scripts/draw_covers.py
 python scripts/build_docx.py
 ```
 
+该脚本调用本机 Microsoft Word 刷新目录页码，需要 Windows + Word + `pywin32`。若 `submit/` 里的 PDF 正被阅读器打开，脚本会跳过 PDF 复制并给出提示，Word 仍会写出。
+
 ## 演示
 
 本地：仓库根目录执行 `.\start-demo.ps1` 或双击 `start-demo.bat`。默认条件是种子 7、肉糜、厚度 30 mm、初温 8 °C、含水 0.72、组合档、对偶策略。页面按 8 s 抽样显示停机 1864 s；核日志是 1866 s，\(e_\alpha=+0.145\)。1680 s 冷点 70.21 °C、进度 0.558。50 mm 对偶组合停在 3298 s，\(e_\alpha=-0.782\)。
+
+这些数字来自 `display` 代际。演示页读取已经写出的数组，不在浏览器里重跑积分。
 
 `catalog.json` 必须留在 `demo/public/`。开门只改铰链，不改已经写出的温度数组。红虚线是设计线 0.85。
 
@@ -74,13 +110,14 @@ python scripts/build_docx.py
 
 ## 数字从哪里来
 
-S1 共 19440 行，档位研究 11664 行。种子 7、肉糜、30 mm、组合、对偶：方差 192 s 由 0.64 降到 0.224；停机 1866 s，能量 1864。50 mm 对偶组合中位 \(e_\alpha=-0.782\)，55 min 时 Fourier 数 0.12。网格从 8 到 16 会把 30 mm 对偶停机偏差翻号（\(\Delta e\approx 0.227\)）。加热器平衡点 196.5 °C，削减阈值 230 °C。
+S1 共 19440 行，档位研究 11664 行。种子 7、肉糜、30 mm、组合、对偶：方差 192 s 由 0.64 降到 0.224；停机 1866 s，能量 1864。50 mm 对偶组合中位 \(e_\alpha=-0.782\)，55 min 时 Fourier 数 0.12。网格从 8 到 16 会把 30 mm 对偶停机偏差翻号（\(\Delta e\approx 0.227\)，仅主对照核成立）；演示版核在同一格子上五档同为正，见表 5.5。加热器平衡点 196.5 °C，削减阈值 230 °C。
 
 命题核对（需把 `src` 加入 `PYTHONPATH`）：
 
 ```
 $env:PYTHONPATH="src"
 python tests/test_propositions.py
+python scripts/verify_logs.py
 ```
 
 重跑战役调用 `scripts/run_campaign.py` 与 `scripts/run_study.py`，耗时以小时计。图件重绘：`python scripts/draw_expansion.py`。

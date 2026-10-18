@@ -2,6 +2,7 @@
 \input{preamble.tex}
 \begin{document}
 
+\onecolumn
 \pagestyle{empty}
 \BodyBgfalse
 \FullBleedPage{cover.png}
@@ -12,47 +13,44 @@
 \chapter*{摘要}
 \addcontentsline{toc}{chapter}{摘要}
 
-家用蒸箱靠饱和蒸汽在食品表面冷凝释放潜热，对流烤箱靠干热空气和管壁辐射把表面推到褐变温度。两台机器分体布置既占台面，又各自保留互不引用的定时曲线。并入同一腔体之后，操作者选择的仍是蒸、烤或组合，机器真正能改的只有加热器功率、蒸汽阀、排汽和风机。冷点温度、内部含水和反应进度并不在这四个旋钮上。机械定时、腔温闭环、按重量调用曲线、穿刺探针和表面红外，闭合的是空气温度、申报质量或刺入点；这一次过程里的内部热阻从未进入后验。同一阀门对冷点和表面品质的符号可以相反：为冷点多送一股蒸汽，表面可能被打湿到无法结壳；为表面排湿而加大排汽，冷点又可能失去冷凝潜热。工作把一体机作为信息感知问题处理：在可安装观测之下，若决策泛函的剩余不确定度仍高于允许误判，执行器必须离开平衡去购买信息。家用时域取 \(55\,\mathrm{min}\)。\(15\,\mathrm{mm}\) 的导热时间尺度已经走完，\(50\,\mathrm{mm}\) 的 Fourier 数只有 \(0.12\)，同一套旋钮在薄件和厚件上给出相反的停机符号。
+家用蒸箱靠饱和蒸汽在食品表面冷凝释放潜热，对流烤箱靠干热空气和管壁辐射把表面推到褐变温度。两台机器分体布置既占台面，又各自保留互不引用的定时曲线。并入同一腔体之后，操作者选择的仍是蒸、烤或组合，机器真正能改的只有加热器功率、蒸汽阀、排汽和风机。冷点温度、内部含水和反应进度并不在这四个旋钮上。机械定时、腔温闭环、按重量调用曲线、穿刺探针和表面红外，闭合的是空气温度、申报质量或刺入点；这一次过程里的内部热阻从未进入后验。同一阀门对冷点和表面品质的符号可以相反：为冷点多送一股蒸汽，表面可能被打湿到无法结壳；为表面排湿而加大排汽，冷点又可能失去冷凝潜热。本报告把一体机当作信息感知问题来处理。传感器只能装在腔体侧。稳态观测若压不低决策量的后验不确定度，控制器就必须离开平衡，用短时边界激励把内部参数从灵敏度零的状态里拖出来。家用时域取 \(55\,\mathrm{min}\)。\(15\,\mathrm{mm}\) 的导热时间尺度已经走完，\(50\,\mathrm{mm}\) 的 Fourier 数只有 \(0.12\)，同一套旋钮在薄件和厚件上给出相反的停机符号。
 
-方案按过程、多尺度模型、估计、对偶决策和安全五层组织。过程层给出腔体与食品边界；多尺度模型把多孔介质场压缩为冷点、表面、进度和热阻；估计层指出稳态观测对内部热阻的灵敏度为零，因而用离开平衡的短时探针购买可辨识性；对偶决策把信息动作与品质动作分开；安全层只用水位、门、漏电和加热器温度改写执行量，品质估计不进入断电条件。蒸、烤、组合三档只改变四个执行量的允许集合。
+方案分成五层：过程、多尺度模型、估计、对偶决策和安全。过程层给出腔体与食品边界。多尺度模型把多孔介质场压成冷点、表面、进度和热阻。估计层指出稳态观测对内部热阻的灵敏度为零，于是用离开平衡的短时探针激发第二个灵敏度方向。对偶决策把信息动作与品质动作分开。安全层只用水位、门、漏电和加热器温度改写执行量，品质估计不进入断电条件。蒸、烤、组合三档只改变四个执行量的允许集合。
 
-数值核沿厚度用十六条控制体积分，时间步 \(2\,\mathrm{s}\)。主对照 S1 共 \(19440\) 条样本，档位研究 \(11664\) 条，并辅以网格加密、因子消融、宽格子、二维截面和种子 7 轨迹族。开环菜单按厚度给出 \(900/1170/1530\,\mathrm{s}\)，中位 \(e_{\alpha}=-0.843\)。腔温比例闭合空气温度、不停机，能量中位 \(3310\)。对偶策略在 \(150\)--\(190\,\mathrm{s}\) 的两段探针之后，约三分之二的样本把热阻方差从 \(0.64\) 降到 \(0.224\)；档位研究中 \(50\,\mathrm{mm}\)、组合、对偶的中位 \(e_{\alpha}=-0.782\)，全部低于设计线 \(\alpha_m=0.85\)（恒温冷点上 \(F=3.794\,\mathrm{min}\)）。种子 7、肉糜 \(30\,\mathrm{mm}\)、组合、对偶停于 \(1866\,\mathrm{s}\)，\(e_{\alpha}=+0.145\)，能量 \(1864\)。同一状态流读回三维腔体，交互页为 \url{https://2711944586.github.io/xxgz/}。
+数值核沿厚度用十六条控制体积分，时间步 \(2\,\mathrm{s}\)。主对照 S1 共 \(19440\) 条样本，档位研究 \(11664\) 条，并辅以网格加密、因子消融、宽格子、二维截面和种子 7 轨迹族。开环菜单按厚度给出 \(900/1170/1530\,\mathrm{s}\)，中位 \(e_{\alpha}=-0.843\)。腔温比例闭合空气温度、不停机，能量中位 \(3310\)。对偶策略在 \(150\)--\(190\,\mathrm{s}\) 的两段探针（先蒸汽、后风机）之后，主对照 S1 的 \(4860\) 条样本全部把热阻方差从 \(0.64\) 降到 \(0.224\)，档位研究里只有三分之二完成更新，未更新的全部落在蒸档；档位研究中 \(50\,\mathrm{mm}\)、组合、对偶的中位 \(e_{\alpha}=-0.782\)，全部低于设计线 \(\alpha_m=0.85\)（恒温冷点上 \(F=3.794\,\mathrm{min}\)）。种子 7、肉糜 \(30\,\mathrm{mm}\)、组合、对偶停于 \(1866\,\mathrm{s}\)，\(e_{\alpha}=+0.145\)，能量 \(1864\)。同一状态流读回三维腔体，交互页为 \url{https://2711944586.github.io/xxgz/}。
 
 \noindent\textbf{关键词：} 信息感知；蒸烤一体机；逆热传导；对偶控制；控制屏障；食品热加工
 
 \vspace{0.6em}
-{\small\noindent 工具使用说明：文稿排版、图件重绘、交互页静态部署与文字润色使用了大语言模型辅助；数值核、战役日志、交叉表中的停机偏差、能量与方差均由 \texttt{src/acts\_mcdt} 积分得到，正文引用的数字以 \texttt{results/logs/} 已落盘文件为准。}
+{\small\noindent AI辅助位置说明：第1、2、6章部分产品场景过渡段落的文字润色；图1.1腔体示意、图1.2架构、图3章剖面场与图4章路径示意的绘制辅助；第6章 WebGL 交互演示页的前端渲染代码框架生成。数值核、战役日志、交叉表中的停机偏差、能量与方差均由 \texttt{src/acts\_mcdt} 积分得到，正文引用的数字以 \texttt{results/logs/} 已落盘文件为准。}
 
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-A household steamer heats by condensation of saturated vapour on the food surface; a convection oven heats by dry air and tube-wall radiation. Combining both boundaries in one cavity removes the second appliance but leaves the machine with the same four actuators: heater power, steam valve, exhaust and fan. Cold-spot temperature, internal moisture and reaction progress sit behind those knobs. Mechanical timers, cavity-temperature loops, weight-indexed menus, puncture probes and surface infrared close air temperature, declared mass or a puncture-point reading; internal thermal resistance of this particular piece never enters the posterior. The same valve can take opposite signs for the cold spot and for surface quality. The work treats the appliance as an information-sensing problem: if residual uncertainty of the decision functional still exceeds the allowed misclassification under installable observations, the actuators must leave equilibrium to buy information. The household horizon is \(55\,\mathrm{min}\). A \(15\,\mathrm{mm}\) piece already finishes its conduction scale; a \(50\,\mathrm{mm}\) piece remains at Fourier number \(0.12\); the same four knobs therefore yield opposite stop signs.
+A household steamer heats by condensation of saturated vapour on the food surface; a convection oven heats by dry air and tube-wall radiation. Combining both boundaries in one cavity removes the second appliance but leaves the machine with the same four actuators: heater power, steam valve, exhaust and fan. Cold-spot temperature, internal moisture and reaction progress sit behind those knobs. Mechanical timers, cavity-temperature loops, weight-indexed menus, puncture probes and surface infrared close air temperature, declared mass or a puncture-point reading; internal thermal resistance of this particular piece never enters the posterior. The same valve can take opposite signs for the cold spot and for surface quality. The report treats the appliance as an information-sensing problem. Only cavity-side sensors can be installed. If steady observations cannot bring the posterior uncertainty of the decision functional within tolerance, the controller must leave equilibrium and excite the boundary so that internal parameters leave the zero-sensitivity state. The household horizon is \(55\,\mathrm{min}\). A \(15\,\mathrm{mm}\) piece already finishes its conduction scale; a \(50\,\mathrm{mm}\) piece remains at Fourier number \(0.12\); the same four knobs therefore yield opposite stop signs.
 
-The architecture has five layers---process, multi-scale model, estimator, dual decision and safety. Steady observations have zero sensitivity to internal resistance, so a two-stage probe in a \(40\,\mathrm{s}\) window purchases a second sensitivity direction. Dual decision separates the information action from the quality action. The safety layer rewrites commands using only water level, door, residual current and heater temperature; quality estimates never enter the cut-off. Steam, bake and combi modes only restrict the admissible set of the same four actuators.
+The architecture has five layers---process, multi-scale model, estimator, dual decision and safety. Steady observations have zero sensitivity to internal resistance, so a two-stage probe in a \(40\,\mathrm{s}\) window supplies a second, linearly independent sensitivity direction. Dual decision separates the information action from the quality action. The safety layer rewrites commands using only water level, door, residual current and heater temperature; quality estimates never enter the cut-off. Steam, bake and combi modes only restrict the admissible set of the same four actuators.
 
-A one-dimensional kernel with sixteen control volumes and time step \(2\,\mathrm{s}\) scores four policies on the S1 lattice of \(19440\) samples, together with a \(11664\)-row cook-mode study, grid refinement, factor ablation, a \(24\times 16\) explicit section and the seed-7 family. The open-loop menu writes \(900/1170/1530\,\mathrm{s}\) by thickness and returns median \(e_{\alpha}=-0.843\). Cavity-temperature proportion never stops and spends median energy \(3310\). After the dual probe, about two thirds of samples reduce resistance variance from \(0.64\) to \(0.224\); on \(50\,\mathrm{mm}\) combi dual the cook-mode median is \(e_{\alpha}=-0.782\), entirely below the design line \(\alpha_m=0.85\) (\(F=3.794\,\mathrm{min}\) at a constant cold spot). Seed 7, mince, \(30\,\mathrm{mm}\), combi, dual stops at \(1866\,\mathrm{s}\) with \(e_{\alpha}=+0.145\) and energy \(1864\). The same logged state is read back into a three-dimensional cavity at \url{https://2711944586.github.io/xxgz/}.
+A one-dimensional kernel with sixteen control volumes and time step \(2\,\mathrm{s}\) scores four policies on the S1 lattice of \(19440\) samples, together with a \(11664\)-row cook-mode study, grid refinement, factor ablation, a \(24\times 16\) explicit section and the seed-7 family. The open-loop menu writes \(900/1170/1530\,\mathrm{s}\) by thickness and returns median \(e_{\alpha}=-0.843\). Cavity-temperature proportion never stops and spends median energy \(3310\). After the dual probe (steam then fan, \(150\)--\(190\,\mathrm{s}\)), all \(4860\) samples of the S1 lattice reduce resistance variance from \(0.64\) to \(0.224\), while only two thirds of the cook-mode study do, and every miss sits in the steam mode; on \(50\,\mathrm{mm}\) combi dual the cook-mode median is \(e_{\alpha}=-0.782\), entirely below the design line \(\alpha_m=0.85\) (\(F=3.794\,\mathrm{min}\) at a constant cold spot). Seed 7, mince, \(30\,\mathrm{mm}\), combi, dual stops at \(1866\,\mathrm{s}\) with \(e_{\alpha}=+0.145\) and energy \(1864\). The same logged state is read back into a three-dimensional cavity at \url{https://2711944586.github.io/xxgz/}.
 
 \noindent\textbf{Keywords:} information sensing; combi steamer; inverse heat transfer; dual control; control barrier; food thermal processing
 
 {\fangsong\tableofcontents}
 \clearpage
+\twocolumn
 
-\input{ch01.tex}
-\input{ch02.tex}
-\input{ch03.tex}
-\input{ch04.tex}
-\input{ch05.tex}
-\input{ch06.tex}
-\input{ch07.tex}
-\input{ch08.tex}
-\input{ch11.tex}
-\input{ch12.tex}
-\input{ch13.tex}
-\input{ch14.tex}
-\input{ch15.tex}
-\input{ch09.tex}
-\input{ch10.tex}
+\input{ch1.tex}
+\input{ch2.tex}
+\input{ch3.tex}
+\input{ch4.tex}
+\input{ch5.tex}
+\input{ch6.tex}
 
+\clearpage
+\onecolumn
+
+% thebibliography issues its own \chapter*{参考文献}; adding one here produced
+% a duplicate heading on its own page. The TOC entry lives in refs.tex.
 \input{refs.tex}
 
 \appendix
@@ -60,6 +58,7 @@ A one-dimensional kernel with sixteen control volumes and time step \(2\,\mathrm
 \input{app_discrete.tex}
 \input{app_trace.tex}
 \input{app_scales.tex}
+\input{app_tables.tex}
 
 \BodyBgfalse
 \pagestyle{empty}

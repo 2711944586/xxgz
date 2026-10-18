@@ -1,4 +1,24 @@
-"""Vectorized one-dimensional food slab and two-node reduction."""
+"""Vectorized one-dimensional food slab and two-node reduction.
+
+The kernel carries two named switch sets, because the project ran two
+generations of it and the monograph cites both:
+
+``BASELINE``
+    The campaign kernel. Produced ``results/logs/s1_summary.json``,
+    ``s0_summary.json``, ``s2_summary.json``, ``s1_wide.jsonl``.
+    Cavity air, water tank, door interlock, Antoine drive and crust feedback
+    are all off; the steam valve stays shut outside the probe window.
+
+``DISPLAY``
+    The interaction-page kernel. Produced ``demo/public/catalog.json``,
+    ``results/logs/study.json``, ``antoine_pairs.json``, ``shell_scan.json``,
+    ``ensemble.json`` and ``tab:gridn``. Same integrator, crust feeds back
+    into conductance, and the surface vapour-pressure drive is active.
+
+Every log records which set produced it (``results/logs/MANIFEST.json``).
+A new campaign must state its set; mixing them inside one table is the
+defect this split exists to prevent.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +30,32 @@ RHO_C = 3.4e6  # J/(m^3 K)
 K_BASE = ALPHA * RHO_C
 LATENT = 2.3e6  # J/kg
 DX_FRAC = 1.0 / 16.0
+
+# Named switch sets. Pass one with ``generation=`` or spell the switches out.
+BASELINE = {
+    "cavity_air": False,
+    "use_antoine": False,
+    "shell_k": 0.0,
+    "moisture_bc": "gradient",
+    "steam_baseline": 0.0,
+}
+DISPLAY = {
+    "cavity_air": True,
+    "use_antoine": True,
+    "shell_k": 0.55,
+    "moisture_bc": "flux",
+    "steam_baseline": 0.15,
+}
+GENERATIONS = {"baseline": BASELINE, "display": DISPLAY}
+
+
+def switches(generation: str = "baseline", **overrides) -> dict:
+    """Return one named switch set, with optional per-key overrides."""
+    if generation not in GENERATIONS:
+        raise ValueError(f"unknown generation {generation!r}")
+    out = dict(GENERATIONS[generation])
+    out.update(overrides)
+    return out
 
 
 def prototypes():
@@ -59,19 +105,62 @@ def rollout(
     record_every: int = 5,
     store_history: bool = True,
     cook: str = "combi",
-    use_antoine: bool = True,
-    shell_k: float = 0.55,
     n: int = 16,
     noise_scale: float = 1.0,
     occlude_s: float = 0.0,
     use_mass: bool = True,
     door_s: float | None = None,
+    # --- physics switches ---------------------------------------------------
+    # Pass ``generation="display"`` (or spell the switches out) for the
+    # interaction-page kernel. The defaults are the campaign baseline, which is
+    # what results/logs/s1_summary.json and the main tables were produced with.
+    # Each switch changes the trajectory, so every campaign must record its set
+    # in results/logs/MANIFEST.json.
+    generation: str | None = None,
+    cavity_air: bool = False,
+    use_antoine: bool = False,
+    shell_k: float = 0.0,
+    moisture_bc: str = "gradient",
+    steam_baseline: float = 0.0,
 ) -> dict:
     """Integrate a batch of slabs.
 
     Arrays are shape (B,). hetero: 0 uniform, 1 thickness jitter, 2 fat layer.
     policy in {open, pid, mpc, dual}.
+
+    Switch meanings, all off at the baseline:
+
+    ``cavity_air``
+        Integrate the cavity air node, the water tank, the door interlock and
+        the residual-current proxy, and let them overwrite the commands. The
+        interaction page needs these channels; the campaign does not.
+    ``use_antoine``
+        Add the surface vapour-pressure drive ``p_cav - a_w p_food`` to the
+        latent flux. Its sign flips with thickness, which is a result in its
+        own right and must be turned on explicitly.
+    ``shell_k``
+        Multiply the surface conductance by ``1 - shell_k * shell`` so that
+        crust raises the surface resistance. Zero keeps the crust a display
+        variable only.
+    ``moisture_bc``
+        ``"gradient"`` is the baseline surface moisture update. ``"flux"``
+        divides loss and gain by the cell fraction, which is what the
+        interaction-page export was built on.
+    ``steam_baseline``
+        The steam command outside the probe window. The baseline holds the
+        valve shut, which is what s1_summary.json was produced with.
     """
+    if generation is not None:
+        if generation not in GENERATIONS:
+            raise ValueError(f"unknown generation {generation!r}")
+        preset = GENERATIONS[generation]
+        cavity_air = preset["cavity_air"]
+        use_antoine = preset["use_antoine"]
+        shell_k = preset["shell_k"]
+        moisture_bc = preset["moisture_bc"]
+        steam_baseline = preset["steam_baseline"]
+    if moisture_bc not in ("gradient", "flux"):
+        raise ValueError("moisture_bc must be 'gradient' or 'flux'")
     policy_code = {"open": 1, "pid": 2, "mpc": 3, "dual": 4}[policy]
     b = length.shape[0]
     if n < 2:
@@ -190,7 +279,7 @@ def rollout(
             tc_hat = np.minimum(tc_hat, y_t - 4.0 * np.maximum(r_hat - 1.0, 0.2))
             if policy == "dual":
                 in_probe = (now >= 150.0) & (now < 190.0) & (var_r > 0.25) & (~probe_locked)
-                steam = np.where(in_probe & (now < 170.0), 1.0, 0.15)
+                steam = np.where(in_probe & (now < 170.0), 1.0, steam_baseline)
                 fan = np.where(in_probe & (now >= 170.0), 1.3, 0.4)
                 exhaust = np.where(in_probe & (now < 170.0), 0.05, 0.55)
                 mode = np.where(in_probe, 1, 0)
@@ -222,19 +311,13 @@ def rollout(
             heat_req = np.where(stopped, 0.15, heat_req)
             mode = np.where(stopped, 2, mode)
 
-        # Cavity. Product mode selects which actuators may move.
+        # Cavity. Product mode selects which actuators may move. The mode
+        # restriction belongs to the process, not to the cavity-air switch:
+        # the cook-mode study reads it, so it stays unconditional.
         # 0 steam: no dry heat. 1 bake: no steam. 2 combi: all four.
         steam = np.where(cook_mode == 1, 0.0, steam)
         heat_req = np.where(cook_mode == 0, np.minimum(heat_req, 0.25), heat_req)
         exhaust = np.clip(exhaust, 0.0, 1.0)
-        # Hard measurements. Quality estimates never enter these four lines.
-        if door_s is not None and now >= door_s:
-            door[:] = 1.0
-        water = np.clip(water - dt * 1.2e-4 * steam, 0.0, 1.0)
-        dry_tank = water < 0.05
-        door_open = door > 0.5
-        leak = np.where((heater_temp > 200.0) & (cav_h > 0.85), 0.004, 0.0)
-        leak_trip = leak > 0.003
         # Shield: heater temperature is a hard measurement.
         heat_cmd = heat_req.copy()
         heater_temp = heater_temp + dt * (
@@ -243,36 +326,46 @@ def rollout(
         # Full power approaches ~250 C. The shield trims only past 230 C.
         over = np.clip((heater_temp - 230.0) / 40.0, 0.0, 1.0)
         heat_cmd = heat_cmd * (1.0 - 0.75 * over)
-        blocked = dry_tank | door_open | leak_trip | (heater_temp >= 250.0)
-        heat_cmd = np.where(blocked, 0.0, heat_cmd)
-        steam = np.where(blocked, 0.0, steam)
-        # Cavity air. Exhaust lowers humidity; steam raises it.
-        cav_t = cav_t + dt * (
-            0.02 * heat_cmd * (heater_temp - cav_t) - 0.01 * exhaust * (cav_t - 25.0)
-        )
-        cav_h = np.clip(
-            cav_h + dt * (0.015 * steam - 0.02 * exhaust * cav_h - 0.05 * door),
-            0.05, 0.98,
-        )
-        cav_p = 1.0 + 0.04 * cav_h + 0.0004 * np.maximum(cav_t - 100.0, 0.0)
+        if cavity_air:
+            # Hard measurements. Quality estimates never enter these four lines.
+            if door_s is not None and now >= door_s:
+                door[:] = 1.0
+            water = np.clip(water - dt * 1.2e-4 * steam, 0.0, 1.0)
+            dry_tank = water < 0.05
+            door_open = door > 0.5
+            leak = np.where((heater_temp > 200.0) & (cav_h > 0.85), 0.004, 0.0)
+            leak_trip = leak > 0.003
+            blocked = dry_tank | door_open | leak_trip | (heater_temp >= 250.0)
+            heat_cmd = np.where(blocked, 0.0, heat_cmd)
+            steam = np.where(blocked, 0.0, steam)
+            # Cavity air. Exhaust lowers humidity; steam raises it.
+            cav_t = cav_t + dt * (
+                0.02 * heat_cmd * (heater_temp - cav_t) - 0.01 * exhaust * (cav_t - 25.0)
+            )
+            cav_h = np.clip(
+                cav_h + dt * (0.015 * steam - 0.02 * exhaust * cav_h - 0.05 * door),
+                0.05, 0.98,
+            )
+            cav_p = 1.0 + 0.04 * cav_h + 0.0004 * np.maximum(cav_t - 100.0, 0.0)
         if (s % record_every == 0) or (s == steps - 1):
             energy_acc += heat_cmd
 
-        # Boundary. Antoine vapour pressure of water, T in C, P in bar.
-        # log10(P) = 5.1962 - 1730.63 / (T + 233.426), 1 to 100 C.
-        p_food = 10.0 ** (5.1962 - 1730.63 / (t[:, 0] + 233.426))
-        p_cav = cav_h * 10.0 ** (5.1962 - 1730.63 / (np.maximum(cav_t, 1.0) + 233.426))
-        drive = np.clip(p_cav - aw * p_food, -0.4, 0.4)
         h = 12.0 + 55.0 * fan
         q_lat = 18000.0 * steam * (1.0 - aw) - 9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan
         if use_antoine:
+            # Surface vapour-pressure drive. Antoine coefficients for water,
+            # T in C, P in bar: log10(P) = 5.1962 - 1730.63/(T + 233.426).
+            p_food = 10.0 ** (5.1962 - 1730.63 / (t[:, 0] + 233.426))
+            p_cav = cav_h * 10.0 ** (5.1962 - 1730.63 / (np.maximum(cav_t, 1.0) + 233.426))
+            drive = np.clip(p_cav - aw * p_food, -0.4, 0.4)
             q_lat = q_lat + 4000.0 * drive
         t_inf = 90.0 + 95.0 * heat_cmd
         flux = h * (t_inf - t[:, 0]) + q_lat + 7000.0 * heat_cmd
-        # Crust raises thermal resistance of the surface cell before conduction.
-        k_step = k * (1.0 - shell_k * shell)[:, None]
-        k_step[:, 0] = k[:, 0] * (1.0 - shell_k * shell)
-        alpha = k_step / RHO_C
+        if shell_k:
+            # Crust raises the resistance of the surface cell before conduction.
+            k_step = k * (1.0 - shell_k * shell)[:, None]
+            k_step[:, 0] = k[:, 0] * (1.0 - shell_k * shell)
+            alpha = k_step / RHO_C
         # Conduction.
         lap = np.zeros_like(t)
         lap[:, 1:-1] = (t[:, 2:] - 2 * t[:, 1:-1] + t[:, :-2]) / dx[:, None] ** 2
@@ -289,11 +382,17 @@ def rollout(
         ml[:, 1:-1] = (m[:, 2:] - 2 * m[:, 1:-1] + m[:, :-2]) / dx[:, None] ** 2
         ml[:, 0] = (m[:, 1] - m[:, 0]) / dx ** 2
         ml[:, -1] = (m[:, -2] - m[:, -1]) / dx ** 2
-        loss = 8.0e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - 0.5 * steam)
-        gain = 1.2e-4 * steam * (1.0 - m[:, 0])
-        m = m + dt * d * ml
-        m[:, 0] = m[:, 0] + dt * (gain - loss)
-        m = np.clip(m, 0.02, 0.95)
+        if moisture_bc == "flux":
+            loss = 8.0e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - 0.5 * steam)
+            gain = 1.2e-4 * steam * (1.0 - m[:, 0])
+            m = m + dt * d * ml
+            m[:, 0] = m[:, 0] + dt * (gain - loss)
+            m = np.clip(m, 0.02, 0.95)
+        else:
+            loss = 1.6e-4 * np.maximum(aw - 0.4, 0.0) * (0.3 + fan) * (1.0 - steam)
+            gain = 1.1e-4 * steam * (1.0 - m[:, 0])
+            ml[:, 0] = ml[:, 0] - loss / DX_FRAC + gain / DX_FRAC
+            m = np.clip(m + dt * d * ml, 0.02, 0.95)
         # Kinetics at core and surface.
         rate = 10.0 ** ((t_core - 70.0) / 10.0) / 60.0
         f_value = f_value + dt * rate

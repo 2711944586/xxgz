@@ -1,0 +1,293 @@
+\chapter{内部热阻不可辨识性、对偶探针与安全屏障}
+\label{ch:dual}
+
+第三章把多孔介质连续方程收缩为十六条控制体与两节点降阶。收缩之后仍须回答：可安装观测能否看见内部热阻。若平衡点上灵敏度为零，加密腔温只是把已经闭合的空气温度再画密一档。本章给出三件事。稳态平衡观测对内部热阻、表面热容与内部热容的灵敏度为零，信息动作必须离开平衡。家电嵌入式控制器算力有限，在线求逆 Fisher 矩阵改成固定时窗 \(150\sim 190\,\mathrm{s}\) 的两阶段开环激励：先蒸汽、后风机，把外部换热与内部导热的灵敏度列分开。蒸汽对品质的全导数分解为冷点、表面与慢热阻三条路径；安全投影只读水位、门、剩余电流和加热器温度，品质估计不进入断电条件。
+
+\section{可安装观测与高频放大}
+\label{ch:est}
+
+家用蒸烤箱上已经装得上的通道并不少。腔温热电偶在后壁或顶部，湿度探头在排汽附近，门缝可以加一根穿刺针，部分机型在门玻璃内侧装红外。表\ref{tab:obs}列出进入品质估计器的通道。安全侧测量——水位、门、剩余电流、加热器温度——不进入品质滤波。腔温、湿度、质量和红外都可以作为可安装通道写入观测向量；工程核实际读入的是表面温度加 \(0.4^\circ\mathrm{C}\) 散列，以及平均含水加 \(0.004\) 散列。其余通道留在表里，用来标明“可安装”与“已经接到跟踪器”的差别。
+
+\begin{table}[htbp]
+\centering
+\caption{进入品质估计器的观测}
+\label{tab:obs}
+\setlength{\tabcolsep}{2.2pt}
+{\footnotesize
+\begin{tabularx}{\columnwidth}{llY}
+\toprule
+通道 & 符号 & 与隐藏状态的关系 \\
+\midrule
+腔体空气温度 & \(y_T\) & 靠近 \(T_\infty\)，受加热器辐射污染 \\
+腔体相对湿度 & \(y_\varphi\) & \(p_v/p_{\mathrm{sat}}(T_\infty)\)，饱和时丢失分辨率 \\
+食品质量 & \(y_m\) & 累计蒸发的积分，不定位冷点 \\
+表面热像 & \(\vect{y}_{\mathrm{IR}}\) & 发射率未知的辐射亮度 \\
+电功率 & \(y_P\) & 已知输入，写入边界 \\
+排气温度 & \(y_{T,e}\) & 冷凝与漏汽的积分证据 \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+装得上并不等于已经看见内部热阻。腔温靠近空气，受加热器辐射污染；湿度在饱和段丢失分辨率；质量是累计蒸发的积分，不定位冷点；红外给出的是发射率未知的辐射亮度。穿刺改变局部场，而且不刺中冷点时读数不代表场的下确界。工程核因此只用表面温度和平均含水两条，外加确定性散列。探针窗的任务，是让这两条已经装得上的通道暂时离开平衡，把内部热阻从灵敏度零的状态里拖出来。
+
+观测方程 \(\vect{y}_k=h\big(\Phi(\vect{X}(t_k)),\vect{\theta}\big)+\vect{v}_k\)。红外通道
+\[
+L_j=\epsilon(\varepsilon_{l,s},S_s)\,\sigma T(\vect{r}_j)^4
++\big(1-\epsilon(\varepsilon_{l,s},S_s)\big)L_j^{\mathrm{refl}}.
+\]
+发射率随表面变干下降。系统精度应取发射率区间两端分别滤波后的分位包络。进入跟踪器的噪声由种子和步号生成，重复运行得到同一轨迹。
+
+线性化热方程在厚度方向上，对高频边界噪声的放大随 \(\mathrm{e}^{kL}\) 增长\cite{ozisik2000}。半无限体上表面温度取成角频率 \(\omega\) 的谐波时，
+\begin{equation}
+\label{eq:halfspace}
+T(x,t)=\mathrm{e}^{-kx}\cos(\omega t-kx),\qquad
+k=\sqrt{\frac{\omega}{2\alpha}}.
+\end{equation}
+深度 \(L\) 处的振幅是表面振幅的 \(\mathrm{e}^{-kL}\)。\(\alpha=2.0\times 10^{-7}\,\mathrm{m}^2/\mathrm{s}\)。表\ref{tab:amp}给出正文中已经出现的时间尺度。
+
+\begin{table}[htbp]
+\centering
+\caption{半无限体上单个谐波的放大倍数 \(\mathrm{e}^{kL}\)}
+\label{tab:amp}
+\setlength{\tabcolsep}{2.6pt}
+{\footnotesize
+\begin{tabular}{llrr}
+\toprule
+周期 & 位置 & \(L=30\,\mathrm{mm}\) 放大 & 穿透深度 \\
+\midrule
+8 s & 演示记录间隔 & \(1.81\times 10^{18}\) & 0.71 mm \\
+40 s & 探针窗 & \(1.46\times 10^{8}\) & 1.60 mm \\
+1170 s & \(30\,\mathrm{mm}\) 开环菜单 & 32.3 & 8.63 mm \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+8 s 谐波在 \(15\,\mathrm{mm}\) 处剩下 \(7.44\times 10^{-10}\,\mathrm{K}\)。菜单时间把放大降到另一个量级：薄件在自己的菜单时间上还留着约十分之一，厚件只留到千分之几。令 \(kL=1\) 对应的周期是 \(\pi L^2/\alpha\)：\(30\,\mathrm{mm}\) 为 \(14137\,\mathrm{s}\)，长于菜单。加密表面像素提高的是已经衰减掉的高频分量；要看见冷点，必须有一个穿透时间尺度上的动态激励，或一个对内部热阻敏感的积分量。质量损失对累计蒸发敏感，对冷点位置不敏感。
+
+\section{稳态观测下的不可辨识}
+
+\begin{proposition}[平衡点不含内部参数]
+\label{prop:steady}
+设\eqref{eq:twonode}中 \(\dot m=0\)、\(q_{\mathrm{lat}}=0\)，且存在平衡点。则 \(T_1=T_2=T_\infty\)。\((R_{\mathrm{int}},C_1,C_2)\) 不进入该代数方程，平衡观测对三者的灵敏度为零。
+\end{proposition}
+
+\begin{proof}
+第二式在平衡时为 \((T_1-T_2)/R_{\mathrm{int}}=0\)。热阻取正，故 \(T_1=T_2\)。第一式变为 \((T_\infty-T_1)/R_{\mathrm{ext}}=0\)，故 \(T_1=T_\infty\)。三个参数只作为除数出现，不出现在解的表达式中。对任一参数求导，平衡方程的右端仍为零。
+\end{proof}
+
+推论：恒温段再密的腔温采样也不更新内部热阻，信息动作必须离开平衡。对 \(R\in\{1,3,6\}\) 从同一初值积分，平衡温差的极差为 \(0\)。这是“到时按菜单停机”失败的数学形式：菜单时钟闭合的是时间，不是这一次过程里看见的 \(R_{\mathrm{int}}\)。
+
+灵敏度 \(\vect{\sigma}=\partial(T_1,T_2)/\partial R_{\mathrm{int}}\) 满足
+\begin{equation}
+\label{eq:sigma}
+\dot{\vect{\sigma}}=\vect{A}\vect{\sigma}+\frac{\partial\vect{A}}{\partial\theta}\begin{pmatrix}T_1\\ T_2\end{pmatrix}.
+\end{equation}
+平衡且 \(T_1=T_2\) 时右端为零，\(\vect{\sigma}=0\) 是平衡解，Fisher 矩阵里这一列贡献为零。离开平衡、温差不为零时，右端不再是零。
+
+参数灵敏度满足
+\begin{equation}
+\label{eq:sens}
+\frac{\mathrm{d}}{\mathrm{d}t}\frac{\partial \vect{s}}{\partial\theta_i}
+=\vect{A}(\vect{\theta})\frac{\partial \vect{s}}{\partial\theta_i}
++\frac{\partial\vect{A}}{\partial\theta_i}\vect{s}
++\frac{\partial\vect{B}}{\partial\theta_i}\vect{u}.
+\end{equation}
+Fisher 信息
+\begin{equation}
+\label{eq:fisher}
+\vect{\mathcal{I}}(\vect{\theta};\vect{u}_{0:K})
+=\sum_{k=0}^{K}
+\Big(\frac{\partial h}{\partial \vect{s}}\frac{\partial \vect{s}_k}{\partial\vect{\theta}}\Big)^{\!\top}
+\vect{R}_k^{-1}
+\Big(\frac{\partial h}{\partial \vect{s}}\frac{\partial \vect{s}_k}{\partial\vect{\theta}}\Big).
+\end{equation}
+探针设计在规格上最大化 \(\log\det\vect{\mathcal{I}}\) 的增量。工程核并不在每个时间步组装这个矩阵，而把同一几何压成固定时窗，见第\ref{ch:ati}节。
+
+在线一侧读表面温度和平均含水。内部时间尺度
+\[
+\tau=\mathrm{clip}(\hat r,0.8,8)\,(L/0.03)^2\,280\ \mathrm{s}.
+\]
+估计冷点
+\begin{align}
+\hat T_c &\leftarrow \hat T_c+\Delta t\,(y_T-\hat T_c)/\tau,\\
+\hat T_c &\leftarrow \min\big(\hat T_c,\, y_T-4\max(\hat r-1,0.2)\big).
+\end{align}
+第二式把估计压到表面读数之下。先验 \(\hat r=5\)，方差 \(0.64\)。\(30\,\mathrm{mm}\) 上 \(\hat r=5\) 时 \(\tau=1400\,\mathrm{s}\)；\(50\,\mathrm{mm}\) 上同一先验把 \(\tau\) 放大到约 \(3889\,\mathrm{s}\)，已经超过家用时域。先验把估计压到表面读数之下 \(4\times(5-1)=16\,\mathrm{K}\)，开局估计可以低于 \(0^\circ\mathrm{C}\)。滞后上限只用表面减一项只依赖 \(\hat r\) 的常数，表面已经远高于冷点之后，估计仍可以停在冷点之上。已实现的跟踪器给出带滞后的点估计，接口比九维决策状态窄。
+
+\section{两阶段热信息探针}
+\label{ch:ati}
+
+传感器只能装在腔体侧。稳态观测若压不低决策量的后验不确定度，控制器就必须离开平衡，用短时边界激励把内部参数从灵敏度零的状态里拖出来。探针因此是一段有限时长的执行器轨迹，不是任意一次功率变化。
+
+\begin{definition}[热信息探针]
+探针是一段有限时长 \(\tau\le\tau_{\max}\) 的执行器轨迹 \(a\in\cA\)，满足三条：设计目标是增大\eqref{eq:fisher}的 \(\log\det\)，或等价地减小决策量的后验熵；对表面褐变、质量损失和热力进度的预测损伤低于预算 \(\eta\)；结束后执行器回到探针前的名义轨迹，除非安全层已经改写该轨迹。
+\end{definition}
+
+不满足第一条的功率变化是加工动作。高斯近似下，决策状态的微分熵由协方差 \(\vect{\Sigma}_z\) 的行列式决定。对候选探针 \(a\)，
+\begin{equation}
+\label{eq:ati}
+G(a)=\frac12\log\det\vect{\Sigma}_{z,k}
+-\frac12\log\det\vect{\Sigma}_{z,k+\tau}(a).
+\end{equation}
+工程核用时间窗代替在线 \(\log\det\)：\([150,190)\) 秒且方差大于 \(0.25\) 时进入探针模式。前 \(20\,\mathrm{s}\) 蒸汽全开、排汽关小，后 \(20\,\mathrm{s}\) 风机升高到 \(1.3\)。顺序保留了先冷凝、后对流，时长固定为 \(40\,\mathrm{s}\)，打分用热阻是否更接近参照来代替 \(\log\det\)。
+
+窗结束时，若新的热阻比旧值更接近由真值温差构成的参照，方差乘 \(0.35\)。参照
+\[
+r_{\mathrm{proxy}}=\mathrm{clip}(\Delta T/8+1.2+2.5 S,\,0.8,\,8)
+\]
+用了表面与冷点的真值温差，实施到机器上时改成可安装通道。方差没有下降，停止时刻就留在动作之前。厚度超过 \(40\,\mathrm{mm}\) 且方差仍高于 \(0.45\) 时，停机判据要求方差先下降，点估计单独越过阈值仍保持加热。
+
+\begin{proposition}[第二输入方向]
+\label{prop:pulse}
+线性化后，仅 \(\delta T_\infty\) 时输入矩阵为单列。在\eqref{eq:twonode}里 \(q_{\mathrm{lat}}\) 与 \(T_\infty\) 都只进入第一式，两列输入共线，变号不增加输入矩阵的秩。可分开的是参数列：离开平衡之后，只改变 \(R_{\mathrm{ext}}\) 的气流段使 \((R_{\mathrm{ext}},R_{\mathrm{int}})\) 的灵敏度列线性无关。
+\end{proposition}
+
+\begin{proof}
+\(T_\infty\) 的输入列是 \((1/(C_1 R_{\mathrm{ext}}),\,0)\)，\(q_{\mathrm{lat}}\) 的输入列是 \((1/C_1,\,0)\)。第二分量都是 \(0\)，潜热变号只改变倍数的符号，秩仍是 \(1\)。气流段把 \(R_{\mathrm{ext}}\) 改为另一个正数，对 \(R_{\mathrm{ext}}\) 的偏导数含有 \(-(T_\infty-T_1)/R_{\mathrm{ext}}^2\)，对 \(R_{\mathrm{int}}\) 的偏导数含有两节点温差。冷凝段对 \(R_{\mathrm{ext}}\) 的偏导数不包含潜热本身。因此气流段的灵敏度列含有一个冷凝段列空间里没有的分量。
+\end{proof}
+
+两节点灵敏度分析给出：加上强对流段之后，内部热阻滞后从单蒸汽激励下的 \(38.91\,\mathrm{s}\) 走到 \(40.85\,\mathrm{s}\)。相对倍数 \(1.05\)，增量来自第二段对流切换，不是潜热变号。这一差值把外部换热热阻与内部导热热阻的共线性拆开：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在短窗内几乎不动。
+
+\begin{proposition}[冷点增量]
+\label{prop:budget}
+记 \(\tau_2=R_{\mathrm{int}}C_2\)。当 \(\tau\le\tau_2/10\) 且表面温度增量不超过 \(\Delta T_s\) 时，
+\[
+|\Delta T_2|\le\frac{\tau}{\tau_2}\Delta T_s,\qquad
+|\Delta F|\le\tau\,10^{(T_2(0)+\Delta T_2-T_{\mathrm{ref}})/z}.
+\]
+\end{proposition}
+
+\begin{proof}
+第二节点是线性滤波器 \(\dot T_2=(T_1-T_2)/\tau_2\)。在窗口 \([0,\tau]\) 上把 \(T_1-T_2\) 放大到不超过 \(\Delta T_s\)，积分得所述上界。前提 \(\tau\le\tau_2/10\) 保证温差还没有被冷点的上升吃掉。
+\end{proof}
+
+损伤预算因此写在表面褐变和表面含水上。用冷点温度否决探针，会放过表面已经越界的情况。取 \(\tau_2=30\,\mathrm{s}\)、\(\tau=3\,\mathrm{s}\)、\(\Delta T_s=12\,\mathrm{K}\)，解析上界 \(1.20\,\mathrm{K}\)，离散步进实现值 \(1.14\,\mathrm{K}\)，落在预算之内。这组常数属于命题核对。工程核探针窗为 \(40\,\mathrm{s}\)，对应 Fourier 数 \(8.9\times 10^{-3}\)（第\ref{ch:physics}章），冷点增量远小于表面增量：短窗口把热量留在近表面。
+
+\section{对偶决策与四种停机几何}
+
+加热请求
+\begin{equation}
+\label{eq:ureq}
+u_{\mathrm{req}}=\mathrm{clip}\big(0.35+(75+\mu-\hat T_c)/30,\,0.15,\,1\big),
+\end{equation}
+裕量 \(\mu=6+10\sqrt{\mathrm{Var}}\,(L/0.03)\)。式子只看见估计温度、方差和厚度。停机要求 \(\hat T_c>75+\mu\) 且时刻已经超过 \(240\,\mathrm{s}\)。
+
+四条策略共用同一积分器和同一条设计线 \(\alpha_m=0.85\)，差别写在停机几何上。
+\begin{enumerate}
+\item \textbf{开环。} 按厚度给菜单时间，中途不改。\(15\,\mathrm{mm}\)、\(30\,\mathrm{mm}\)、\(50\,\mathrm{mm}\) 分别是 \(900\,\mathrm{s}\)、\(1170\,\mathrm{s}\)、\(1530\,\mathrm{s}\)。
+\item \textbf{腔温比例。} \(u=\mathrm{clip}(0.04(160-y_c)+0.6,0,1)\)。只跟踪带噪腔温，不停机，过程一直走到时域终点。
+\item \textbf{无探针。} 使用\eqref{eq:ureq}，没有蒸汽窗。跟踪器看见表面温度，按点估计停机。
+\item \textbf{对偶。} 在无探针加热律上叠加固定探针窗，厚件上另有方差否决。\(150\)--\(190\,\mathrm{s}\) 蒸汽和风机按时间表离开平衡，窗后若新热阻更接近参照则方差乘 \(0.35\)。
+\end{enumerate}
+
+无探针和对偶共用同一条饱和线性加热律，差别在 \(40\,\mathrm{s}\) 窗口和其后的热阻更新。开环把停止时刻取为厚度的函数；腔温比例把停止时刻取为时域终点 \(3300\,\mathrm{s}\)。四条策略因此在同一积分器上给出四种停机几何：时钟、腔温、点估计、点估计加短窗。
+
+加热请求\eqref{eq:ureq} 的裕量随方差和厚度放大。方差仍为先验 \(0.64\)、厚度 \(30\,\mathrm{mm}\) 时 \(\mu\approx 14\,\mathrm{K}\)，停机门槛大约 \(89^\circ\mathrm{C}\)；方差落到 \(0.224\) 之后 \(\mu\) 降到约 \(11\,\mathrm{K}\)。厚件上同一公式把门槛再抬高，点估计更难单独宣布停机。导热时间尺度若在家用时域内走不完，停机时刻会被时域终点截住——这是跟踪器侧的几何，不是探针拒绝工作。
+
+信息动作与品质动作在时间轴上分开。\(150\,\mathrm{s}\) 之前四个执行量按品质加热走，加热请求由估计温度、方差和厚度决定；\(150\)--\(190\,\mathrm{s}\) 蒸汽和风机按时间表离开平衡，加热请求仍由同一条饱和律给出，只是边界被探针改写；\(190\,\mathrm{s}\) 之后蒸汽回到基线 \(0.15\)，风机回到 \(0.4\)，方差若已下降则停机门槛跟着下降。日志里要能查出这一时刻是哪一个函数发出的指令：探针窗内蒸汽列跳到 \(1.0\)，窗外蒸汽列回到 \(0.15\)，加热列始终由\eqref{eq:ureq} 给出。可分离落实为这条时间表。
+
+能耗必须和中心熟化度误差 \(e_{\alpha}\) 一起读。单独看能耗，开环会因为提前停机、冷点还没起来，被误当成节能。
+
+\section{蒸汽路径分解与安全屏障}
+\label{ch:safe}
+
+同一次蒸汽指令可以同时加热冷点、打湿表面，并在更长的时间上改变结壳热阻。把这三件事合成一个“蒸汽有利”的分数，会把薄件上的冷凝收益当作厚件上的菜单。决策状态的分量满足结构方程
+\begin{equation}
+\label{eq:scm}
+Z_i=f_i(\mathrm{Pa}_i,U_i),\qquad i=1,\ldots,n_z.
+\end{equation}
+父节点 \(\mathrm{Pa}_i\) 由机理指定，见表\ref{tab:scm}。\(U_i\) 是外生噪声。学习阶段只调整函数的参数和事先声明的可选边；一次烹饪的短序列上，能量守恒的边保持固定。
+
+\begin{table*}[t]
+\centering
+\caption{因果骨架。内部热阻既是参数也是子节点，因为结壳会增大它}
+\label{tab:scm}
+\setlength{\tabcolsep}{3.4pt}
+{\small
+\begin{tabularx}{\textwidth}{llY}
+\toprule
+子节点 & 父节点 & 物理内容 \\
+\midrule
+界面蒸汽压 & 蒸汽流、排汽、腔温 & 腔体水分平衡 \\
+表面温度 & 蒸汽压、腔温、风速、加热、内部温度 & \eqref{eq:twonode} 第一式 \\
+内部温度 & 表面温度、内部热阻、内部热容 & \eqref{eq:twonode} 第二式 \\
+表面含水 & 蒸汽压、表面温度、传质系数 & 蒸发与冷凝 \\
+冷点进度 & 内部温度的历史 & \eqref{eq:F} \\
+表面褐变 & 表面温度、表面含水 & \eqref{eq:kinetics} \\
+结壳 & 蛋白进度、表面含水 & \eqref{eq:structure} \\
+内部热阻 & 结壳、厚度 & 结构到传递 \\
+\bottomrule
+\end{tabularx}}
+\end{table*}
+
+观测条件分布 \(p(\alpha_m\mid \dot m_{\mathrm{st}})\) 混有控制器对当前低温的反应：没熟所以多喷蒸汽。干预分布 \(p(\alpha_m\mid\mathrm{do}(\dot m_{\mathrm{st}}=m^\star))\) 把决定蒸汽流量的策略从结构方程中删去，只保留蒸汽到界面蒸汽压的物理边\cite{pearl2009}。孪生的积分实现干预：替换执行器轨迹后再积分。
+
+蒸汽对品质的全导数分成冷点项、表面项和慢热阻项：
+\begin{align}
+\text{A: }& \dot m_{\mathrm{st}}\to q_{\mathrm{lat}}\to T_2\to\alpha_m\to Q,\\
+\text{B: }& \dot m_{\mathrm{st}}\to\varepsilon_{l,s}\to(\alpha_b,m_{\mathrm{loss}})\to Q,\\
+\text{C: }& \dot m_{\mathrm{st}}\to S\to R_{\mathrm{int}}\to T_2\to Q.
+\end{align}
+路径 A 在冷点落后时为正，路径 B 在表面已经湿且后续需要烤色时为负；路径 C 是慢路径，短探针窗口内增量是 \(O(\tau/\tau_S)\)，全时域必须保留。总效应
+\begin{equation}
+\label{eq:path}
+\begin{aligned}
+\frac{\mathrm{d}Q}{\mathrm{d}m_{\mathrm{st}}}
+={}&\underbrace{\frac{\partial Q}{\partial\alpha_m}\frac{\partial\alpha_m}{\partial m_{\mathrm{st}}}\Big|_{\!S}}_{\text{A}}\\
+&+\underbrace{\frac{\partial Q}{\partial\varepsilon_{l,s}}\frac{\partial\varepsilon_{l,s}}{\partial m_{\mathrm{st}}}}_{\text{B}}\\
+&+\underbrace{\frac{\partial Q}{\partial\alpha_m}\frac{\partial\alpha_m}{\partial R_{\mathrm{int}}}\frac{\partial R_{\mathrm{int}}}{\partial m_{\mathrm{st}}}}_{\text{C}}.
+\end{aligned}
+\end{equation}
+
+\begin{proposition}[路径加性]
+若品质泛函 \(Q\) 只通过 \(\alpha_m\)、\(\varepsilon_{l,s}\) 和 \(R_{\mathrm{int}}\) 依赖蒸汽质量，则全导数恰好分解为\eqref{eq:path} 的三项。
+\end{proposition}
+
+\begin{proof}
+链式法则在所述依赖下把全导数写成三条互不重叠的通路。其余状态若只作为这三者的中间变量，已被吸收进偏导数。
+\end{proof}
+
+\begin{figure*}[t]
+\centering
+\spanimg{path_abc.png}
+\caption{同一次蒸汽指令的三条路径。实线对应通量里有对应项的边，路径 C 经过结壳但核未把结壳乘回导热}
+\label{fig:path}
+\end{figure*}
+
+\begin{figure}[htbp]
+\centering
+\colimg{M_paths.png}
+\caption{蒸汽离开界面之后的三条去向。路径 C 在核里不乘回导热}
+\label{fig:mpaths}
+\end{figure}
+
+图\ref{fig:path}给出分叉，图\ref{fig:mpaths}把同一分叉画成三条去向。积分闭合了潜热通量对蒸汽、活度和风机的依赖，以及表面失水对活度和风机的依赖。结壳只累加，不乘进导热，所以路径 C 在评分核里没有闭合。界面通量对蒸汽指令的偏导数
+\begin{equation}
+\label{eq:dqlat}
+\begin{aligned}
+\frac{\partial q_{\mathrm{lat}}}{\partial u_{\mathrm{st}}}
+={}&18000\,(1-a_w)\\
+&+9000\max(a_w-0.35,0)\,u_v
+\end{aligned}
+\end{equation}
+在饱和活度附近为正：关掉蒸汽时蒸发冷却被撤掉，蒸汽的热效应是撤冷却。短窗内路径 A 与 C 的温度增量很小。厚度增大使 A 变小，结壳使 B 更负；解释输出应当是这三项的符号与区间，而不是一个“蒸汽有利”的标量。
+
+品质层的输出记为 \(\vect{u}_{\mathrm{AI}}\)。安全层求解
+\begin{equation}
+\label{eq:cbf}
+\begin{aligned}
+\vect{u}={}&\argmin_{\vect{u}}\;\|\vect{u}-\vect{u}_{\mathrm{AI}}\|_W^2\\
+\mathrm{s.t.}\quad
+&\dot h_j+\gamma_j h_j\ge 0.
+\end{aligned}
+\end{equation}
+\(h_j\ge 0\) 表示安全集内部\cite{ames2017cbf}。自变量只含漏电、加热器温度、水位或空烧温升、腔压、门状态和执行器电流，不含 \(\alpha_m\)。屏障在估计器崩溃时仍然成立。漏电与干烧另有独立断电回路，不读取品质后验，也不经过产生参考动作的处理器。投影负责提前限制，断电负责投影失效后的切断。家用电器对漏电、温升和异常工作的通用要求见 IEC 60335-1 与 GB 4706.1\cite{iec60335,gb4706}。
+
+本次落实的削减是\eqref{eq:hard}：加热器温度超过 \(230^\circ\mathrm{C}\) 时把加热请求剪到 \(0.25\)。可行域与后验不相交——同一削减在两组不同后验上给出同一指令。置信度低于阈值时，送入投影的参考改为预先存储的低功率保持 \(0.15\)，学习模块的最后一次输出不再进入执行器。品质回路读表面温度和平均含水，写出四个请求；安全回路读水位、门、剩余电流和加热器温度，在请求与指令之间改写这四个量。投影可以减小加热，断电可以把四个量同时置零。
+
+\section{模型假设与工程简化}
+
+数值核沿厚度取十六条控制体，时间步 \(2\,\mathrm{s}\)。腔体压力场 \(p_g\) 与蒸汽质量分数 \(\omega_v\) 不作为独立未知量，界面潜热由蒸汽指令与活度的工程式\eqref{eq:qlat}给出。跟踪器为标量一阶滞后，时间常数 \(\tau=\mathrm{clip}(\hat r,0.8,8)\,(L/0.03)^2\cdot 280\,\mathrm{s}\)，先验 \(\hat r=5\)、方差 \(0.64\)。探针窗固定为 \([150,190)\,\mathrm{s}\)：前 \(20\,\mathrm{s}\) 蒸汽全开，后 \(20\,\mathrm{s}\) 风机升至 \(1.3\)；窗结束时若新热阻更接近由真值温差构成的参照 \(r_{\mathrm{proxy}}\)，方差乘 \(0.35\)。停机门槛为估计冷点越过 \(75^\circ\mathrm{C}\) 加随方差与厚度放大的裕量。加热器温度屏障只读管温，阈值 \(230^\circ\mathrm{C}\)；满功率平衡点约 \(196.5^\circ\mathrm{C}\)，主对照格子上削减保持待命。结构方程的路径积分与有限时域模型预测控制不进入评分循环；评分读取的是标量跟踪器给出的停机偏差。两节点教师模型的均方根误差约 \(41^\circ\mathrm{C}\)，留在规格层。褐变通道要求表面温度高于 \(110^\circ\mathrm{C}\) 且表面含水低于 \(0.55\)；主对照格子初始含水位于 \(0.64\)--\(0.80\)，表面保持湿润，褐变进度接近零。路径 C 经结壳累加，核未把结壳乘回导热。
+
+下一章把上述停机几何放到同一积分器上对照：主格子、档位研究、网格加密、因子消融、宽格子与典型轨迹共用第\ref{ch:physics}章的工程常数和第\ref{ch:dual}章的跟踪器、探针窗与屏障。
+\FloatBarrier

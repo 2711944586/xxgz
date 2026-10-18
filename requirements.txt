@@ -1,7 +1,18 @@
+# Numerical core (src/acts_mcdt) and campaign scripts.
 numpy>=1.26
-scipy>=1.11
 matplotlib>=3.8
-openpyxl>=3.1
+pandas>=2.0          # restyle_figures.py reads the demo CSV
+openpyxl>=3.1        # external/gab-fit.xlsx
+Pillow>=10.0         # cover and watermark rendering
+pymupdf>=1.24        # PDF page checks in the build scripts
+
+# Optional: src/acts_mcdt/fast.py (the legacy wide-grid kernel).
+numba>=0.59
+
+# Optional: scripts/run_extensions.py trains the two-node surrogate.
+torch>=2.2
+
+# Word export: scripts/build_docx.py drives Microsoft Word through COM to
+# refresh the table of contents and page numbers. Windows + Word only.
 python-docx>=1.1
-pymupdf>=1.24
-Pillow>=10.0
+pywin32>=306

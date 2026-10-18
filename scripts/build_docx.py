@@ -54,26 +54,18 @@ HEADER_RIGHT = "庄颂  20241334  信息2402"
 
 BODY_CHAPTERS = [
     "绪论",
-    "文献基础与商品方案的信息边界",
-    "感知、决策与执行的分层",
-    "从全场物理到决策状态",
-    "内部热阻的不可辨识性",
-    "热信息探针与对偶决策",
-    "因果路径与安全隔离",
-    "厚度、档位与探针的对照结果",
-    "网格收敛与冷点取法",
-    "因子消融与边界扰动",
-    "先验宽度、集合散布与时域",
-    "冷点位置与过程尺度",
-    "典型轨迹与作用机理",
-    "数值实现与交互演示",
-    "结论",
+    "文献综述与现有商业方案的信息边界",
+    "多尺度热质耦合机理与降阶状态建模",
+    "内部热阻不可辨识性、对偶探针与安全屏障",
+    "多维数值仿真、网格收敛与因子消融",
+    "三维数字孪生交互系统与总结展望",
 ]
 APPENDIX_CHAPTERS = [
     "符号、单位与日志字段",
     "一维工程核的离散格式",
     "种子 7 轨迹抽样",
     "用已定常数算出的尺度",
+    "公开等温线与交叉表全文",
 ]
 UNNUMBERED = {"摘要", "Abstract", "目录", "参考文献"}
 
@@ -112,8 +104,8 @@ TOKEN_RE = re.compile(
     r"\\end\{equation\*?\}|"
     r"\\begin\{align\*?\}|"
     r"\\end\{align\*?\}|"
-    r"\\begin\{figure\}|"
-    r"\\begin\{table\}|"
+    r"\\begin\{figure\*?\}|"
+    r"\\begin\{table\*?\}|"
     r"\\begin\{longtable\}|"
     r"\\begin\{proposition\}|"
     r"\\begin\{definition\}|"
@@ -265,11 +257,11 @@ def collect_labels(tex: str) -> tuple[dict[str, str], set[str]]:
         if token.startswith(r"\end{equation") or token.startswith(r"\end{align"):
             in_eq = False
             continue
-        if token.startswith(r"\begin{figure}"):
+        if token.startswith(r"\begin{figure"):
             fig_n += 1
             pending = ("fig", f"{chap_id()}.{fig_n}")
             continue
-        if token.startswith(r"\begin{table}") or token.startswith(r"\begin{longtable}"):
+        if token.startswith(r"\begin{table") or token.startswith(r"\begin{longtable"):
             tab_n += 1
             pending = ("tab", f"{chap_id()}.{tab_n}")
             continue
@@ -317,6 +309,13 @@ def strip_layout(tex: str) -> str:
     tex = re.sub(r"\\setcounter\{page\}\{[^}]*\}", "", tex)
     tex = re.sub(r"\\tableofcontents", "", tex)
     tex = re.sub(r"\\FloatBarrier", "", tex)
+    tex = re.sub(r"\\(?:one|two)column\b", "", tex)
+    tex = re.sub(r"\\colimg\{([^}]+)\}", r"\\includegraphics[width=\\columnwidth]{\1}", tex)
+    tex = re.sub(r"\\spanimg\{([^}]+)\}", r"\\includegraphics[width=0.96\\textwidth]{\1}", tex)
+    tex = tex.replace(r"\begin{figure*}", r"\begin{figure}")
+    tex = tex.replace(r"\end{figure*}", r"\end{figure}")
+    tex = tex.replace(r"\begin{table*}", r"\begin{table}")
+    tex = tex.replace(r"\end{table*}", r"\end{table}")
     tex = re.sub(r"\\clearpage", r"\\newpage", tex)
     tex = re.sub(r"\\begin\{proof\}", r"\n\\noindent\\textbf{证明.}\n", tex)
     tex = re.sub(r"\\end\{proof\}", "", tex)
@@ -365,7 +364,7 @@ def extract_macro_arg(text: str, command: str) -> str | None:
 
 
 def convert_subfigures(tex: str) -> str:
-    figure_re = re.compile(r"\\begin\{figure\}(?:\[[^\]]*\])?(.*?)\\end\{figure\}", re.S)
+    figure_re = re.compile(r"\\begin\{figure\*?\}(?:\[[^\]]*\])?(.*?)\\end\{figure\*?\}", re.S)
     sub_re = re.compile(
         r"\\begin\{subfigure\}(?:\[[^\]]*\])?\{[^}]*\}(.*?)\\end\{subfigure\}",
         re.S,
@@ -2439,7 +2438,12 @@ def build() -> None:
 
         SUBMIT_DIR.mkdir(exist_ok=True)
         if PDF.exists():
-            SUBMIT_PDF.write_bytes(PDF.read_bytes())
+            try:
+                SUBMIT_PDF.write_bytes(PDF.read_bytes())
+            except PermissionError:
+                print(f"warning: {SUBMIT_PDF.name} is open in another process; "
+                      "skipped the PDF copy. Close the viewer and re-run, or copy "
+                      "monograph/ACTS-MCDT.pdf over it by hand.")
         doc.save(SUBMIT_DOCX)
         bake_toc_pages(SUBMIT_DOCX, work)
         shutil.copy2(SUBMIT_DOCX, LOCAL_DOCX)

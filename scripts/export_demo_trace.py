@@ -27,6 +27,7 @@ def main() -> None:
         dt=2.0,
         record_every=4,
         cook="combi",
+        generation="display",
     )
     n = out["time"].shape[0]
     cols = [
@@ -85,6 +86,7 @@ def main() -> None:
                     dt=2.0,
                     record_every=4,
                     cook=cook,
+                    generation="display",
                 )
     frames = []
     for key, item in catalog.items():
