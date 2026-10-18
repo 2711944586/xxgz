@@ -207,7 +207,14 @@ C_2\dot T_2
 
 \section{过程特征尺度与二维冷点偏移}
 
-半厚取 \(L=30\,\mathrm{mm}\)，Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出设计尺度。探针窗的 Fourier 数为 \(8.9\times 10^{-3}\)，远小于 \(1\)，冷点来不及跟上表面。探针段把 Biot 数从 \(1.50\) 升到 \(3.68\)，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 \(40\,\mathrm{s}\) 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在核常数下。
+厚度取 \(L=30\,\mathrm{mm}\)（全厚，与附录\ref{app:scales} 同一口径），Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出设计尺度。探针窗的 Fourier 数为 \(8.9\times 10^{-3}\)，远小于 \(1\)，冷点来不及跟上表面。探针段把 Biot 数从 \(1.50\) 升到 \(3.68\)，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 \(40\,\mathrm{s}\) 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在核常数下；图\ref{fig:foband}把同一关系摊到 \((L,t)\) 平面上，家用时域线两侧的差别就是“薄件走完、厚件未走完”的全部内容。
+
+\begin{figure*}[t]
+\centering
+\spanimg{X_fo_band.png}
+\caption{Fourier 数在厚度--时间平面上的分布。\(55\,\mathrm{min}\) 时域线上，\(15\,\mathrm{mm}\) 的 \(\mathrm{Fo}=2.93\)、\(30\,\mathrm{mm}\) 为 \(0.73\)、\(50\,\mathrm{mm}\) 为 \(0.26\)；三个端点标出对应的停机偏差中位}
+\label{fig:foband}
+\end{figure*}
 
 \begin{table}[htbp]
 \centering
