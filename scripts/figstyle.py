@@ -57,6 +57,11 @@ DIV = LinearSegmentedColormap.from_list(
     "acts_div", ["#8c2f1f", "#c26a4a", "#e6bfa8", "#f4f1ea", "#a9c3d0", "#4a7fa0", "#173f63"]
 )
 # Phase: four distinguishable hues for policy panels.
+# For magnitude maps where "absent" must read as blank: near-white at the
+# low end, warming through amber to deep red at the high end.
+HEATMAP = LinearSegmentedColormap.from_list(
+    "acts_heat", ["#f7f5f0", "#f0e2cd", "#e3c398", "#cf9459", "#b45c33", "#7d2f18"]
+)
 PHASE = LinearSegmentedColormap.from_list(
     "acts_phase", ["#f4f1ea", "#d9c9a8", "#9fb0a6", "#5f8496", "#2c5673"]
 )
@@ -120,7 +125,7 @@ def save(fig, name: str, vector: bool = True) -> None:
 
 def panel_tag(ax, tag: str) -> None:
     """Panel letter outside the axes, top-left, so it never collides with the title."""
-    ax.text(-0.085, 1.03, tag, transform=ax.transAxes, ha="left", va="bottom",
+    ax.text(-0.075, 1.055, tag, transform=ax.transAxes, ha="left", va="bottom",
             fontsize=9.2, fontweight="bold", color=INK, clip_on=False)
 
 
