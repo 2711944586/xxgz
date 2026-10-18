@@ -2,6 +2,7 @@
 """Export a native, editable Word file whose typography matches the PDF."""
 from __future__ import annotations
 
+import copy
 import re
 import shutil
 import subprocess
@@ -45,7 +46,10 @@ TOC_LINE = 280
 A4_CX = 7560000
 A4_CY = 10692000
 DEMO_PX = (1680, 1445)
-DEMO_WIDTH = Mm(68)
+# The body is set in two columns (see configure_section), so demo screenshots
+# are packed into pairs inside one column rather than across the page.
+TWO_COLUMN_BODY = True
+DEMO_WIDTH = Mm(34) if TWO_COLUMN_BODY else Mm(68)
 MATH_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 DRAWING_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing"
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -903,8 +907,9 @@ def add_body_header_bar(header) -> None:
     if tbl_w is None:
         tbl_w = OxmlElement("w:tblW")
         tbl_pr.append(tbl_w)
+    # Two-column body: the pair table spans the full column, not half a page.
     tbl_w.set(qn("w:type"), "pct")
-    tbl_w.set(qn("w:w"), "5000")
+    tbl_w.set(qn("w:w"), "5000" if not TWO_COLUMN_BODY else "10000")
     tbl_ind = tbl_pr.find(qn("w:tblInd"))
     if tbl_ind is None:
         tbl_ind = OxmlElement("w:tblInd")
@@ -984,7 +989,30 @@ def set_page_start(section, number: int) -> None:
     pg_num.set(qn("w:start"), str(number))
 
 
-def configure_section(section, full_bleed: bool) -> None:
+def set_columns(section, num: int, space_mm: float = 6.2) -> None:
+    """Set the column count on a section, mirroring the LaTeX twocolumn layout.
+
+    Word stores column layout as ``w:cols`` under the section properties. The
+    manuscript is typeset with ``\\twocolumn`` and a 0.68 cm column gap, so the
+    DOCX body section uses two columns at 6.8 mm. Front matter (abstract,
+    contents) stays single-column, and so do the cover and back pages.
+    """
+    sect_pr = section._sectPr
+    cols = sect_pr.find(qn("w:cols"))
+    if cols is None:
+        cols = OxmlElement("w:cols")
+        sect_pr.append(cols)
+    cols.set(qn("w:num"), str(num))
+    cols.set(qn("w:space"), str(int(round(space_mm * 56.6929))))  # mm -> twips
+    if num > 1:
+        # equal column widths, like the LaTeX default
+        for attr in ("w:equalWidth", "w:sep"):
+            if cols.get(qn(attr)) is not None:
+                del cols.attrib[qn(attr)]
+        cols.set(qn("w:equalWidth"), "1")
+
+
+def configure_section(section, full_bleed: bool, columns: int = 1) -> None:
     section.page_width = A4_W
     section.page_height = A4_H
     section.orientation = WD_ORIENT.PORTRAIT
@@ -995,6 +1023,15 @@ def configure_section(section, full_bleed: bool) -> None:
         section.bottom_margin = Mm(0)
         section.header_distance = Mm(0)
         section.footer_distance = Mm(0)
+    elif columns > 1:
+        # Narrower side margins so two ~82 mm columns fit, matching the
+        # LaTeX geometry (left/right 1.75 cm, columnsep 0.68 cm).
+        section.left_margin = Mm(17.5)
+        section.right_margin = Mm(17.5)
+        section.top_margin = Mm(21.5)
+        section.bottom_margin = Mm(21.5)
+        section.header_distance = Mm(11)
+        section.footer_distance = Mm(11)
     else:
         section.left_margin = Mm(25)
         section.right_margin = Mm(25)
@@ -1002,6 +1039,7 @@ def configure_section(section, full_bleed: bool) -> None:
         section.bottom_margin = Mm(24.5)
         section.header_distance = Mm(12)
         section.footer_distance = Mm(12)
+    set_columns(section, columns)
     start = section._sectPr.find(qn("w:type"))
     if start is None:
         start = OxmlElement("w:type")
@@ -1077,11 +1115,62 @@ def insert_cover(doc: Document, image_path: Path) -> None:
     cover._p.get_or_add_pPr().append(make_fullbleed_sectpr())
 
 
+def split_front_matter(doc: Document) -> None:
+    """Put a continuous section break before the first chapter heading.
+
+    Front matter (abstract, English abstract, contents) must stay single
+    column; the body must be two columns. Word sections are delimited by a
+    ``w:sectPr`` attached to the last paragraph *before* the break, so the
+    break is created by inserting a paragraph carrying the current (single
+    column) section properties just before the first chapter, and letting the
+    body section that follows inherit the two-column settings.
+    """
+    target = None
+    for paragraph in doc.paragraphs:
+        style = paragraph.style.name if paragraph.style is not None else ""
+        text = paragraph.text.strip()
+        if style == "Heading 1" and text.startswith("第") and "章" in text:
+            target = paragraph
+            break
+    if target is None:
+        return
+
+    # Clone the sectPr that currently governs the document, so the front
+    # matter keeps single-column geometry, then attach it to a new empty
+    # paragraph placed immediately before the first chapter.
+    body_sect = doc.sections[-1]._sectPr
+    front = copy.deepcopy(body_sect)
+    # Force the front matter section to one column.
+    cols = front.find(qn("w:cols"))
+    if cols is None:
+        cols = OxmlElement("w:cols")
+        front.append(cols)
+    cols.set(qn("w:num"), "1")
+    for attr in ("w:space", "w:equalWidth"):
+        if cols.get(qn(attr)) is not None:
+            del cols.attrib[qn(attr)]
+    # The front matter flows on, not to a new page.
+    typ = front.find(qn("w:type"))
+    if typ is not None:
+        typ.set(qn("w:val"), "continuous")
+
+    brk = target.insert_paragraph_before()
+    make_empty_bleed_paragraph(brk)
+    brk._p.get_or_add_pPr().append(front)
+
+
 def setup_headers(doc: Document, watermark: Path) -> None:
-    cover, body, back = doc.sections[0], doc.sections[1], doc.sections[2]
+    n = len(doc.sections)
+    cover = doc.sections[0]
+    back = doc.sections[-1]
+    # Any sections between cover and back are the body: front matter first
+    # (single column), then the chapters (two columns).
     configure_section(cover, True)
-    configure_section(body, False)
+    for i in range(1, n - 1):
+        is_last_body = (i == n - 2)
+        configure_section(doc.sections[i], False, columns=2 if is_last_body else 1)
     configure_section(back, True)
+    body = doc.sections[1]
     set_page_start(body, 1)
 
     for section in (cover, back):
@@ -2030,8 +2119,9 @@ def pack_demo_group(doc: Document, group: list[tuple], caption: str | None = Non
     if tbl_w is None:
         tbl_w = OxmlElement("w:tblW")
         tbl_pr.append(tbl_w)
+    # Two-column body: the pair table spans the full column, not half a page.
     tbl_w.set(qn("w:type"), "pct")
-    tbl_w.set(qn("w:w"), "5000")
+    tbl_w.set(qn("w:w"), "5000" if not TWO_COLUMN_BODY else "10000")
     jc = tbl_pr.find(qn("w:jc"))
     if jc is None:
         jc = OxmlElement("w:jc")
@@ -2431,6 +2521,10 @@ def build() -> None:
         center_figure_paragraphs(doc)
         insert_toc(doc, toc_entries)
         insert_cover(doc, COVER)
+        # The front matter (abstract, abstract-en, contents) stays single
+        # column; the chapter body is set in two columns to mirror the LaTeX
+        # \twocolumn layout. Insert a section break right after the contents.
+        split_front_matter(doc)
         back_section = doc.add_section(WD_SECTION.NEW_PAGE)
         configure_section(back_section, True)
         make_empty_bleed_paragraph(doc.add_paragraph())
