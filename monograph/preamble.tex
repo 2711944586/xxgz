@@ -87,7 +87,10 @@
   \fancyfoot[C]{\thepage}
   \renewcommand{\headrulewidth}{0pt}
 }
-\AtBeginDocument{\renewcommand{\contentsname}{目　录}}
+\AtBeginDocument{\renewcommand{\contentsname}{目　录}
+% FangSong has no bold face on Windows; map bold to Hei so TOC and
+% headers do not fall back silently.
+\setCJKfamilyfont{zhfs}[BoldFont={SimHei}]{FangSong}}
 \newtheorem{definition}{定义}[chapter]
 \newtheorem{proposition}{命题}[chapter]
 \newtheorem{theorem}{定理}[chapter]

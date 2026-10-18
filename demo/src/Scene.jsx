@@ -44,6 +44,8 @@ function steamTexture() {
 }
 
 function metal(color, metalness, roughness, env = 1.05) {
+  // The env map is a PMREM; anisotropic sampling keeps the highlight stretched
+  // along brushed grooves instead of round.
   return new THREE.MeshPhysicalMaterial({
     color,
     metalness,
@@ -532,13 +534,15 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     const key = new THREE.DirectionalLight(0xfff3e4, 1.12);
     key.position.set(3.6, 5.2, 4.6);
     key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.02;
     key.shadow.camera.near = 1;
     key.shadow.camera.far = 18;
-    key.shadow.camera.left = -6;
-    key.shadow.camera.right = 6;
-    key.shadow.camera.top = 6;
-    key.shadow.camera.bottom = -4;
+    key.shadow.camera.left = -4.2;
+    key.shadow.camera.right = 4.2;
+    key.shadow.camera.top = 4.6;
+    key.shadow.camera.bottom = -3.2;
     const fill = new THREE.DirectionalLight(0xb7d3dc, 0.36);
     fill.position.set(-3.8, 1.7, 2.5);
     const rim = new THREE.PointLight(0xe07a3d, 0.55, 10);
@@ -558,6 +562,29 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.28;
     ground.receiveShadow = true;
+
+    // Contact shadow: a soft radial darkening under the body so it reads as
+    // resting on the floor rather than hovering above it.
+    const contactCanvas = document.createElement("canvas");
+    contactCanvas.width = contactCanvas.height = 256;
+    const cctx = contactCanvas.getContext("2d");
+    const grad = cctx.createRadialGradient(128, 128, 10, 128, 128, 126);
+    grad.addColorStop(0, "rgba(0,0,0,0.55)");
+    grad.addColorStop(0.55, "rgba(0,0,0,0.22)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    cctx.fillStyle = grad;
+    cctx.fillRect(0, 0, 256, 256);
+    const contact = new THREE.Mesh(
+      new THREE.PlaneGeometry(7.4, 5.2),
+      new THREE.MeshBasicMaterial({
+        map: new THREE.CanvasTexture(contactCanvas),
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    contact.rotation.x = -Math.PI / 2;
+    contact.position.y = -0.275;
+    scene.add(contact);
     scene.add(ground);
 
     const cavity = makeCavity();
