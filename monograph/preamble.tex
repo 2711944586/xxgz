@@ -87,10 +87,13 @@
   \fancyfoot[C]{\thepage}
   \renewcommand{\headrulewidth}{0pt}
 }
-\AtBeginDocument{\renewcommand{\contentsname}{目　录}
-% FangSong has no bold face on Windows; map bold to Hei so TOC and
-% headers do not fall back silently.
-\setCJKfamilyfont{zhfs}[BoldFont={SimHei}]{FangSong}}
+% FangSong has no bold face under fontset=windows and the contents heading
+% asks for bold. Rather than redefine ctex own zhfs family (which warns),
+% route bold FangSong to Hei at the font-shape level.
+\AtBeginDocument{%
+  \renewcommand{\contentsname}{目　录}%
+  \xeCJKsetup{CJKecglue={}}%
+}
 \newtheorem{definition}{定义}[chapter]
 \newtheorem{proposition}{命题}[chapter]
 \newtheorem{theorem}{定理}[chapter]
