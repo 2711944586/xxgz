@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
@@ -132,8 +136,22 @@ function airfoilGeometry() {
 function makeCavity() {
   const group = new THREE.Group();
 
+  // Two procedural fills: a fine anisotropic streak for the brushed shell, and
+  // a finer grain for the bright liner. Generated at load time so the repo
+  // carries no binary texture assets.
+  const shellMaps = proceduralSurfaceMaps({ streak: 0.26, grain: 0.05 });
+  const linerMaps = proceduralSurfaceMaps({ streak: 0.14, grain: 0.04 });
+
   const outer = metal("#2a3136", 0.58, 0.46);
+  outer.normalMap = shellMaps.normalMap;
+  outer.normalScale = new THREE.Vector2(0.06, 0.06);
+  outer.roughnessMap = shellMaps.roughnessMap;
+
   const liner = metal("#d8e0e6", 0.92, 0.16, 1.25);
+  liner.normalMap = linerMaps.normalMap;
+  liner.normalScale = new THREE.Vector2(0.025, 0.025);
+  liner.roughnessMap = linerMaps.roughnessMap;
+
   const floor = metal("#8f989f", 0.72, 0.34);
   const dark = metal("#3a434a", 0.62, 0.4);
   const brass = metal("#c4a574", 0.84, 0.26, 1.2);
@@ -152,15 +170,22 @@ function makeCavity() {
     roughness: 0.92,
     metalness: 0.02,
   });
+  // Oven glass: a dark, strongly reflective pane. Transmission stays high
+  // enough to see the cavity, opacity and tint give the sheet a visible
+  // presence so the door does not vanish against the lit interior.
   const glass = new THREE.MeshPhysicalMaterial({
-    color: "#9eb8c4",
-    metalness: 0.05,
-    roughness: 0.08,
-    transmission: 0.58,
-    thickness: 0.045,
+    color: "#5d7078",
+    metalness: 0.12,
+    roughness: 0.045,
+    transmission: 0.72,
+    thickness: 0.03,
+    ior: 1.52,
     transparent: true,
-    opacity: 0.4,
-    envMapIntensity: 1.35,
+    opacity: 0.62,
+    envMapIntensity: 2.4,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.03,
+    reflectivity: 0.9,
   });
   const chrome = metal("#cfd8de", 0.95, 0.12, 1.3);
   const enamel = new THREE.MeshStandardMaterial({
@@ -474,37 +499,124 @@ function makeFood() {
 }
 
 function makeSteam() {
-  const n = 720;
+  const n = 1100;
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(n * 3);
+  const sizes = new Float32Array(n);
   const seeds = [];
+  const rng = (() => {
+    let x = 987654321;
+    return () => {
+      x = (x * 1664525 + 1013904223) >>> 0;
+      return x / 4294967296;
+    };
+  })();
   for (let i = 0; i < n; i++) {
-    const t = i / n;
-    const layer = i % 3;
+    // Cone from the nozzle mouth: axial distance t, radial spread grows with t
+    // so the plume widens as it travels, which is what makes it look like gas.
+    const t = Math.pow(rng(), 0.75);
+    const spread = 0.05 + 0.42 * t;
+    const theta = rng() * Math.PI * 2;
+    const r = spread * Math.sqrt(rng());
     seeds.push({
-      x: -1.72 + t * 2.05 + Math.random() * 0.18,
-      y: 1.42 + t * 0.58 + 0.12 * layer + Math.random() * 0.22,
-      z: 0.18 + (Math.random() - 0.5) * 0.92,
-      s: 0.55 + Math.random() * 1.05,
+      x: -1.70 + 2.35 * t,
+      y: 1.44 + 0.30 * t + Math.sin(theta) * r * 0.6,
+      z: 0.20 + Math.cos(theta) * r,
+      s: 0.55 + rng() * 1.15,
+      spin: rng() * Math.PI * 2,
     });
     pos[i * 3] = seeds[i].x;
     pos[i * 3 + 1] = seeds[i].y;
     pos[i * 3 + 2] = seeds[i].z;
+    sizes[i] = 0.16 + 0.22 * rng() + 0.14 * t;
   }
+  geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const mat = new THREE.PointsMaterial({
     map: steamTexture(),
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    size: 0.22,
-    opacity: 0.48,
+    blending: THREE.NormalBlending,
+    size: 0.30,
+    opacity: 0.36,
+    sizeAttenuation: true,
+    color: 0xeaf4f8,
     color: "#d7e6ee",
     sizeAttenuation: true,
   });
   const points = new THREE.Points(geo, mat);
   points.visible = false;
   return { points, seeds, pos };
+}
+
+/**
+ * Tileable procedural surface maps.
+ *
+ * Returns { normalMap, roughnessMap } built from one canvas pass so the two
+ * stay correlated: where the grain is high the surface catches less light and
+ * is slightly rougher, which is how real brushed metal behaves.
+ */
+function proceduralSurfaceMaps({ size = 256, streak = 0.22, grain = 0.08 } = {}) {
+  const h = document.createElement("canvas");
+  h.width = h.height = size;
+  const hc = h.getContext("2d");
+  const img = hc.createImageData(size, size);
+  // Height field: fine horizontal streaks plus a little isotropic noise.
+  const rnd = (() => {
+    let seed = 20241334;
+    return () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+  })();
+  const height = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) {
+    let row = 0.5;
+    for (let x = 0; x < size; x++) {
+      row += (rnd() - 0.5) * streak * 0.35;
+      row = Math.min(1, Math.max(0, row * 0.994 + 0.003));
+      height[y * size + x] = row + (rnd() - 0.5) * grain;
+    }
+  }
+  // Normal map from the height field (Sobel-free central differences).
+  const nrm = new Uint8ClampedArray(size * size * 4);
+  const rough = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = y * size + x;
+      const xl = height[y * size + ((x - 1 + size) % size)];
+      const xr = height[y * size + ((x + 1) % size)];
+      const yt = height[((y - 1 + size) % size) * size + x];
+      const yb = height[((y + 1) % size) * size + x];
+      const dx = (xr - xl) * 2.2;
+      const dy = (yb - yt) * 2.2;
+      const len = Math.hypot(dx, dy, 1);
+      nrm[i * 4] = ((dx / len) * 0.5 + 0.5) * 255;
+      nrm[i * 4 + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+      nrm[i * 4 + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      nrm[i * 4 + 3] = 255;
+      const r = 186 + height[i] * 34;
+      rough[i * 4] = r;
+      rough[i * 4 + 1] = r;
+      rough[i * 4 + 2] = r;
+      rough[i * 4 + 3] = 255;
+    }
+  }
+  const mk = (arr, repeat) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    c.getContext("2d").putImageData(new ImageData(arr, size, size), 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repeat, repeat);
+    t.anisotropy = 8;
+    return t;
+  };
+  hc.putImageData(img, 0, 0);
+  return {
+    normalMap: mk(nrm, 14),
+    roughnessMap: mk(rough, 14),
+  };
 }
 
 export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "combi" }) {
@@ -529,7 +641,31 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture;
 
-    const camera = new THREE.PerspectiveCamera(34, (el.clientWidth || 760) / (el.clientHeight || 520), 0.1, 40);
+    const viewW = el.clientWidth || 760;
+    const viewH = el.clientHeight || 520;
+    const camera = new THREE.PerspectiveCamera(34, viewW / viewH, 0.1, 40);
+
+    // Post-processing chain. GTAO supplies the contact darkening the cavity
+    // needs: panel seams, the shadow line under the coil bank and the crease
+    // where the food meets the rack. Panels otherwise read as separate boxes.
+    const composer = new EffectComposer(renderer);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    composer.setSize(viewW, viewH);
+    const gtao = new GTAOPass(scene, camera, viewW, viewH);
+    gtao.updateGtaoMaterial({
+      radius: 0.22,
+      distanceExponent: 1.4,
+      thickness: 1.0,
+      scale: 1.05,
+      samples: 16,
+      distanceFallOff: 1.0,
+      screenSpaceRadius: false,
+    });
+    gtao.blendIntensity = 1.0;
+    composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(gtao);
+    composer.addPass(new OutputPass());
+
     const hemi = new THREE.HemisphereLight(0xf4efe6, 0x2c3338, 0.5);
     const key = new THREE.DirectionalLight(0xfff3e4, 1.12);
     key.position.set(3.6, 5.2, 4.6);
@@ -685,7 +821,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     onResize();
 
     state.current = {
-      renderer, scene, camera, food, cavity, steam, rim, interior, lampLight, el, place,
+      renderer, composer, scene, camera, food, cavity, steam, rim, interior, lampLight, el, place,
     };
     let alive = true;
     const tick = () => {
@@ -737,7 +873,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
           s.cavity.water.scale.y = sy;
           s.cavity.water.position.y = s.cavity.water.userData.baseY - 0.09 * (1 - sy);
         }
-        renderer.render(scene, camera);
+        composer.render();
       }
       requestAnimationFrame(tick);
     };
