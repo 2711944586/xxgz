@@ -516,28 +516,91 @@ function makeFood() {
   const group = new THREE.Group();
   const slabs = [];
   const w = 1.68 / N_CELL;
+  // Deterministic pseudo-random so the stack looks hand-cut but rebuilds the
+  // same way on every load.
+  let seed = 20241334;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
   for (let i = 0; i < N_CELL; i++) {
     const fat = i === 5;
+    const slice = new THREE.Group();
+
+    // --- body ---------------------------------------------------------
     const mat = new THREE.MeshPhysicalMaterial({
       color: fat ? "#8a5a32" : "#c9a078",
-      roughness: fat ? 0.42 : 0.58,
-      metalness: 0.03,
-      clearcoat: fat ? 0.38 : 0.22,
-      clearcoatRoughness: fat ? 0.28 : 0.42,
+      roughness: fat ? 0.44 : 0.60,
+      metalness: 0.02,
+      clearcoat: fat ? 0.34 : 0.18,
+      clearcoatRoughness: fat ? 0.30 : 0.46,
     });
-    const mesh = new THREE.Mesh(
-      new RoundedBoxGeometry(w * (fat ? 0.96 : 0.99), fat ? 0.48 : 0.40, fat ? 1.26 : 1.16, 4, 0.012),
+    // 1-1.5% variation: enough that the stack is not machine-perfect,
+    // small enough that it still reads as one piece cut into portions.
+    const bw = w * (fat ? 0.985 : 0.995) * (0.993 + rnd() * 0.014);
+    const bh = (fat ? 0.48 : 0.40) * (0.994 + rnd() * 0.012);
+    const bd = (fat ? 1.26 : 1.16) * (0.994 + rnd() * 0.012);
+    const body = new THREE.Mesh(
+      new RoundedBoxGeometry(bw, bh, bd, 4, 0.012),
       mat,
     );
-    // Keep the base tint so browning can be re-applied each frame without
-    // compounding the previous mix.
-    mesh.userData.baseColor = mat.color.clone();
-    mesh.position.set(-0.84 + (i + 0.5) * w, 0.93, 0.08);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.userData.fat = fat;
-    group.add(mesh);
-    slabs.push(mesh);
+    body.userData.baseColor = mat.color.clone();
+    body.castShadow = true;
+    body.receiveShadow = true;
+    body.userData.fat = fat;
+    body.userData.tintable = true;
+    slice.add(body);
+
+    // --- surface cap --------------------------------------------------
+    // The +y face is what the heater sees; give it its own material so the
+    // browning tint can act on the crust rather than the whole block.
+    const capMat = new THREE.MeshPhysicalMaterial({
+      color: fat ? "#a87243" : "#dcb489",
+      roughness: fat ? 0.32 : 0.40,
+      metalness: 0.0,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.22,
+    });
+    const cap = new THREE.Mesh(
+      new RoundedBoxGeometry(bw * 0.995, 0.030, bd * 0.995, 3, 0.008),
+      capMat,
+    );
+    cap.position.y = bh / 2 + 0.004;
+    cap.castShadow = false;
+    cap.receiveShadow = true;
+    cap.userData.baseColor = capMat.color.clone();
+    cap.userData.tintable = true;
+    cap.userData.isCap = true;
+    slice.add(cap);
+
+    // --- interior grain ------------------------------------------------
+    // Two small darker inserts; visible through the section view and at the
+    // open cut faces, which is where a real slice shows its structure.
+    for (let g = 0; g < 2; g++) {
+      const gMat = new THREE.MeshStandardMaterial({
+        color: fat ? "#7d5130" : "#b8916b",
+        roughness: 0.78,
+        metalness: 0.01,
+      });
+      const gm = new THREE.Mesh(
+        new THREE.BoxGeometry(bw * (0.12 + rnd() * 0.14), bh * 0.42, bd * (0.06 + rnd() * 0.10)),
+        gMat,
+      );
+      gm.position.set(
+        (rnd() - 0.5) * bw * 0.5,
+        (rnd() - 0.5) * bh * 0.15,
+        (rnd() - 0.5) * bd * 0.55,
+      );
+      gm.userData.tintable = true;
+      gm.userData.baseColor = gMat.color.clone();
+      slice.add(gm);
+    }
+
+    slice.position.set(-0.84 + (i + 0.5) * w, 0.93, 0.08);
+    slice.userData.body = body;
+    group.add(slice);
+    slabs.push(slice);
   }
   group.userData.slabs = slabs;
   return group;
@@ -1005,22 +1068,25 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     // Surface browning proxy in [0, 1]; the log carries shell and the panel
     // carries no alpha_b, so shell is used as the visible browning proxy.
     const brown = Math.min(1, Math.max(0, (frame.shell ?? 0) * 14 + Math.max(frame.t1 - 120, 0) / 90));
-    slabs.forEach((mesh, i) => {
+    slabs.forEach((slice, i) => {
       const u = i / Math.max(N_CELL - 1, 1);
       const value = frame.t1 - span * u ** 1.15;
       const color = heatColor(value);
-      if (mesh.userData.fat) color.offsetHSL(0.02, 0.12, -0.12);
-      if (mesh.userData.baseColor) {
-        mesh.material.color.copy(color);
-        // Mix toward a toasted brown; only the outer slices see the surface.
-        const outer = Math.max(0, 1 - u * 6);
-        const mix = brown * outer * 0.55;
-        if (mix > 0.001) {
-          mesh.material.color.lerp(TOASTED, mix);
-        }
-      } else {
-        mesh.material.color.copy(color);
-      }
+      // Only the outer slices are exposed to the heater, so browning falls off
+      // quickly with index; the cap takes more of the tint than the body.
+      const outer = Math.max(0, 1 - u * 6);
+      slice.traverse((mesh) => {
+        if (!mesh.isMesh || !mesh.userData.tintable) return;
+        const base = mesh.userData.baseColor;
+        mesh.material.color.copy(base);
+        // Blend the temperature colour into the body, but keep the cap and
+        // grain closer to their own material so the surface still reads as
+        // crust rather than as a heat map.
+        const bodyMix = mesh.userData.isCap ? 0.35 : 0.85;
+        mesh.material.color.lerp(color, bodyMix);
+        const mix = brown * outer * (mesh.userData.isCap ? 0.75 : 0.45);
+        if (mix > 0.001) mesh.material.color.lerp(TOASTED, mix);
+      });
     });
     s.food.scale.set(length / 0.03, 1, 1);
     s.cavity.coilMat.emissiveIntensity = 0.16 + 1.55 * frame.heat;
