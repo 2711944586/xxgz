@@ -600,10 +600,17 @@ function makeSteam() {
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         float drift = uSteamTime;
-         transformed.x += mod(drift * 0.36 + position.y * 3.1, 2.9);
-         transformed.y += mod(drift * 0.20, 1.1);
-         transformed.z += sin(drift * 0.7 + position.y * 6.0) * 0.05;`,
+         // Bounded plume. u is a per-particle phase so the cloud does not move
+         // as a rigid block; the offsets stay inside the cavity box
+         // (x in [-2.2, 2.2], y in [0.15, 2.5], z in [-1.3, 1.4]).
+         float u = fract(uSteamTime * 0.22 + position.y * 0.37 + position.z * 0.21);
+         float life = smoothstep(0.0, 0.25, u) * (1.0 - smoothstep(0.55, 1.0, u));
+         transformed.x += u * 2.34 * life;
+         transformed.y += u * 0.72 * life + 0.05 * sin(uSteamTime * 1.4 + position.x * 5.0) * life;
+         transformed.z += 0.10 * sin(uSteamTime * 0.9 + position.y * 4.0) * life;
+         transformed.x = clamp(transformed.x, -2.15, 2.15);
+         transformed.y = clamp(transformed.y, 0.18, 2.46);
+         transformed.z = clamp(transformed.z, -1.26, 1.36);`,
       );
   };
   const points = new THREE.Points(geo, mat);
@@ -820,6 +827,11 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     };
     place();
     const clampDist = (value) => Math.min(CAM.max, Math.max(CAM.min, value));
+    // Read-only hook so automated checks can sample the animation state.
+    window.__actsDebug = () => {
+      const d = state.current?.cavity?.door;
+      return { doorAngle: d ? d.rotation.y : 0 };
+    };
     window.__actsCam = {
       set(nextYaw, nextPitch, nextDist) {
         if (Number.isFinite(nextYaw)) yaw = nextYaw;
@@ -894,6 +906,25 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       if (!alive) return;
       const s = state.current;
       if (s) {
+        // Time-based door motion, independent of frame rate and of whether
+        // the trace is playing. Critically damped approach: each step moves a
+        // fraction determined by elapsed time, so 60 fps and 144 fps look alike.
+        if (s.cavity.door) {
+          const d = s.cavity.door;
+          const wantSection = s.sectionWanted ?? section;
+          d.visible = !wantSection;
+          if (!wantSection) {
+            const now = performance.now();
+            const dt = Math.min(0.05, (now - (s.lastDoorT || now)) / 1000);
+            s.lastDoorT = now;
+            const wantOpen = (s.doorWanted ?? (doorOpen ? "open" : "closed")) === "open";
+            const target = wantOpen ? d.userData.openAngle : 0;
+            const k = 1 - Math.exp(-9.5 * dt);
+            d.rotation.y += (target - d.rotation.y) * k;
+            // settle
+            if (Math.abs(target - d.rotation.y) < 1e-4) d.rotation.y = target;
+          }
+        }
         const fan = s.frame?.fan ?? 0.4;
         s.cavity.blades.rotation.z += 0.035 + 0.18 * Math.min(fan / 1.3, 1);
         const f = s.frame;
@@ -957,6 +988,14 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     };
   }, []);
 
+  // Publish the desired door state so the animation loop (which lives in the
+  // setup effect and is never re-created) can read the current value each frame
+  // instead of seeing the one captured when the context was built.
+  useEffect(() => {
+    if (state.current) state.current.doorWanted = doorOpen ? "open" : "closed";
+    if (state.current) state.current.sectionWanted = section;
+  }, [doorOpen, section]);
+
   useEffect(() => {
     const s = state.current;
     if (!s || !frame) return;
@@ -989,16 +1028,6 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     s.interior.intensity = 0.72 + 0.7 * frame.heat;
     s.lampLight.intensity = 0.45 + 0.55 * frame.heat;
     s.cavity.vent.scale.set(1, 1, 0.55 + 1.2 * frame.exhaust);
-    if (s.cavity.door) {
-      // Section view hides the door entirely so the interior can be read from
-      // the front; otherwise the door swings on its eased hinge angle.
-      const d = s.cavity.door;
-      d.visible = !section;
-      if (!section) {
-        const target = doorOpen ? d.userData.openAngle : 0;
-        d.rotation.y += (target - d.rotation.y) * 0.12;
-      }
-    }
     if (s.cavity.knobs) {
       const cookAngle = { steam: 0.4, bake: 2.2, combi: 4.1 }[cook] || 4.1;
       s.cavity.knobs[0].rotation.y = frame.heat * 4.4;
