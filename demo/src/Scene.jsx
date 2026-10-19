@@ -685,7 +685,7 @@ const PROBE_GOLD = new THREE.Color("#c4a574");
 const STEAM_COOL = new THREE.Color("#cfe3ea");
 const TOASTED = new THREE.Color("#6b3a18");
 
-export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "combi" }) {
+export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "combi", section = false }) {
   const host = useRef(null);
   const state = useRef(null);
 
@@ -990,9 +990,14 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     s.lampLight.intensity = 0.45 + 0.55 * frame.heat;
     s.cavity.vent.scale.set(1, 1, 0.55 + 1.2 * frame.exhaust);
     if (s.cavity.door) {
-      const target = doorOpen ? s.cavity.door.userData.openAngle : 0;
+      // Section view hides the door entirely so the interior can be read from
+      // the front; otherwise the door swings on its eased hinge angle.
       const d = s.cavity.door;
-      d.rotation.y += (target - d.rotation.y) * 0.12;
+      d.visible = !section;
+      if (!section) {
+        const target = doorOpen ? d.userData.openAngle : 0;
+        d.rotation.y += (target - d.rotation.y) * 0.12;
+      }
     }
     if (s.cavity.knobs) {
       const cookAngle = { steam: 0.4, bake: 2.2, combi: 4.1 }[cook] || 4.1;
@@ -1019,7 +1024,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       fasciaTex.needsUpdate = true;
     }
     s.renderer.render(s.scene, s.camera);
-  }, [frame, length, doorOpen, cook]);
+  }, [frame, length, doorOpen, cook, section]);
 
   function zoomBy(step) {
     const cam = window.__actsCam;

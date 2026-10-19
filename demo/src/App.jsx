@@ -200,6 +200,8 @@ export default function App() {
   const [length, setLength] = useState(0.03);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState(4);
+  const [sectionView, setSectionView] = useState(false);
   const [doorOpen, setDoorOpen] = useState(true);
   const [error, setError] = useState("");
 
@@ -243,11 +245,13 @@ export default function App() {
 
   useEffect(() => {
     if (!playing || rows.length === 0) return undefined;
+    // Base cadence 40 ms per frame; speed multiplies the step.
+    const step = Math.max(1, Math.round(playSpeed / 1));
     const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % rows.length);
+      setIndex((i) => (i + step) % rows.length);
     }, 40);
     return () => window.clearInterval(id);
-  }, [playing, rows.length]);
+  }, [playing, rows.length, playSpeed]);
 
   function snapLength(value) {
     return [0.015, 0.03, 0.05].reduce((a, b) => (Math.abs(b - value) < Math.abs(a - value) ? b : a));
@@ -392,6 +396,36 @@ export default function App() {
               {doorOpen ? "关门" : "开门"}
             </button>
           </div>
+          <label>播放速度</label>
+          <div className="events">
+            {[1, 2, 4, 8].map((sp) => (
+              <button
+                key={sp}
+                type="button"
+                className={`chip-btn ${playSpeed === sp ? "active" : ""}`}
+                onClick={() => setPlaySpeed(sp)}
+              >
+                {sp}×
+              </button>
+            ))}
+          </div>
+          <label>视图</label>
+          <div className="events">
+            <button
+              type="button"
+              className={`chip-btn ${!sectionView ? "active" : ""}`}
+              onClick={() => setSectionView(false)}
+            >
+              外观
+            </button>
+            <button
+              type="button"
+              className={`chip-btn ${sectionView ? "active" : ""}`}
+              onClick={() => setSectionView(true)}
+            >
+              剖面
+            </button>
+          </div>
           <div className="playrow">
             <button type="button" className="ghost" onClick={downloadAll} disabled={!frame}>
               导出 CSV
@@ -447,7 +481,7 @@ export default function App() {
 
         <section className="panel viewport">
           <p className="panel-label" style={{ position: "absolute", zIndex: 2, left: 16, top: 10 }}>02 腔体</p>
-          <Scene frame={frame} length={length} doorOpen={doorOpen} cook={cook} />
+          <Scene frame={frame} length={length} doorOpen={doorOpen} cook={cook} section={sectionView} />
           {frame && (
             <div className="hud">
               <p className="hud-kicker keep-case">{cookLabel} · {policyLabel} · {mm} mm</p>
