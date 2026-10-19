@@ -216,8 +216,17 @@ export function SurfaceMap({ surfaces, policy, metric, surface, onSurface, onMet
       </div>
       <canvas ref={stripRef} className="surface-strip" />
       <div className="surface-foot">
-        <span>hue = {metricDef.label}</span>
-        <span>每格 48 个种子 · baseline 代际</span>
+        <span className="surface-scale">
+          {metricDef.fmt(metricDef.domain[0])}
+          <i style={{
+            background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1]
+              .map((t) => colorOf(metricDef.domain[0] + t * (metricDef.domain[1] - metricDef.domain[0]), metricDef.domain))
+              .join(", ")})`,
+          }} />
+          {metricDef.fmt(metricDef.domain[1])}{metricDef.unit}
+        </span>
+        <span>着色：{metricDef.label}</span>
+        <span>每格 48 个种子 · 主表代际</span>
       </div>
     </div>
   );

@@ -222,7 +222,7 @@ export default function App() {
           {manifest && (
             <>
               <span className="status-chip">{manifest.product}</span>
-              <span className="status-chip mono">display 代际</span>
+              <span className="status-chip mono">显示代际</span>
               <span className="status-chip mono">{manifest.sampling.frames.toLocaleString()} 帧 · {manifest.sampling.scenarios} 条</span>
             </>
           )}
@@ -259,7 +259,7 @@ export default function App() {
             <b>{frame ? fmt(frame.alpha, 3) : "—"}</b>
           </div>
           <div className={`status-cell ${scenario?.metrics.eAlpha >= 0 ? "ok" : "warn"}`}>
-            <span>e_α</span>
+            <span>e<sub>α</sub></span>
             <b>{(scenario?.metrics.eAlpha ?? 0) >= 0 ? "+" : ""}{scenario ? fmt(scenario.metrics.eAlpha, 3) : "—"}</b>
           </div>
           <div className="status-cell">
@@ -705,7 +705,7 @@ function SurfaceControls({ surface, setSurface, metric, setMetric, policy, setPo
           ))}
         </div>
         <p className="rail-note">
-          响应面来自 baseline 代际，48 个种子逐格聚合，覆盖 41 个厚度档与 31 个初温档。冷色表示停机偏早，暖色表示已越过设计线。
+          响应面来自主表代际，48 个种子逐格聚合，覆盖 41 个厚度档与 31 个初温档。冷色表示停机偏早，暖色表示已越过设计线。
         </p>
       </section>
     </>
@@ -751,7 +751,7 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
         <dl className="readout tight">
           <div><dt>停机时刻</dt><dd>{Math.round(m.stopS)} s</dd></div>
           <div><dt>停机进度</dt><dd>{fmt(m.alphaAtStop, 3)}</dd></div>
-          <div><dt>e_α</dt><dd className={m.eAlpha >= 0 ? "ok" : "warn"}>{m.eAlpha >= 0 ? "+" : ""}{fmt(m.eAlpha, 3)}</dd></div>
+          <div><dt>e<sub>α</sub></dt><dd className={m.eAlpha >= 0 ? "ok" : "warn"}>{m.eAlpha >= 0 ? "+" : ""}{fmt(m.eAlpha, 3)}</dd></div>
           <div><dt>停机冷点</dt><dd>{fmt(m.coreAtStop, 1)} °C</dd></div>
           <div><dt>能量</dt><dd>{Math.round(m.energy)}</dd></div>
           <div><dt>终值方差</dt><dd>{fmt(m.finalVar, 3)}</dd></div>
@@ -1003,7 +1003,7 @@ function ProbeInspector({ chainStep, setChainStep, rows, frame, scenario, onJump
         ["当前 α", frame.alpha.toFixed(3)],
         ["首次越线", over ? `${over.time.toFixed(0)} s` : "本次未越线"],
         ["停机", `${Math.round(scenario.metrics.stopS)} s`],
-        ["e_α", `${scenario.metrics.eAlpha >= 0 ? "+" : ""}${scenario.metrics.eAlpha.toFixed(3)}`],
+        ["e<sub>α</sub>", `${scenario.metrics.eAlpha >= 0 ? "+" : ""}${scenario.metrics.eAlpha.toFixed(3)}`],
       ],
     },
   ];
@@ -1042,7 +1042,7 @@ function CompareInspector({ manifest, cook, lengthMm, policy, compare }) {
         <h2>同一工况 · 五种策略</h2>
         <table className="cmp-table">
           <thead>
-            <tr><th>策略</th><th>停机 s</th><th>e_α</th><th>能耗</th></tr>
+            <tr><th>策略</th><th>停机 s</th><th>e<sub>α</sub></th><th>能耗</th></tr>
           </thead>
           <tbody>
             {list.map(({ meta, row }) => (
@@ -1085,7 +1085,7 @@ function SurfaceInspector({ surfaces, policy, metric, surface, onPickPolicy }) {
         <h2>读数</h2>
         <p className="rail-note">{surfaces.note}</p>
         <dl className="readout">
-          <div><dt>代际</dt><dd>{surfaces.generation}</dd></div>
+          <div><dt>代际</dt><dd>{surfaces.generation === "baseline" ? "主表代际" : surfaces.generation}</dd></div>
           <div><dt>种子/格</dt><dd>{surfaces.seedsPerCell}</dd></div>
           <div><dt>厚度档</dt><dd>{grid.secondAxis.length}</dd></div>
           <div><dt>第三轴</dt><dd>{grid.thirdAxis.length}</dd></div>

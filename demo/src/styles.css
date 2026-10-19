@@ -520,9 +520,11 @@ select + h2 { margin-top: 16px; }
 .surface-canvas { width: 100%; height: 100%; display: block; border: 1px solid var(--line); }
 .surface-strip { width: 100%; height: 92px; display: block; border: 1px solid var(--line); }
 .surface-foot {
-  display: flex; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
   font-family: var(--mono); font-size: 9.5px; color: var(--dim);
 }
+.surface-scale { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.surface-scale i { display: block; width: 84px; height: 6px; border: 1px solid var(--line-2); }
 .surface-tip {
   position: absolute;
   display: grid;
@@ -553,6 +555,7 @@ select + h2 { margin-top: 16px; }
 .readout dt { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 .readout dd { margin: 0; font-family: var(--mono); font-size: 11px; color: var(--ink); white-space: nowrap; }
 .readout.tight > div { padding: 3.5px 0; }
+.readout dd sub, .cmp-table sub, .status-cell sub { font-size: 0.72em; line-height: 0; }
 .readout dd.ok { color: var(--green); }
 .readout dd.warn { color: var(--red); }
 
@@ -949,5 +952,73 @@ select + h2 { margin-top: 16px; }
   ul, ol, li, dl { min-width: 0 !important; max-width: 100% !important; }
   button { max-width: 100% !important; white-space: normal !important; }
   pre, code, table { max-width: 100% !important; overflow-x: auto !important; }
+}
+
+
+/* ---------- narrow-screen repair pass 3 ----------
+   Root cause found: .shell declares grid-template-rows but no
+   grid-template-columns, so the implicit column is sized by the widest child
+   (539.6 px) and every descendant inherits that width. Pinning the implicit
+   column to minmax(0,1fr) makes content shrink to the viewport instead. */
+.shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto auto !important;
+    height: auto !important;
+    min-height: 100dvh;
+  }
+  .top {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    min-height: 70px;
+    gap: 8px;
+    padding: 10px 12px !important;
+  }
+  .top > * { min-width: 0; max-width: 100%; }
+  .main, .stage, .bench, .rail, .group, section, aside, main {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .main > *, .rail > *, .group > *, section > *, aside > *, main > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  * { min-width: 0; }
+  ul, ol, li, dl, dt, dd, p, span, b, button, select, input {
+    max-width: 100% !important;
+    word-break: break-word;
+  }
+  button, select { white-space: normal !important; }
+}
+
+
+/* ---------- narrow-screen repair pass 4: the last few overflow items ---------- */
+@media (max-width: 900px) {
+  /* canvas elements keep their backing-store width; let CSS scale them down */
+  canvas, svg, img, video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  /* grids that still size to content */
+  [style*="grid-template-columns"], .grid, .row, .rowline {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* anything positioned past the right edge */
+  .hud, .callout, .tooltip, .legend, .scalebar, .readout, .note, .hint {
+    max-width: calc(100vw - 24px) !important;
+    left: auto !important;
+    right: 12px !important;
+    transform: none !important;
+  }
+  pre, code { white-space: pre-wrap !important; }
 }
 
