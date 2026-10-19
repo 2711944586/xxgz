@@ -1,0 +1,321 @@
+{
+ "kind": "demo dataset contract",
+ "schema_version": 1,
+ "purpose": "Declares what the browser replay is and what produced it. The page must display mode, kernel generation and provenance so that a viewer never mistakes a precomputed trajectory for a live measurement.",
+ "mode": {
+  "id": "offline-replay",
+  "label_zh": "离线轨迹回放",
+  "label_en": "offline replay",
+  "statement_zh": "页面读取已写盘的轨迹数组，不在浏览器内重跑积分；显示的一切都是预计算仿真结果，不含任何真实设备测量。",
+  "is_live": false,
+  "is_measurement": false
+ },
+ "kernel": {
+  "generation": "display",
+  "why": "演示页与档位研究共用 display 代际；论文主表 s1/s0/s2 使用 baseline 代际。两者在同一名义格子上可以相差 0.2 以上，因此页面必须显式标注，不能与主表数字混读。",
+  "switches": {
+   "display": {
+    "cavity_air": true,
+    "use_antoine": true,
+    "shell_k": 0.55,
+    "moisture_bc": "flux",
+    "steam_baseline": 0.15
+   },
+   "baseline": {
+    "cavity_air": false,
+    "use_antoine": false,
+    "shell_k": 0.0,
+    "moisture_bc": "gradient",
+    "steam_baseline": 0.0
+   }
+  },
+  "differing_switches": [
+   "cavity_air",
+   "moisture_bc",
+   "shell_k",
+   "steam_baseline",
+   "use_antoine"
+  ]
+ },
+ "sampling": {
+  "dt_s": 2.0,
+  "record_every": 4,
+  "sample_interval_s": 8.0,
+  "horizon_min": 55,
+  "frames_per_scenario": 414,
+  "scenarios": 36,
+  "total_frames": 14904
+ },
+ "default_scenario": {
+  "key": "dual_combi_30",
+  "seed": 7,
+  "prototype": "mince",
+  "length_m": 0.03,
+  "t0_c": 8.0,
+  "m0": 0.72
+ },
+ "scenarios": {
+  "open_steam_15": {
+   "policy": "open",
+   "cook_mode": "steam",
+   "length_mm": 15
+  },
+  "open_steam_30": {
+   "policy": "open",
+   "cook_mode": "steam",
+   "length_mm": 30
+  },
+  "open_steam_50": {
+   "policy": "open",
+   "cook_mode": "steam",
+   "length_mm": 50
+  },
+  "open_bake_15": {
+   "policy": "open",
+   "cook_mode": "bake",
+   "length_mm": 15
+  },
+  "open_bake_30": {
+   "policy": "open",
+   "cook_mode": "bake",
+   "length_mm": 30
+  },
+  "open_bake_50": {
+   "policy": "open",
+   "cook_mode": "bake",
+   "length_mm": 50
+  },
+  "open_combi_15": {
+   "policy": "open",
+   "cook_mode": "combi",
+   "length_mm": 15
+  },
+  "open_combi_30": {
+   "policy": "open",
+   "cook_mode": "combi",
+   "length_mm": 30
+  },
+  "open_combi_50": {
+   "policy": "open",
+   "cook_mode": "combi",
+   "length_mm": 50
+  },
+  "pid_steam_15": {
+   "policy": "pid",
+   "cook_mode": "steam",
+   "length_mm": 15
+  },
+  "pid_steam_30": {
+   "policy": "pid",
+   "cook_mode": "steam",
+   "length_mm": 30
+  },
+  "pid_steam_50": {
+   "policy": "pid",
+   "cook_mode": "steam",
+   "length_mm": 50
+  },
+  "pid_bake_15": {
+   "policy": "pid",
+   "cook_mode": "bake",
+   "length_mm": 15
+  },
+  "pid_bake_30": {
+   "policy": "pid",
+   "cook_mode": "bake",
+   "length_mm": 30
+  },
+  "pid_bake_50": {
+   "policy": "pid",
+   "cook_mode": "bake",
+   "length_mm": 50
+  },
+  "pid_combi_15": {
+   "policy": "pid",
+   "cook_mode": "combi",
+   "length_mm": 15
+  },
+  "pid_combi_30": {
+   "policy": "pid",
+   "cook_mode": "combi",
+   "length_mm": 30
+  },
+  "pid_combi_50": {
+   "policy": "pid",
+   "cook_mode": "combi",
+   "length_mm": 50
+  },
+  "mpc_steam_15": {
+   "policy": "mpc",
+   "cook_mode": "steam",
+   "length_mm": 15
+  },
+  "mpc_steam_30": {
+   "policy": "mpc",
+   "cook_mode": "steam",
+   "length_mm": 30
+  },
+  "mpc_steam_50": {
+   "policy": "mpc",
+   "cook_mode": "steam",
+   "length_mm": 50
+  },
+  "mpc_bake_15": {
+   "policy": "mpc",
+   "cook_mode": "bake",
+   "length_mm": 15
+  },
+  "mpc_bake_30": {
+   "policy": "mpc",
+   "cook_mode": "bake",
+   "length_mm": 30
+  },
+  "mpc_bake_50": {
+   "policy": "mpc",
+   "cook_mode": "bake",
+   "length_mm": 50
+  },
+  "mpc_combi_15": {
+   "policy": "mpc",
+   "cook_mode": "combi",
+   "length_mm": 15
+  },
+  "mpc_combi_30": {
+   "policy": "mpc",
+   "cook_mode": "combi",
+   "length_mm": 30
+  },
+  "mpc_combi_50": {
+   "policy": "mpc",
+   "cook_mode": "combi",
+   "length_mm": 50
+  },
+  "dual_steam_15": {
+   "policy": "dual",
+   "cook_mode": "steam",
+   "length_mm": 15
+  },
+  "dual_steam_30": {
+   "policy": "dual",
+   "cook_mode": "steam",
+   "length_mm": 30
+  },
+  "dual_steam_50": {
+   "policy": "dual",
+   "cook_mode": "steam",
+   "length_mm": 50
+  },
+  "dual_bake_15": {
+   "policy": "dual",
+   "cook_mode": "bake",
+   "length_mm": 15
+  },
+  "dual_bake_30": {
+   "policy": "dual",
+   "cook_mode": "bake",
+   "length_mm": 30
+  },
+  "dual_bake_50": {
+   "policy": "dual",
+   "cook_mode": "bake",
+   "length_mm": 50
+  },
+  "dual_combi_15": {
+   "policy": "dual",
+   "cook_mode": "combi",
+   "length_mm": 15
+  },
+  "dual_combi_30": {
+   "policy": "dual",
+   "cook_mode": "combi",
+   "length_mm": 30
+  },
+  "dual_combi_50": {
+   "policy": "dual",
+   "cook_mode": "combi",
+   "length_mm": 50
+  }
+ },
+ "fingerprints": {
+  "open_steam_15": "5ac57b7a0de794f7",
+  "open_steam_30": "e5edcdb71b71d2ca",
+  "open_steam_50": "a49412a01eb49b07",
+  "open_bake_15": "009681ccccba557e",
+  "open_bake_30": "49d28d5aebdf01c9",
+  "open_bake_50": "3f11ebd9b71245d8",
+  "open_combi_15": "009681ccccba557e",
+  "open_combi_30": "49d28d5aebdf01c9",
+  "open_combi_50": "3f11ebd9b71245d8",
+  "pid_steam_15": "373b05192608d6e8",
+  "pid_steam_30": "c2eb4ae95fd1aafb",
+  "pid_steam_50": "a93b5e80071e0b1a",
+  "pid_bake_15": "b1e828b8c8331486",
+  "pid_bake_30": "f116ecd794660e9f",
+  "pid_bake_50": "59fe4715557f816a",
+  "pid_combi_15": "5ef8581b94ae7e56",
+  "pid_combi_30": "4306094cad221257",
+  "pid_combi_50": "f7eaec698e72b2b4",
+  "mpc_steam_15": "b0edac4292fcecc2",
+  "mpc_steam_30": "1b047377f5d6b0f6",
+  "mpc_steam_50": "13fd01bac5c588c5",
+  "mpc_bake_15": "db07138b3bb7de12",
+  "mpc_bake_30": "15398e13bf35f8b4",
+  "mpc_bake_50": "95037511b7ec6b0e",
+  "mpc_combi_15": "db07138b3bb7de12",
+  "mpc_combi_30": "15398e13bf35f8b4",
+  "mpc_combi_50": "95037511b7ec6b0e",
+  "dual_steam_15": "7e2612ff5220b044",
+  "dual_steam_30": "c3b2ab28ee1add6f",
+  "dual_steam_50": "416c5301408a1471",
+  "dual_bake_15": "4ff801494ebd86a1",
+  "dual_bake_30": "4df0a2c755dc1738",
+  "dual_bake_50": "db5a78795c691679",
+  "dual_combi_15": "f65491366e0f0b01",
+  "dual_combi_30": "a05a4f868861f1ba",
+  "dual_combi_50": "7539c0c31532467b"
+ },
+ "provenance": {
+  "generator": "scripts/export_demo_trace.py",
+  "kernel": "src/acts_mcdt/physics.py :: rollout(generation='display')",
+  "source_log": "results/logs/demo_seed7_dual.csv",
+  "research_manifest": "results/logs/MANIFEST.json",
+  "paper_figures": "results/figures/paper/E_demo_*.png"
+ },
+ "boundaries": [
+  {
+   "id": "r_proxy",
+   "severity": "info",
+   "zh": "跟踪器里的 r 是滞后倍数代理量，由表面与冷点的真值温差反解而来，不是可直接测量的传感器读数。",
+   "where": "热阻/方差 读数、探针模式"
+  },
+  {
+   "id": "steam_clip",
+   "severity": "warning",
+   "zh": "display 代际的蒸汽压驱动裁在 [-0.4, 0.4] bar，约 60.1% 的步数贴下界；凡依赖蒸汽压差符号的结论只能按符号读，不能按标定灵敏度读。",
+   "where": "路径 A/B/C、蒸汽指令"
+  },
+  {
+   "id": "moisture_dead_axis",
+   "severity": "warning",
+   "zh": "家用工况下初始含水落在活度饱和段，界面潜热对它的偏导接近零，因此含水在当前场景里是无效参数轴。",
+   "where": "含水读数、参数敏感性"
+  },
+  {
+   "id": "design_line",
+   "severity": "critical",
+   "zh": "alpha_m = 0.85 是模型设计判据，用于定义停机偏差 e_alpha 的零点，不是经过认证的食品安全阈值；模型也未纳入微生物初始数量。",
+   "where": "设计线、两盏判断灯、停机判据"
+  },
+  {
+   "id": "applicability",
+   "severity": "info",
+   "zh": "适用工况为家用一体机、55 min 时域、厚度 10-60 mm；超出范围的外推未经检验。",
+   "where": "全页"
+  }
+ ],
+ "expected_summary": {
+  "stop_s": 1866.0,
+  "e_alpha": 0.14497,
+  "tolerance": 0.001
+ }
+}

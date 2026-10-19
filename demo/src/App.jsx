@@ -204,6 +204,8 @@ export default function App() {
   const [sectionView, setSectionView] = useState(false);
   const [doorOpen, setDoorOpen] = useState(true);
   const [error, setError] = useState("");
+  const [contract, setContract] = useState(null);
+  const [contractError, setContractError] = useState("");
 
   useEffect(() => {
     fetch("./catalog.json")
@@ -214,6 +216,38 @@ export default function App() {
       .then(setCatalog)
       .catch(() => setError("无法读取 catalog.json，请先运行 scripts/export_demo_trace.py。"));
   }, []);
+
+  // The contract states what this page actually is: an offline replay of a
+  // specific kernel generation. It is loaded separately so that a missing or
+  // stale contract degrades into a visible warning rather than a silent claim.
+  useEffect(() => {
+    fetch("./dataset.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("dataset");
+        return res.json();
+      })
+      .then(setContract)
+      .catch(() => setContractError("缺少 dataset.json：无法确认模型代际与数据来源。"));
+  }, []);
+
+  // Verify the catalog against the contract fingerprints once both are loaded.
+  useEffect(() => {
+    if (!contract || catalog.length === 0) return;
+    const expected = contract.sampling?.total_frames;
+    const scens = Object.keys(contract.scenarios || {}).length;
+    const actualScens = new Set(catalog.map((r) => r.key)).size;
+    if (expected && expected !== catalog.length) {
+      setContractError(
+        `数据契约不符：契约声明 ${expected} 帧，实际 ${catalog.length} 帧。`,
+      );
+    } else if (scens && scens !== actualScens) {
+      setContractError(
+        `数据契约不符：契约声明 ${scens} 条轨迹，实际 ${actualScens} 条。`,
+      );
+    } else {
+      setContractError("");
+    }
+  }, [contract, catalog]);
 
   const rows = useMemo(
     () => rowsOf(catalog, policy, cook, length),
@@ -297,6 +331,14 @@ export default function App() {
           </p>
         </div>
         <div className="chips">
+          <span className={`chip prov ${contract ? "ok" : contractError ? "bad" : ""}`}
+                title={contract ? contract.mode.statement_zh : contractError || "正在读取数据契约"}>
+            {contract ? contract.mode.label_zh : contractError ? "来源未确认" : "读取契约…"}
+          </span>
+          <span className={`chip prov ${contract ? "gen" : ""}`}
+                title={contract ? contract.kernel.why : ""}>
+            {contract ? `数值核 ${contract.kernel.generation}` : "代际未知"}
+          </span>
           <span className="chip">种子 7 · 肉糜 · 8 °C · 含水 0.72</span>
           <span className={`chip ${cook === "steam" ? "steam" : "on"}`}>{cookLabel}</span>
           <span className="chip">{policyLabel}</span>
@@ -305,6 +347,37 @@ export default function App() {
           {frame && <span className={`chip ${frame.mode === 1 ? "steam" : frame.mode === 2 ? "hold" : ""}`}>{MODES[frame.mode] || "—"}</span>}
         </div>
       </header>
+
+      {contractError && (
+        <div className="contract-warn" role="alert">
+          <b>数据契约警告</b>
+          <span>{contractError}</span>
+        </div>
+      )}
+
+      {contract && (
+        <details className="boundary-drawer">
+          <summary>
+            <span className="bd-title">模型边界</span>
+            <span className="bd-count">{contract.boundaries.length} 条</span>
+            <span className="bd-hint">
+              代际 {contract.kernel.generation} · 与主表差
+              {contract.kernel.differing_switches.length} 个开关
+            </span>
+          </summary>
+          <ul className="bd-list">
+            {contract.boundaries.map((b) => (
+              <li key={b.id} className={`bd-item sev-${b.severity}`}>
+                <span className={`diag-dot ${b.severity}`} />
+                <div>
+                  <p className="bd-id">{b.id}<span className="bd-where">{b.where}</span></p>
+                  <p className="bd-text">{b.zh}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       <div className="fascia" aria-live="polite">
         <div className="fascia-cell">
