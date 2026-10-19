@@ -107,14 +107,22 @@ def main() -> int:
                       if r["policy"] == "dual" and r["cook"] == "combi"])
     check("study combi/dual median", st.median(vals), want, 2e-3)
 
-    catalog = json.loads((ROOT / "demo" / "public" / "catalog.json").read_text(encoding="utf-8"))
-    frame = [r for r in catalog if r["key"] == "dual_combi_30" and abs(r["time"] - 1680) < 1][0]
+    demo = json.loads((ROOT / "demo" / "public" / "data" / "manifest.json").read_text(encoding="utf-8"))
+    blob = (ROOT / "demo" / "public" / "data" / "traces.bin").read_bytes()
+    stride = len(demo["channels"]) + demo["field"]["cells"]
+    meta = next(s for s in demo["scenarios"] if s["key"] == "dual_combi_30")
+    block = np.frombuffer(blob, dtype=np.int16, count=meta["frames"] * stride,
+                          offset=meta["start"] * stride * 2).reshape(meta["frames"], stride)
+    names = [c["key"] for c in demo["channels"]]
+    channel = lambda key: (demo["channels"][names.index(key)]["offset"]
+                           + block[:, names.index(key)]
+                           * demo["channels"][names.index(key)]["scale"])
     out = rollout(length=np.array([0.03]), proto=np.array([0]), t0=np.array([8.0]),
                   m0=np.array([0.72]), hetero=np.array([0]), seed=np.array([7.0]),
                   policy="dual", minutes=55.0, record_every=4, **DISPLAY)
     j = int(1680 / 8)
-    check("catalog t2 at 1680 s", float(out["t_core"][j, 0]), frame["t2"], 1e-3)
-    check("catalog alpha at 1680 s", float(out["alpha_m"][j, 0]), frame["alpha"], 1e-4)
+    check("demo tCore at 1680 s", float(out["t_core"][j, 0]), float(channel("tCore")[j]), 1e-3)
+    check("demo alpha at 1680 s", float(out["alpha_m"][j, 0]), float(channel("alpha")[j]), 1e-4)
 
     width = max(len(name) for name, *_ in CHECKS)
     failed = 0

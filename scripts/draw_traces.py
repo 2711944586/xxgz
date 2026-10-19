@@ -51,7 +51,7 @@ def draw_policy() -> None:
     axes[0].axhline(75.0, color=fs.MUTED, linewidth=0.6, linestyle=(0, (3, 3)))
     axes[0].set_xlabel("时间 / min")
     axes[0].set_ylabel("冷点温度 / °C")
-    axes[0].legend(fontsize=6.4, loc="lower right")
+    axes[0].legend(fontsize=6.4, loc="upper left", frameon=False, borderaxespad=0.6)
     axes[0].set_title("四条策略的冷点", fontsize=8.4)
     fs.panel_tag(axes[0], "a")
     axes[1].axhline(0.85, color=fs.HEAT, linewidth=0.8, linestyle=(0, (4, 3)))
@@ -74,7 +74,7 @@ def draw_thick() -> None:
     ax.axhline(0.85, color=fs.HEAT, linewidth=0.8, linestyle=(0, (4, 3)))
     ax.set_xlabel("时间 / min")
     ax.set_ylabel("$\\alpha_m$")
-    ax.legend(fontsize=6.6, loc="lower right")
+    ax.legend(fontsize=6.6, loc="upper left", frameon=False, borderaxespad=0.6)
     ax.set_title("三种厚度的进度（对偶、组合）", fontsize=8.2)
     ax.annotate("50 mm 走不到设计线", xy=(52, 0.10), xytext=(28, 0.30),
                 fontsize=6.0, color=fs.ACCENT,
@@ -115,7 +115,7 @@ def draw_l50() -> None:
     ax.axhline(0.85, color=fs.HEAT, linewidth=0.8, linestyle=(0, (4, 3)))
     ax.set_xlabel("时间 / min")
     ax.set_ylabel("$\\alpha_m$")
-    ax.legend(fontsize=6.8, loc="upper left")
+    ax.legend(fontsize=6.8, loc="lower right", frameon=False, borderaxespad=0.6)
     ax.set_title("50 mm：延长时域才到设计线", fontsize=8.2)
     ax.annotate("55 min 停在 0.068", xy=(54, 0.07), xytext=(26, 0.28),
                 fontsize=6.0, color=fs.SERIES["dual"],
