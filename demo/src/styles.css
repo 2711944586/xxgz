@@ -812,3 +812,120 @@ input[type="range"]::-webkit-slider-thumb {
   .stage-q { display: none; }
 }
 
+
+/* ---------------------------------------------------------------
+   Mechanism chain: five clickable stages of the causal argument.
+   Each stage shows the real numbers it depends on, so the reader can
+   check the claim rather than take it on trust.
+   --------------------------------------------------------------- */
+.chain {
+  border: 1px solid var(--line, #2b333a);
+  border-radius: 3px;
+  background: rgba(126, 184, 196, 0.03);
+  padding: 8px 10px 10px;
+  margin-bottom: 12px;
+}
+.chain-head { display: flex; align-items: baseline; gap: 8px; }
+.chain-head .panel-label { margin: 0; }
+.chain-hint { margin-left: auto; font-size: 10.5px; color: #5f7079; }
+
+.chain-track {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+  margin: 7px 0 9px;
+}
+.chain-node {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 6px;
+  background: #141b1f;
+  border: 1px solid #232c33;
+  border-radius: 2px;
+  cursor: pointer;
+  color: #7d919b;
+  transition: border-color .12s ease, background .12s ease;
+}
+.chain-node:hover { background: #182126; color: #a9bcc5; }
+.chain-node.active {
+  border-color: #c4a574;
+  background: #1c2529;
+  color: #e2ecf0;
+}
+.chain-no {
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: #5f7079;
+  font-variant-numeric: tabular-nums;
+}
+.chain-node.active .chain-no { color: #c4a574; }
+.chain-title { font-size: 11.5px; line-height: 1.3; }
+
+.chain-body { display: flex; flex-direction: column; gap: 7px; }
+.chain-q { margin: 0; font-size: 12px; color: #c3d4da; line-height: 1.5; }
+.chain-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 10px;
+  margin: 0;
+}
+.chain-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dotted #232c33;
+}
+.chain-facts dt { font-size: 11px; color: #6f8791; }
+.chain-facts dd {
+  margin: 0;
+  font-size: 11.5px;
+  color: #d3e0e5;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.chain-why {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #8ba1ab;
+}
+.chain-fail {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #a58f74;
+}
+.chain-fail b {
+  color: #c4a574;
+  font-weight: 600;
+  margin-right: 6px;
+  letter-spacing: .04em;
+}
+@media (max-width: 1100px) {
+  .chain-facts { grid-template-columns: 1fr; }
+  .chain-track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+
+
+/* Right-column tabs: readouts and the mechanism chain share the column. */
+.right-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: 0 0 8px;
+  background: var(--line, #2b333a);
+}
+.right-tab {
+  padding: 6px 4px;
+  font-size: 11.5px;
+  background: #141b1f;
+  border: 0;
+  color: #7d919b;
+  cursor: pointer;
+}
+.right-tab:hover { background: #182126; color: #a9bcc5; }
+.right-tab.active { background: #1c2529; color: #e2ecf0; box-shadow: inset 0 -2px 0 0 #c4a574; }

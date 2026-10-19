@@ -938,8 +938,16 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     const onWheel = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      const pixels = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaMode === 2 ? ev.deltaY * el.clientHeight : ev.deltaY;
-      dist = clampDist(dist + pixels * 0.003);
+      const pixels = ev.deltaMode === 1
+        ? ev.deltaY * 16
+        : ev.deltaMode === 2
+          ? ev.deltaY * el.clientHeight
+          : ev.deltaY;
+      // Scroll up (negative deltaY) moves the camera in: the usual convention.
+      // Step is proportional to current distance so zooming feels even at both
+      // ends of the range instead of crawling when close.
+      const step = dist * 0.0016;
+      dist = clampDist(dist + pixels * step);
       place();
     };
     const onResize = () => {
@@ -948,6 +956,10 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      // The post-processing chain has its own render targets; without this the
+      // GTAO pass keeps the old size and the image is stretched after resize.
+      composer.setSize(w, h);
+      if (gtao.setSize) gtao.setSize(w, h);
     };
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove, { passive: false });
