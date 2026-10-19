@@ -93,7 +93,7 @@ h=12+55\,u_{\mathrm{fan}}\qquad[\mathrm{W}/(\mathrm{m}^2\mathrm{K})].
 \end{equation}
 把 \(\alpha=2.0\times 10^{-7}\,\mathrm{m^2/s}\)、\(n=16\) 代入三条厚度：\(15\,\mathrm{mm}\) 给出 \(\Delta x=0.94\,\mathrm{mm}\)、上限 \(2.20\,\mathrm{s}\)；\(30\,\mathrm{mm}\) 为 \(8.80\,\mathrm{s}\)；\(50\,\mathrm{mm}\) 为 \(24.5\,\mathrm{s}\)。薄件最紧，因此全局取 \(\Delta t=2\,\mathrm{s}\)，对最薄的一条留有约 \(9\%\) 的裕量。时间离散是一阶、空间离散是二阶，截断误差 \(O(\Delta t)+O(\Delta x^{2})\)；\(2\,\mathrm{s}\) 的步长下，时间误差在一分钟量级的过程里累积到毫开尔文量级，而空间误差要由\ref{ch:sim}章的网格收敛来量化（表\ref{tab:gridn}、图\ref{fig:gridmerge}）。把上限写成显式不等式，是为了让“为什么选 2 秒”可以从常数直接复算，而不必依赖约定。
 
-图\ref{fig:profiles}给出一维核沿厚度的温度剖面：表面先升，冷点滞后；后期加热下降后剖面重新拉平。图\ref{fig:xt}把同一剖面沿时间展开。探针窗落在进门后约 \(2.5\)--\(3.2\,\mathrm{min}\)，近表面留下短暂的高温条带，尚未传到冷点；横向没有第二维梯度，这是一维核的几何。图\ref{fig:paw}给出核内活度对含水。S1 的三档初含水 \(0.64/0.72/0.80\) 都落在饱和段 \(a_w\approx 0.99\)，界面潜热对含水的导数在这一段接近零。活度是含水的单调饱和函数，与公开 GAB 等温线同方向。
+图\ref{fig:profiles}给出一维核沿厚度的温度剖面：表面先升，冷点滞后；后期加热下降后剖面重新拉平。图\ref{fig:xt}把同一剖面沿时间展开。探针窗落在进门后约 \(2.5\)--\(3.2\,\mathrm{min}\)，近表面留下短暂的高温条带，尚未传到冷点；横向没有第二维梯度，这是一维核的几何。图\ref{fig:paw}给出核内活度对含水，S1 的三档初含水 \(0.64/0.72/0.80\) 都落在饱和段 \(a_w\approx 0.99\)，界面潜热对含水的导数在这一段接近零。活度是含水的单调饱和函数，与公开 GAB 等温线同方向。
 
 \begin{figure*}[t]
 \centering
@@ -220,7 +220,7 @@ C_2\dot T_2
 
 \section{过程特征尺度与二维冷点偏移}
 
-厚度取 \(L=30\,\mathrm{mm}\)（全厚，与附录\ref{app:scales} 同一口径），Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出设计尺度。探针窗的 Fourier 数为 \(8.9\times 10^{-3}\)，远小于 \(1\)，冷点来不及跟上表面。探针段把 Biot 数从 \(1.50\) 升到 \(3.68\)，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 \(40\,\mathrm{s}\) 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在核常数下；图\ref{fig:foband}把同一关系摊到 \((L,t)\) 平面上，家用时域线两侧的差别就是“薄件走完、厚件未走完”的全部内容。
+厚度取 \(L=30\,\mathrm{mm}\)（全厚，与附录\ref{app:scales} 同一口径），Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出设计尺度，探针窗的 Fourier 数为 \(8.9\times 10^{-3}\)，远小于 \(1\)，冷点来不及跟上表面。探针段把 Biot 数从 \(1.50\) 升到 \(3.68\)，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 \(40\,\mathrm{s}\) 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在核常数下；图\ref{fig:foband}把同一关系摊到 \((L,t)\) 平面上，家用时域线两侧的差别就是“薄件走完、厚件未走完”的全部内容。
 
 \begin{figure*}[t]
 \centering
