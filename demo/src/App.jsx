@@ -352,6 +352,7 @@ export default function App() {
             annotations={annotations && (pane === "twin" || pane === "run")}
             showSteam={showSteam}
             showAirflow={showAirflow}
+            cavityLightOn={orphan}
             onPickPart={(part) => setPickedPart(part)}
           />
           {pane !== "surface" && (
@@ -606,14 +607,14 @@ function TwinControls({
           <span>气流线</span>
           <i>{showAirflow ? "开" : "关"}</i>
         </button>
-        <button type="button" className={`toggle ${orphan ? "on" : ""}`} onClick={() => setOrphan((v) => !v)}>
+        <button type="button" className={`toggle ${orphan ? "" : "on"}`} onClick={() => setOrphan((v) => !v)}>
           <span>腔体照明</span>
-          <i>{orphan ? "开" : "关"}</i>
+          <i>{orphan ? "关" : "开"}</i>
         </button>
         <p className="rail-note">
           建模按家用蒸烤箱可见零件：外壳钢板、岩棉夹层、拉丝内衬、黄铜门框、双层门玻璃、六根 U 形加热管、十叶风机、蒸汽喷嘴、七片排汽百叶、四层搁架。
         </p>
-        {pickedPart && <p className="picked">已选部件 <b>{pickedPart}</b></p>}
+        {pickedPart && <p className="picked">已选部件 <b>{PART_LABEL[pickedPart] || pickedPart}</b></p>}
       </section>
     </>
   );
@@ -810,6 +811,55 @@ function Meter({ label, value, tone = "" }) {
   );
 }
 
+const PART_LABEL = {
+  "food": "食品切片",
+  "steam.plume": "蒸汽羽流",
+  "steam.tank": "水箱",
+  "steam.pipe": "蒸汽管路",
+  "steam.valve": "蒸汽阀",
+  "steam.nozzle": "蒸汽喷嘴",
+  "heater": "加热管组",
+  "fan": "离心风机",
+  "vent": "排汽百叶",
+  "tray": "烤盘",
+  "rack": "烤架",
+  "frame": "腔口门框",
+  "seal": "密封条",
+  "bay": "电控舱",
+  "fascia": "控制面板",
+  "fascia.knob": "旋钮",
+  "fascia.led": "指示灯",
+  "fascia.display": "显示屏",
+  "door.frame": "门外框",
+  "door.panel": "门板",
+  "door.glass": "门玻璃",
+  "door.seal": "门封条",
+  "door.handle": "门把手",
+  "door.hinge": "铰链",
+  "door.striker": "门锁扣",
+  "shell.top": "外壳顶板",
+  "shell.bottom": "外壳底板",
+  "shell.back": "外壳背板",
+  "shell.left": "外壳左侧板",
+  "shell.right": "外壳右侧板",
+  "insulation.top": "顶部保温层",
+  "insulation.back": "背部保温层",
+  "insulation.left": "左侧保温层",
+  "insulation.right": "右侧保温层",
+  "liner.floor": "内衬底板",
+  "liner.ceiling": "内衬顶板",
+  "liner.back": "内衬背板",
+  "liner.left": "内衬左侧板",
+  "liner.right": "内衬右侧板",
+  "sensor.cavityTemp": "腔温热电偶",
+  "sensor.humidity": "湿度探头",
+  "sensor.heaterProbe": "加热器测温",
+  "sensor.doorSwitch": "门互锁",
+  "sensor.waterFloat": "水位浮子",
+  "sensor.coldSpot": "冷点标记",
+  "sensor.estimate": "冷点估计标记",
+};
+
 const PART_INFO = {
   "food": ["食品切片", "沿厚度分成十六层，每层颜色取该控制体的温度；第 6 层是脂肪夹层。"],
   "steam.plume": ["蒸汽羽流", "喷嘴喷出的蒸汽粒子，浓度跟蒸汽阀；探针窗内全开并染成暖色。"],
@@ -830,14 +880,15 @@ const PART_INFO = {
 
 function TwinInspector({ manifest, frame, scenario, pickedPart, onPickPart }) {
   const info = pickedPart ? PART_INFO[pickedPart] : null;
+  const label = pickedPart ? (PART_LABEL[pickedPart] || pickedPart) : null;
   return (
     <>
       <section className="group">
         <h2>部件</h2>
-        {info ? (
+        {pickedPart ? (
           <div className="part-card">
-            <b>{info[0]}</b>
-            <p>{info[1]}</p>
+            <b>{info ? info[0] : label}</b>
+            <p>{info ? info[1] : "该部件属于腔体建模的固定结构，数据通道不单独记录它的状态。"}</p>
             <button type="button" className="ghost-btn" onClick={() => onPickPart(null)}>取消选择</button>
           </div>
         ) : (

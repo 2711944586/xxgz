@@ -27,3 +27,10 @@ monograph/ACTS-MCDT.docx
 # OS
 .DS_Store
 Thumbs.db
+
+# demo scratch
+demo/_*.cjs
+demo/_*.mjs
+demo/_*.png
+demo/server.log
+demo/preview.log

@@ -49,7 +49,6 @@ button { cursor: pointer; }
 
 ::selection { background: rgba(224, 120, 60, 0.3); }
 
-/* ------------------------------------------------------------------ shell */
 
 .shell {
   height: 100%;
@@ -129,7 +128,6 @@ button { cursor: pointer; }
 }
 .status-link:hover { background: rgba(116, 182, 204, 0.08); }
 
-/* ------------------------------------------------------------------ panes */
 
 .panes {
   display: flex;
@@ -204,7 +202,6 @@ button { cursor: pointer; }
 .status-cell.ok b { color: var(--green); }
 .status-cell.warn b { color: var(--red); }
 
-/* ------------------------------------------------------------------ stage */
 
 .stage {
   display: grid;
@@ -224,7 +221,8 @@ button { cursor: pointer; }
 .rail::-webkit-scrollbar { width: 9px; }
 .rail::-webkit-scrollbar-thumb { background: #223038; border-radius: 9px; border: 2px solid #0b1013; }
 .rail-left { border-right: 1px solid var(--line); }
-.rail-right { border-left: 1px solid var(--line); padding-bottom: 8px; }
+.rail-right { border-left: 1px solid var(--line); padding-bottom: 22px; }
+.rail-right .group:last-child { padding-bottom: 34px; }
 
 .group { padding: 12px 14px 14px; border-bottom: 1px solid var(--line); }
 .group:last-child { border-bottom: 0; }
@@ -387,7 +385,6 @@ select + h2 { margin-top: 16px; }
 .data-note dt { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
 .data-note dd { margin: 0; font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); word-break: break-all; }
 
-/* -------------------------------------------------------------- viewport */
 
 .canvas-area {
   position: relative;
@@ -542,7 +539,6 @@ select + h2 { margin-top: 16px; }
 
 .surface-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 
-/* --------------------------------------------------------------- readouts */
 
 .readout { margin: 0; display: grid; gap: 0; }
 .readout > div {
@@ -735,7 +731,6 @@ select + h2 { margin-top: 16px; }
   font-size: 10px;
 }
 
-/* --------------------------------------------------------------- timeline */
 
 .timeline {
   min-height: 0;
@@ -821,7 +816,6 @@ select + h2 { margin-top: 16px; }
 .chart-legend .dim { color: #4a575e; }
 .chart-legend .dash { color: var(--muted); }
 
-/* ----------------------------------------------------------------- misc */
 
 .loading {
   position: fixed;
@@ -882,6 +876,7 @@ select + h2 { margin-top: 16px; }
   .rail-note { font-size: 10.5px; line-height: 1.55; }
   .hud-row { padding: 6px 10px; }
   .event-list button { padding: 5px 7px; }
+  .spec-list li { font-size: 10px; }
 }
 
 @media (max-width: 1500px) {
@@ -904,7 +899,10 @@ select + h2 { margin-top: 16px; }
   .shell { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto auto; }
   .stage { grid-template-columns: 1fr; }
   .rail { overflow: visible; }
-  .canvas-area { height: 56vh; min-height: 360px; }
+  .canvas-area { height: 56vh; min-height: 360px; order: -1; }
+  .rail-left { order: 0; }
+  .rail-right { order: 1; }
+  .rail-left .group, .rail-right .group { border-top: 1px solid var(--line); }
   .rail-left, .rail-right { border: 0; border-top: 1px solid var(--line); }
   .top { flex-wrap: wrap; padding: 12px 16px; }
   .panes { overflow-x: auto; }
@@ -918,3 +916,38 @@ select + h2 { margin-top: 16px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- narrow-screen repair pass 2 ----------
+   The first pass covered the outer grid but missed the inner ones: main.stage
+   is a grid whose single column is sized by its widest child (539.6 px), and
+   the two rails inside it inherit that width. Forcing minmax(0,1fr) on the
+   inner grids and min-width:0 on their items lets the content shrink instead
+   of pushing the page wider than the viewport. */
+@media (max-width: 900px) {
+  main.stage,
+  .stage,
+  .bench,
+  .rail,
+  .rail-left,
+  .rail-right,
+  .group {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    float: none !important;
+  }
+  main.stage > *,
+  .rail > *,
+  .group > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  ul, ol, li, dl { min-width: 0 !important; max-width: 100% !important; }
+  button { max-width: 100% !important; white-space: normal !important; }
+  pre, code, table { max-width: 100% !important; overflow-x: auto !important; }
+}
+

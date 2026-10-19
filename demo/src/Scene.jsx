@@ -37,6 +37,7 @@ export default function Scene({
   annotations = false,
   showSteam = true,
   showAirflow = true,
+  cavityLightOn = true,
   onPickPart,
 }) {
   const host = useRef(null);
@@ -45,7 +46,7 @@ export default function Scene({
   const pickRef = useRef(onPickPart);
   pickRef.current = onPickPart;
   const live = useRef({});
-  live.current = { frame, lengthM, doorOpen, view, section, explode, annotations, showSteam, showAirflow };
+  live.current = { frame, lengthM, doorOpen, view, section, explode, annotations, showSteam, showAirflow, cavityLightOn };
 
   useEffect(() => {
     const el = host.current;
@@ -203,7 +204,7 @@ export default function Scene({
     }
     state.current = {
       renderer, composer, scene, camera, controls, gtao, bloom, cavity, food,
-      steam, airflow, hemi, key, fill, cavityLight, heaterGlow, nozzleLight,
+      steam, airflow, hemi, key, fill, cavityLight, cavityLight2, cavityLight3, heaterGlow, nozzleLight,
       camGoal: null, setPreset, picked: null, sectionAmt: 0, explodeAmt: 0,
       lastT: performance.now(),
     };
@@ -267,7 +268,10 @@ export default function Scene({
       const exhaust = f?.exhaust ?? 0.4;
       s.cavity.materials.coil.emissiveIntensity = 0.16 + 2.2 * heat;
       s.heaterGlow.intensity = 0.1 + 1.5 * heat;
-      s.cavityLight.intensity = 1.1 + 0.9 * heat;
+      const lampScale = L.cavityLightOn === false ? 0.06 : 1;
+      s.cavityLight.intensity = (1.1 + 0.9 * heat) * lampScale;
+      s.cavityLight2.intensity = 0.85 * lampScale;
+      s.cavityLight3.intensity = 0.75 * lampScale;
       s.key.intensity = 1.25 + 0.2 * heat;
       s.cavity.parts.fan.userData.blades.rotation.z += dt * (0.35 + 5.0 * Math.min(1, fanCmd / 1.3));
 
