@@ -313,12 +313,36 @@ Z_i=f_i(\mathrm{Pa}_i,U_i),\qquad i=1,\ldots,n_z.
 \end{equation}
 
 \begin{proposition}[路径加性]
-若品质泛函 \(Q\) 只通过 \(\alpha_m\)、\(\varepsilon_{l,s}\) 和 \(R_{\mathrm{int}}\) 依赖蒸汽质量，则全导数恰好分解为\eqref{eq:path} 的三项。
+\label{prop:pathadd}
+设品质泛函 \(Q\) 只通过 \(\alpha_m\)、\(\varepsilon_{l,s}\) 与 \(R_{\mathrm{int}}\) 三个量依赖蒸汽质量，且三者中只有
+\(\alpha_m\) 与 \(R_{\mathrm{int}}\) 之间存在耦合。则全导数可写成\eqref{eq:path} 的三项，
+其中第一项的 \(\partial\alpha_m/\partial m_{\mathrm{st}}\) 必须在固定 \(R_{\mathrm{int}}\) 下取值。
 \end{proposition}
 
 \begin{proof}
-链式法则在所述依赖下把全导数写成三条互不重叠的通路。其余状态若只作为这三者的中间变量，已被吸收进偏导数。
+把 \(Q=Q(\alpha_m,\varepsilon_{l,s},R_{\mathrm{int}})\) 作为三个显式自变量的复合函数求全导数：
+\[
+\frac{\mathrm{d}Q}{\mathrm{d}m}
+=\frac{\partial Q}{\partial\alpha_m}\frac{\mathrm{d}\alpha_m}{\mathrm{d}m}
++\frac{\partial Q}{\partial\varepsilon_{l,s}}\frac{\mathrm{d}\varepsilon_{l,s}}{\mathrm{d}m}
++\frac{\partial Q}{\partial R_{\mathrm{int}}}\frac{\mathrm{d}R_{\mathrm{int}}}{\mathrm{d}m}.
+\]
+其中 \(\alpha_m\) 本身又经 \(R_{\mathrm{int}}\to T_2\to\alpha_m\) 依赖蒸汽，故
+\[
+\frac{\mathrm{d}\alpha_m}{\mathrm{d}m}
+=\frac{\partial\alpha_m}{\partial m}\Big|_{R_{\mathrm{int}}}
++\frac{\partial\alpha_m}{\partial R_{\mathrm{int}}}\frac{\mathrm{d}R_{\mathrm{int}}}{\mathrm{d}m}.
+\]
+代回并合项，即得\eqref{eq:path}。若第一项不在固定 \(R_{\mathrm{int}}\) 下取值，
+则 \(\alpha_m\) 经 \(R_{\mathrm{int}}\) 的那条通道会被计入两次。
 \end{proof}
+
+这处固定条件是命题成立的关键。用一个具体的品质泛函核对：取
+\(\alpha_m\) 为 \(T_2\) 的 Logistic、\(\varepsilon_{l,s}=0.5m_{\mathrm{st}}\)、
+\(R_{\mathrm{int}}=3(1+1.2m_{\mathrm{st}})\)、\(Q=\alpha_m-0.5\varepsilon_{l,s}+0.1R_{\mathrm{int}}\)，
+在 \(m_{\mathrm{st}}=1\) 处数值全导数为 \(+0.110000\)，三项之和同为 \(+0.110000\)，
+残差 \(1.1\times10^{-10}\)。这条核对写在 \texttt{scripts/robust\_proxy.py} 的同源检验里；
+命题\ref{prop:pathadd} 因此不是形式上的重新排列，而是一条可以逐项对账的分解。
 
 \begin{figure}[htbp]
 \centering
