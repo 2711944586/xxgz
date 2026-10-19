@@ -3,6 +3,12 @@
 
 正文第\ref{ch:lit}章只列出土豆短表与十二条代表性 GAB 记录；第\ref{ch:sim}章只列出 S1 总体与厚度\(\times\)策略。下列长表给出诊断码为 \(0\) 的全部清洁拟合，以及 S1 按食材、三因子交叉、能量与终点方差的分组。列顺序与源工作表一致：单层容量 \(X_m\) 在能量常数 \(C\) 之前，不调换。
 
+% These tables have 6-8 numeric columns and up to 190 rows; longtable
+% cannot typeset in two-column mode, so this appendix reverts to the full
+% measure. Appendices A-D stay two-column.
+\onecolumn
 \input{gab_tables.tex}
 \input{s1_tables.tex}
 \input{s1_extra.tex}
+
+\twocolumn

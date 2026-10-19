@@ -82,7 +82,7 @@ function buildMaterials() {
     tank: steel("#39434a", { metalness: 0.4, roughness: 0.5 }),
     nozzle: steel("#b9c4cb", { metalness: 0.9, roughness: 0.24 }),
     grille: steel("#2b333a", { metalness: 0.35, roughness: 0.62 }),
-    louvre: steel("#aeb8bf", { metalness: 0.78, roughness: 0.28 }),
+    louvre: steel("#c8d2d8", { metalness: 0.85, roughness: 0.22 }),
     rail: steel("#c3ccd2", { metalness: 0.9, roughness: 0.2 }),
     tray: new THREE.MeshPhysicalMaterial({ color: "#2b3238", metalness: 0.45, roughness: 0.34, clearcoat: 0.5 }),
     trayRim: steel("#aab4bb", { metalness: 0.85, roughness: 0.24 }),
@@ -104,7 +104,6 @@ function buildShell(materials, explodeTargets) {
   ];
   panels.forEach(([geo, mat, pos, part, exp]) => push(add(g, geo, mat, pos, null, part, exp)));
 
-  // Front chassis ring.
   [
     [box(5.18, 0.34, 0.14, 0.03), V(0, 2.72, 1.44), "shell.top", V(0, 0.95, 0)],
     [box(5.18, 0.32, 0.14, 0.03), V(0, 0.0, 1.44), "shell.bottom", V(0, -0.92, 0)],
@@ -383,8 +382,6 @@ function buildSteam(materials) {
   return g;
 }
 
-// Exhaust louvres sit high on the back wall beside the fan: a recessed pocket,
-// seven slats that pivot with the exhaust command, and a brass surround.
 function buildVent(materials) {
   const g = new THREE.Group();
   const Z = -1.245;
@@ -487,7 +484,6 @@ export function buildCavity() {
   group.add(bay);
   explodeTargets.push(bay);
 
-  // Panels hidden in section view: the near wall and its liner/insulation.
   const sectionPanels = [];
   const topPanels = [];
   shell.traverse((m) => {

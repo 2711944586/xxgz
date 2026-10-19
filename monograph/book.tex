@@ -65,6 +65,11 @@ The kernel integrates sixteen control volumes at a $2\,\mathrm{s}$ step. The mai
 % a duplicate heading on its own page. The TOC entry lives in refs.tex.
 \input{refs.tex}
 
+% The bibliography runs full width (\onecolumn above); restore two columns for
+% the appendices so their tables and prose use the same measure as the body.
+\clearpage
+\twocolumn
+
 \appendix
 \input{app_symbols.tex}
 \input{app_discrete.tex}

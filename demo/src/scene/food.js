@@ -26,8 +26,8 @@ export function buildFood() {
 
   for (let i = 0; i < N; i += 1) {
     const slab = new THREE.Group();
-    const jitter = 0.996 + rand() * 0.008;
-    const thickness = w * 0.998 * jitter;
+    const jitter = 0.999 + rand() * 0.002;
+    const thickness = w * 1.0;
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: LEAN.clone(), roughness: 0.6, metalness: 0.0,
       clearcoat: 0.22, clearcoatRoughness: 0.42,
@@ -61,12 +61,12 @@ export function buildFood() {
       slab.add(face);
     }
 
+    slab.traverse((m) => { if (m.isMesh) m.userData.part = 'food'; });
     slab.position.set(-WIDTH / 2 + (i + 0.5) * w, 0, 0);
     group.add(slab);
     slabs.push({ bodyMat, capMat, grainMat });
   }
 
-  // Cold-spot marker and probe needle, shown in section view.
   const coldMark = new THREE.Mesh(
     new THREE.SphereGeometry(0.032, 16, 12),
     new THREE.MeshBasicMaterial({ color: "#7eb8c9" }),
@@ -110,7 +110,7 @@ export function updateFood(food, frame, lengthM) {
     const { bodyMat, capMat, grainMat } = slabs[i];
     base.copy(LEAN).lerp(FAT, i === 6 ? 0.55 : 0);
 
-    bodyMat.color.copy(base).lerp(color, 0.88 * exposure);
+    bodyMat.color.copy(base).lerp(color, 0.82 * exposure);
     bodyMat.color.lerp(CRUST, brown * (1 - u * 0.6) * 0.36);
 
     capMat.color.copy(base).lerp(color, 0.46);

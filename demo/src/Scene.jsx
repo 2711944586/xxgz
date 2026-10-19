@@ -164,7 +164,7 @@ export default function Scene({
       pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(cavity.group.children, true);
+      const hits = raycaster.intersectObjects([cavity.group, food, steam.points], true);
       const hit = hits.find((h) => h.object.userData.part);
       pickRef.current?.(hit ? hit.object.userData.part : null);
     };
@@ -277,7 +277,7 @@ export default function Scene({
       });
 
       s.nozzleLight.intensity = 0.18 + 1.5 * steamCmd;
-      if (L.showSteam) steam.set(steamCmd, f?.mode === 1);
+      if (L.showSteam) steam.set(Math.max(steamCmd, f?.mode === 1 ? 0.85 : 0), f?.mode === 1);
       else steam.set(0);
       steam.tick(dt, steamCmd);
       airflow.set(L.showAirflow && !L.section ? Math.min(1, Math.max(0, (fanCmd - 0.45) / 0.85)) : 0);
@@ -294,7 +294,6 @@ export default function Scene({
 
       updateFood(s.food, f, L.lengthM);
 
-      // Cold-spot and probe markers follow the field they refer to.
       const marks = s.cavity.parts.sensors.userData.marks;
       const cold = f?.nodes ? f.nodes.reduce((a, v, i) => (v < f.nodes[a] ? i : a), 0) : 0;
       const zPos = -0.46 + (cold / 15) * 0.92;

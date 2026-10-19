@@ -5,16 +5,16 @@
 
 \section{规格层场量}
 
-\begin{longtable}{llp{8.2cm}}
-\caption{连续介质与决策状态}\\
+\begin{table}[htbp]
+\centering
+\caption{连续介质与决策状态}
+\label{tab:app-sym}
+{\footnotesize
+\begin{tabular}{@{}l l p{4.5cm}@{}}
+
 \toprule
 符号 & 单位 & 含义 \\
 \midrule
-\endfirsthead
-\toprule
-符号 & 单位 & 含义 \\
-\midrule
-\endhead
 \(\Omega_f\) & \(\mathrm{m}^3\) & 食品区域 \\
 \(\Omega_c\) & \(\mathrm{m}^3\) & 腔体气体区域，不并进食品场 \\
 \(\Gamma\) & \(\mathrm{m}^2\) & 食品与腔体的交界面 \\
@@ -40,20 +40,22 @@
 \(z\) & \(\mathrm{K}\) & 热力值的温度宽度。决策状态 \(\vect{z}\) 另见 \eqref{eq:z} \\
 \(\mathrm{Fo},\mathrm{Bi},\mathrm{Ko}\) & 1 & Fourier、Biot、Kossovich 数 \\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
+
 
 \section{估计、探针与执行量}
 
-\begin{longtable}{lp{10cm}}
-\caption{信息与安全符号}\\
+\begin{table}[htbp]
+\centering
+\caption{信息与安全符号}
+\label{tab:app-sym}
+{\footnotesize
+\begin{tabular}{@{}l p{5.1cm}@{}}
+
 \toprule
 符号 & 含义 \\
 \midrule
-\endfirsthead
-\toprule
-符号 & 含义 \\
-\midrule
-\endhead
 \(\vect{y}\) & 可安装观测。安全侧测量不进入品质滤波 \\
 \(\vect{v}\) & 观测噪声。数值核用确定性散列，不从高斯抽样 \\
 \(\vect{\theta}\) & 在线更新的传递与边界参数 \\
@@ -69,22 +71,24 @@
 \(e_{\alpha}\) & 真值进度在停机时刻相对设计线 \(0.85\) 的差 \\
 \(N_{\mathrm{viol}}\) & 安全不等式被违反的次数。本次核没有单独的越界计数器 \\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
+
 
 \section{数值核中实际出现的量}
 
 下列常数只属于一维工程核。它们的数量级参照瘦组织导热、水的潜热和家用腔体换热。
 
-\begin{longtable}{lllp{6.5cm}}
-\caption{数值核常数}\\
+\begin{table}[htbp]
+\centering
+\caption{数值核常数}
+\label{tab:app-sym}
+{\footnotesize
+\begin{tabular}{@{}l l l p{3.3cm}@{}}
+
 \toprule
 符号 & 数值 & 单位 & 在代码中的作用 \\
 \midrule
-\endfirsthead
-\toprule
-符号 & 数值 & 单位 & 在代码中的作用 \\
-\midrule
-\endhead
 \(\alpha\) & \(2.0\times 10^{-7}\) & \(\mathrm{m}^2/\mathrm{s}\) & 热扩散率尺度 \\
 \(\rho c\) & \(3.4\times 10^{6}\) & \(\mathrm{J}/(\mathrm{m}^3\mathrm{K})\) & 容积热容，与 \(\alpha\) 相乘得基准导热 \\
 \(k\) & \(0.68\) & \(\mathrm{W}/(\mathrm{m\cdot K})\) & \(\alpha\rho c\)。脂肪控制体乘 \(0.45\) \\
@@ -99,22 +103,24 @@
 设计进度 & 0.85 & 1 & \(e_{\alpha}\) 的零点。进度用 \(1-\mathrm{e}^{-F/2}\) \\
 噪声幅度 & 0.4 与 0.004 & \(^\circ\mathrm{C}\)，1 & 表面温度与平均含水。由正弦散列生成 \\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
+
 
 \section{日志字段}
 
 \texttt{s1\_summary.json} 的每一行是一条轨迹的停机摘要。
 
-\begin{longtable}{lp{10cm}}
-\caption{摘要日志的列}\\
+\begin{table}[htbp]
+\centering
+\caption{摘要日志的列}
+\label{tab:app-sym}
+{\footnotesize
+\begin{tabular}{@{}l p{5.1cm}@{}}
+
 \toprule
 列 & 含义 \\
 \midrule
-\endfirsthead
-\toprule
-列 & 含义 \\
-\midrule
-\endhead
 \texttt{suite} & 恒为 S1 \\
 \texttt{case} & 组合编号，从 0 到 4859 \\
 \texttt{food} & mince、potato、dough \\
@@ -132,7 +138,9 @@
 \texttt{augmented} & 恒为 false \\
 \texttt{source} & 恒为 simulation \\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
+
 
 组合数是 \(3\times 3\times 2\times 3\times 3\times 30=4860\)。四个策略各 4860 行，合计 19440 行。较早的乘积 1620 少乘了非均质的 3 个水平。日志与含非均质的乘积一致，不把 1620 写成日志条数。
 

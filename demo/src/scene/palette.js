@@ -1,8 +1,5 @@
 import * as THREE from "three";
 
-/* Thermal palette used by every field reading on the page: the food slices,
-   the legend and the two canvases. Stops are a low-light ironbow so a 60 K
-   gradient still separates at the dark end. */
 const STOPS = [
   [0.0, "#101c30"],
   [0.16, "#233a6e"],
@@ -41,8 +38,6 @@ export function cssStops(count = 8) {
   }).join(", ");
 }
 
-/* ---------------------------------------------------------------- textures */
-
 function canvas2d(w, h) {
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -67,9 +62,6 @@ function toTexture(canvas, repeat = 1) {
   return tex;
 }
 
-/* Brushed metal: a height field of long horizontal streaks becomes a normal
-   map and a correlated roughness map, so highlights stretch along the grain
-   instead of sitting on it as a round blob. */
 export function brushedMaps({ size = 512, streak = 0.24, grain = 0.05, repeat = 6 } = {}) {
   const rand = rng(20241334);
   const height = new Float32Array(size * size);
@@ -112,7 +104,6 @@ export function brushedMaps({ size = 512, streak = 0.24, grain = 0.05, repeat = 
   return { normalMap: build(nrm), roughnessMap: build(rough) };
 }
 
-/* Embossed liner: the dimpled stainless pattern inside real ovens. */
 export function dimpleMaps({ size = 512, repeat = 16 } = {}) {
   const [hCanvas, hCtx] = canvas2d(size, size);
   const [rCanvas, rCtx] = canvas2d(size, size);
@@ -148,7 +139,6 @@ export function dimpleMaps({ size = 512, repeat = 16 } = {}) {
   };
 }
 
-/* Cast-iron / enamel speckle for the cooktop-style fascia. */
 export function enamelMaps({ size = 256, repeat = 2 } = {}) {
   const rand = rng(778821);
   const [canvas, ctx] = canvas2d(size, size);
@@ -188,8 +178,6 @@ export function radialShadow() {
   ctx.fillRect(0, 0, 256, 256);
   return new THREE.CanvasTexture(canvas);
 }
-
-/* ---------------------------------------------------------------- materials */
 
 export function steel(color, { metalness = 0.85, roughness = 0.3, maps = null } = {}) {
   const mat = new THREE.MeshPhysicalMaterial({

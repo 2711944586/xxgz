@@ -1,11 +1,8 @@
 import * as THREE from "three";
 import { steamSprite } from "./palette.js";
 
-const COUNT = 1500;
+const COUNT = 2600;
 
-/* Two coupled particle systems: the nozzle plume (steam command) and the
-   circulating cavity air (fan command). Both run entirely in the vertex shader
-   from one time uniform, so the CPU only updates two scalars per frame. */
 export function buildSteam(tip) {
   const rand = (() => {
     let x = 987654321;
@@ -19,7 +16,6 @@ export function buildSteam(tip) {
   const pos = new Float32Array(COUNT * 3);
   const seeds = new Float32Array(COUNT * 3);
   for (let i = 0; i < COUNT; i += 1) {
-    // Spawn in a cone at the nozzle mouth, then let the shader advect.
     const t = rand() ** 0.7;
     const theta = rand() * Math.PI * 2;
     const r = Math.sqrt(rand());
@@ -47,7 +43,7 @@ export function buildSteam(tip) {
     uniforms,
     transparent: true,
     depthWrite: false,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */ `
       attribute vec3 seed;
       uniform float uTime;
@@ -56,16 +52,13 @@ export function buildSteam(tip) {
       varying float vFade;
       varying float vHot;
       void main() {
-        // Each particle has a phase; the plume travels right and up from the
-        // nozzle, widening with distance and decaying before the far wall.
         float u = fract(seed.x * 0.85 + uTime * 0.16 + seed.y * 0.03);
         vec3 p = position;
-        float spread = 0.06 + 0.62 * u;
-        p.x += u * 2.55;
-        p.y += u * 0.86 + 0.05 * sin(uTime * 1.7 + seed.y * 5.0) * u;
-        p.z += spread * cos(seed.y + u * 5.0) * 0.5;
-        p.y += spread * sin(seed.y * 1.7 + u * 4.0) * 0.35;
-        // Bounded to the cavity so nothing flies through the liner.
+        float spread = 0.05 + 0.62 * u;
+        p.x += u * 2.2;
+        p.y += u * 0.34 + 0.07 * sin(uTime * 1.7 + seed.y * 5.0) * u;
+        p.z += spread * cos(seed.y + u * 5.0) * 0.9;
+        p.y += spread * sin(seed.y * 1.7 + u * 4.0) * 0.55;
         p = clamp(p, vec3(-2.1, 0.2, -1.22), vec3(2.1, 2.44, 1.35));
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         float life = smoothstep(0.0, 0.18, u) * (1.0 - smoothstep(0.5, 1.0, u));
@@ -84,15 +77,16 @@ export function buildSteam(tip) {
       varying float vHot;
       void main() {
         vec4 tex = texture2D(uMap, gl_PointCoord);
-        float a = tex.a * vFade * uOpacity;
+        float a = tex.a * tex.a * vFade * uOpacity;
         if (a < 0.004) discard;
-        vec3 col = mix(uColor, vec3(1.0, 0.95, 0.88), vHot * 0.22);
+        vec3 col = mix(uColor, vec3(1.0, 0.94, 0.84), vHot * 0.45);
         gl_FragColor = vec4(col, a);
       }
     `,
   });
 
   const points = new THREE.Points(geo, mat);
+  points.userData.part = 'steam.plume';
   points.frustumCulled = false;
   points.visible = false;
 
@@ -102,8 +96,8 @@ export function buildSteam(tip) {
     set(intensity, probe = false) {
       points.visible = intensity > 0.004;
       uniforms.uIntensity.value = intensity;
-      uniforms.uOpacity.value = 0.1 + 0.34 * Math.min(1, intensity);
-      uniforms.uSize.value = probe ? 24 : 17;
+      uniforms.uOpacity.value = 0.16 + 0.62 * Math.min(1, intensity);
+      uniforms.uSize.value = probe ? 34 : 26;
       uniforms.uColor.value.set(probe ? "#f2d79a" : "#cfe3ea");
     },
     tick(dt, intensity) {
@@ -113,9 +107,6 @@ export function buildSteam(tip) {
   };
 }
 
-/* Cavity air circulation: thin streamlines bending from the fan around the food
-   and out through the vents. Visible only above a fan threshold so the closed
-   state stays quiet. */
 export function buildAirflow(ventPos) {
   const group = new THREE.Group();
   group.name = "airflow";

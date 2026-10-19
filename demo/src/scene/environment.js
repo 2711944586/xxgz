@@ -1,8 +1,5 @@
 import * as THREE from "three";
 
-/* A dark studio instead of the default bright room: three soft boxes on a black
-   shell. Metals then pick up shaped highlights rather than an even white wash,
-   which is what made the liner read as paper. */
 export function studioEnvironment(renderer) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#05080a");
@@ -16,13 +13,9 @@ export function studioEnvironment(renderer) {
     return m;
   };
 
-  // Key soft box, high front-right.
   box(6, 4.2, 2.6, "#fff2df", [5.5, 5.2, 4.2], [0, -0.72, 0]);
-  // Cool fill, front-left, weaker.
   box(5, 3.2, 0.7, "#9fc4d4", [-6, 3.2, 3.2], [0, 0.85, 0]);
-  // Narrow rim strip behind, to draw the silhouette.
   box(7, 0.9, 1.1, "#9fd2e2", [0, 4.6, -6.4], [0, 0, 0]);
-  // Low bounce card, so the underside of the body is not pitch black.
   box(8, 4, 0.22, "#3a464e", [0, -2.2, 1.5], [-Math.PI / 2, 0, 0]);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -38,8 +31,6 @@ export function studioEnvironment(renderer) {
   return target.texture;
 }
 
-/* Radial floor falloff: gives the product a lit pool to stand in rather than a
-   flat plane, without a second render target. */
 export function floorTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 512;

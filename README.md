@@ -38,6 +38,7 @@ python scripts/identify_reduction.py
 python scripts/crosscheck_dimensions.py
 python scripts/run_estimators.py
 python scripts/run_mpc.py
+python scripts/build_demo_dataset.py  # 演示数据：75 条轨迹 + 参数面 + 契约
 ```
 
 图件重绘：`scripts/draw_results.py`、`draw_fields.py`、`draw_dist.py`、`draw_traces.py`、`draw_merge.py`、`draw_concept.py`、`draw_mechanisms_v2.py`、`draw_last.py`。共享样式在 `scripts/figstyle.py`。
@@ -54,8 +55,10 @@ acts-mcdt/
 │   ├── app_symbols/discrete/trace/scales/tables.tex   附录 A–E
 │   ├── gab_subset.tex
 │   └── figures/            封面、水印、封底与三张原图
-├── demo/                   浏览器实验台（Vite + Three.js）
-│   └── public/catalog.json 36 条轨迹、14904 帧，页面不重跑积分
+├── demo/                   浏览器实验台（Vite + React + Three.js）
+│   ├── public/data/        traces.bin（75 条轨迹、31050 帧、16 层温度场）
+│   │                       surfaces.json（7628 格参数面）manifest.json（通道与缩放）
+│   └── public/dataset.json 数据契约：模式、代际、指纹、模型边界
 ├── src/acts_mcdt/          数值核
 │   ├── physics.py          rollout()，两套代际开关
 │   ├── estimator.py        两节点辨识 + 双状态 EKF
@@ -75,7 +78,11 @@ Word 由 `scripts/build_docx.py` 从 LaTeX 导出：正文双栏（每栏 \(87.5
 
 ## 演示
 
-`.\start-demo.ps1` 或 `start-demo.bat`。默认种子 7、肉糜 \(30\,\mathrm{mm}\)、初温 \(8^\circ\mathrm{C}\)、含水 \(0.72\)、组合档、对偶。页面读 `catalog.json`，按 \(8\,\mathrm{s}\) 抽样。这些数字来自 `display` 代际。
+`.\start-demo.ps1` 或 `start-demo.bat`。数据由 `$env:PYTHONPATH="src"; python scripts/build_demo_dataset.py` 生成，默认种子 7、肉糜 \(30\,\mathrm{mm}\)、初温 \(8^\circ\mathrm{C}\)、含水 \(0.72\)、组合档、对偶，按 \(8\,\mathrm{s}\) 抽样，来自 `display` 代际。
+
+页面分五栏：运行、孪生、探针、对照、响应面。回放覆盖五种策略 × 三种档位 × 五种厚度；每帧带 31 个核通道与 16 层厚度温度场，三维食物按场着色。响应面另用 `baseline` 代际的 48 种子逐格聚合，与回放不混读。
+
+页面操作：拖拽旋转、滚轮缩放、点击零件看说明；`Space` 播放/暂停，`←/→` 步进（`Shift` 十帧），`1`–`5` 切栏，`S` 剖切。导出的 CSV 含 31 列与 16 层温度。
 
 ## 已知边界
 

@@ -19,7 +19,6 @@ const COOK_LABEL = { steam: "蒸", bake: "烤", combi: "组合" };
 
 function colorOf(value, domain) {
   const x = Math.min(1, Math.max(0, (value - domain[0]) / (domain[1] - domain[0])));
-  // Cool→warm ramp: deep blue for low e_alpha, amber for high.
   const stops = [
     [0.0, [22, 42, 74]],
     [0.24, [40, 84, 128]],
@@ -85,7 +84,6 @@ export function SurfaceMap({ surfaces, policy, metric, surface, onSurface, onMet
           ctx.fillRect(padL + ci * cw, padT + ri * ch, Math.ceil(cw) + 0.5, Math.ceil(ch) + 0.5);
         });
       });
-      // Axis annotations.
       ctx.fillStyle = "#7d8b93";
       ctx.font = "10px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";

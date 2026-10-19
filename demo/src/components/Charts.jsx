@@ -70,7 +70,6 @@ export function TemperatureChart({
       ctx.fillStyle = "#0e1418";
       ctx.fillRect(0, 0, w, h);
 
-      // Probe window band.
       const [p0, p1] = manifest.probeWindow;
       ctx.fillStyle = COL.probe;
       ctx.fillRect(xOf(p0), padT, Math.max(xOf(p1) - xOf(p0), 1), ph);
@@ -80,7 +79,6 @@ export function TemperatureChart({
       ctx.textBaseline = "top";
       ctx.fillText("探针窗", xOf(p0) + 4, padT + 3);
 
-      // Grid + axes.
       ctx.strokeStyle = COL.gridSoft;
       ctx.lineWidth = 1;
       niceTicks(0, tempMax, 4).forEach((v) => {
@@ -109,7 +107,6 @@ export function TemperatureChart({
         ctx.fillText(String(Math.round(m)), x, padT + ph + 6);
       });
 
-      // Axes labels.
       ctx.fillStyle = COL.axis;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -119,7 +116,6 @@ export function TemperatureChart({
       ctx.textAlign = "center";
       ctx.fillText("min", padL + pw / 2, h - 12);
 
-      // Design line and stop marker.
       ctx.save();
       ctx.setLineDash([4, 4]);
       ctx.strokeStyle = COL.design;
@@ -176,7 +172,6 @@ export function TemperatureChart({
       line(times, rows.map((r) => yT(r.tHat)), COL.estimate, 1.3, [3, 3]);
       line(times, rows.map((r) => yA(r.alpha)), COL.alpha, 1.5);
 
-      // Cursor + readout dots.
       const idx = Math.min(frameIndex, rows.length - 1);
       const row = rows[idx];
       const cx = xOf(row.time);

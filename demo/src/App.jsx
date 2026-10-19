@@ -354,25 +354,27 @@ export default function App() {
             showAirflow={showAirflow}
             onPickPart={(part) => setPickedPart(part)}
           />
-          <div className="canvas-top">
-            <div className="mode-tag">
-              {probing ? "探针窗" : frame?.mode === 2 ? "保持" : "品质段"}
-              <span>{policyMeta?.label || "—"} · {cook === "steam" ? "蒸" : cook === "bake" ? "烤" : "组合"} · {lengthMm} mm</span>
-            </div>
-            <div className="view-tools">
-              {VIEW_PRESETS.map((v) => (
-                <button key={v.id} type="button"
-                  className={`tool ${view === v.id && !section ? "on" : ""}`}
-                  onClick={() => { setSection(false); setView(v.id); }}>
-                  {v.label}
+          {pane !== "surface" && (
+            <div className="canvas-top">
+              <div className="mode-tag">
+                {probing ? "探针窗" : frame?.mode === 2 ? "保持" : "品质段"}
+                <span>{policyMeta?.label || "—"} · {cook === "steam" ? "蒸" : cook === "bake" ? "烤" : "组合"} · {lengthMm} mm</span>
+              </div>
+              <div className="view-tools">
+                {VIEW_PRESETS.map((v) => (
+                  <button key={v.id} type="button"
+                    className={`tool ${view === v.id && !section ? "on" : ""}`}
+                    onClick={() => { setSection(false); setView(v.id); }}>
+                    {v.label}
+                  </button>
+                ))}
+                <button type="button" className={`tool ${section ? "on" : ""}`}
+                  onClick={() => setSection((s) => !s)}>
+                  剖切
                 </button>
-              ))}
-              <button type="button" className={`tool ${section ? "on" : ""}`}
-                onClick={() => setSection((s) => !s)}>
-                剖切
-              </button>
+              </div>
             </div>
-          </div>
+          )}
           {pane !== "surface" && (
             <div className="canvas-bottom">
               <div className="hud">
@@ -532,7 +534,7 @@ export default function App() {
   );
 }
 
-/* ------------------------------------------------------------------ rails */
+
 
 function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, setLengthMm, policyMeta }) {
   return (
@@ -809,6 +811,8 @@ function Meter({ label, value, tone = "" }) {
 }
 
 const PART_INFO = {
+  "food": ["食品切片", "沿厚度分成十六层，每层颜色取该控制体的温度；第 6 层是脂肪夹层。"],
+  "steam.plume": ["蒸汽羽流", "喷嘴喷出的蒸汽粒子，浓度跟蒸汽阀；探针窗内全开并染成暖色。"],
   "heater": ["U 形加热管", "六根串并联加热管，指令 0–1 决定管壁温度上限 250 °C。"],
   "fan": ["十叶离心风机", "后壁风机，档位 0–1.3。档位越高，表面换热系数 h = 12 + 55·fan 越大。"],
   "steam.nozzle": ["双锥蒸汽喷嘴", "左壁直喷。窗内蒸汽升到 1.0，窗外回到基线 0.15。"],
