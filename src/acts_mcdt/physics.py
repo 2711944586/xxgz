@@ -186,6 +186,11 @@ def rollout(
     occlude_s: float = 0.0,
     use_mass: bool = True,
     door_s: float | None = None,
+    # --- recording switch ---------------------------------------------------
+    # The trajectory channels are aggregates; the visualisation needs the
+    # through-thickness field itself. Off by default so campaign logs keep
+    # their existing shape and size.
+    store_field: bool = False,
     # --- physics switches ---------------------------------------------------
     # Pass ``generation="display"`` (or spell the switches out) for the
     # interaction-page kernel. The defaults are the campaign baseline, which is
@@ -318,7 +323,11 @@ def rollout(
         "steam", "fan", "exhaust", "mode", "heater",
         "cook_mode", "water", "cav_t", "cav_h", "cav_p", "door", "leak",
         "vapor", "shell", "path_a", "path_b", "path_c", "r_field",
+        "m_surf",
     )}
+    if store_field:
+        hist["t_field"] = []
+        hist["m_field"] = []
     energy_acc = np.zeros(b)
     snap_std = np.full(b, np.nan)
     snap_cold = np.full(b, np.nan)
@@ -605,6 +614,10 @@ def rollout(
             hist["path_b"].append((9000.0 * (1.0 - steam) * np.maximum(aw - 0.35, 0.0) * fan).copy())
             hist["path_c"].append((0.55 * shell * k[:, 0]).copy())
             hist["r_field"].append((1.2 + 2.5 * shell).copy())
+            hist["m_surf"].append(m[:, 0].copy())
+            if store_field:
+                hist["t_field"].append(t.copy())
+                hist["m_field"].append(m.copy())
 
     alpha_end = 1.0 - np.exp(-f_value / 2.0)
     rec_time = np.asarray(rec_time)
