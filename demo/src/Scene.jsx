@@ -10,7 +10,9 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 const T_MIN = 8;
 const T_MAX = 170;
 const N_CELL = 16;
-const CAM = { yaw: -0.36, pitch: 0.27, dist: 7.85, min: 3.8, max: 9.2 };
+// The door hinges on the left, so the default viewpoint sits front-left:
+// an open door then frames the cavity instead of crossing the sight line.
+const CAM = { yaw: 0.46, pitch: 0.26, dist: 8.05, min: 3.8, max: 9.2 };
 
 function heatColor(value) {
   const x = Math.min(1, Math.max(0, (value - T_MIN) / (T_MAX - T_MIN)));
@@ -222,18 +224,61 @@ function makeCavity() {
   addMesh(group, new THREE.BoxGeometry(0.04, 2.4, 0.05), rubber, -2.24, 1.31, 1.36);
   addMesh(group, new THREE.BoxGeometry(0.04, 2.4, 0.05), rubber, 2.24, 1.31, 1.36);
 
+  // ------------------------------------------------------------------
+  // Front door. The opening spans x in [-2.62, 2.62] at z = 1.44, and the
+  // body front face is z = 1.52. The hinge is a vertical axis at the LEFT
+  // edge of the opening, so the panel must be built with its own origin at
+  // that axis and extend to +x.
+  // ------------------------------------------------------------------
   const door = new THREE.Group();
-  door.position.set(2.42, 1.32, 1.52);
-  door.rotation.y = -0.72;
-  addMesh(door, new RoundedBoxGeometry(0.07, 2.64, 0.1, 2, 0.012), chrome, 0, 0, -1.18);
-  addMesh(door, new THREE.BoxGeometry(0.022, 2.48, 2.28), glass, -0.02, 0, 0);
-  addMesh(door, new THREE.BoxGeometry(0.022, 2.48, 2.28), glass, 0.024, 0, 0);
-  addMesh(door, new RoundedBoxGeometry(0.08, 0.09, 2.38, 2, 0.01), enamel, 0, 1.22, 0);
-  addMesh(door, new RoundedBoxGeometry(0.08, 0.09, 2.38, 2, 0.01), enamel, 0, -1.22, 0);
-  addMesh(door, new RoundedBoxGeometry(0.08, 2.54, 0.1, 2, 0.01), enamel, 0, 0, 1.18);
-  addMesh(door, new THREE.CylinderGeometry(0.035, 0.035, 0.58, 16), chrome, 0.08, 0.15, 0.85, 0, 0, Math.PI / 2);
-  addMesh(door, new THREE.SphereGeometry(0.048, 16, 16), chrome, 0.36, 0.15, 0.85);
-  addMesh(door, new THREE.TorusGeometry(0.05, 0.008, 8, 20), brass, 0.36, 0.15, 0.85, 0, 0, Math.PI / 2);
+  // Hinge sits just OUTSIDE the front face so the panel clears the brass frame
+  // as it swings. z = 1.62 is in front of both the frame (1.40) and the body
+  // face (1.52), which removes the interpenetration on opening.
+  door.position.set(-2.66, 1.32, 1.62);
+  const DOOR_W = 5.06;
+  const DOOR_H = 2.56;
+  const doorCenterX = DOOR_W / 2;
+
+  // Outer enamel frame (four rails), thin in z so the face points at +z.
+  addMesh(door, new RoundedBoxGeometry(DOOR_W, 0.10, 0.10, 2, 0.012), enamel,
+          doorCenterX, DOOR_H / 2 - 0.05, 0, 0, 0, 0);
+  addMesh(door, new RoundedBoxGeometry(DOOR_W, 0.10, 0.10, 2, 0.012), enamel,
+          doorCenterX, -DOOR_H / 2 + 0.05, 0, 0, 0, 0);
+  addMesh(door, new RoundedBoxGeometry(0.10, DOOR_H, 0.10, 2, 0.012), enamel,
+          0.05, 0, 0, 0, 0, 0);
+  addMesh(door, new RoundedBoxGeometry(0.10, DOOR_H, 0.10, 2, 0.012), enamel,
+          DOOR_W - 0.05, 0, 0, 0, 0, 0);
+
+  // Two glass panes with a narrow air gap, as on a real appliance door.
+  addMesh(door, new RoundedBoxGeometry(DOOR_W - 0.22, DOOR_H - 0.22, 0.016, 2, 0.008),
+          glass, doorCenterX, 0, 0.018);
+  addMesh(door, new RoundedBoxGeometry(DOOR_W - 0.22, DOOR_H - 0.22, 0.016, 2, 0.008),
+          glass, doorCenterX, 0, -0.018);
+
+  // Gasket around the glass, pressed against the cavity when closed.
+  addMesh(door, new RoundedBoxGeometry(DOOR_W - 0.16, 0.05, 0.05, 2, 0.01), rubber,
+          doorCenterX, DOOR_H / 2 - 0.16, -0.02, 0, 0, 0);
+  addMesh(door, new RoundedBoxGeometry(DOOR_W - 0.16, 0.05, 0.05, 2, 0.01), rubber,
+          doorCenterX, -DOOR_H / 2 + 0.16, -0.02, 0, 0, 0);
+
+  // Handle on the free (right) edge, standing off the face.
+  addMesh(door, new THREE.CylinderGeometry(0.032, 0.032, 0.62, 16), chrome,
+          DOOR_W - 0.30, 0.10, 0.14, 0, 0, 0);
+  addMesh(door, new THREE.CylinderGeometry(0.030, 0.030, 0.16, 12), chrome,
+          DOOR_W - 0.30, 0.10, 0.08, Math.PI / 2, 0, 0);
+  addMesh(door, new THREE.SphereGeometry(0.046, 16, 16), chrome,
+          DOOR_W - 0.30, 0.41, 0.14);
+  addMesh(door, new THREE.SphereGeometry(0.046, 16, 16), chrome,
+          DOOR_W - 0.30, -0.21, 0.14);
+
+  // Hinge barrels, visible at the left edge when the door is open.
+  for (const hy of [-0.85, 0.0, 0.85]) {
+    addMesh(door, new THREE.CylinderGeometry(0.035, 0.035, 0.16, 14), chrome,
+            0.0, hy, 0.0, 0, 0, 0);
+  }
+
+  door.userData.closedZ = 1.62;
+  door.userData.openAngle = -1.15;
   group.add(door);
 
   const fasciaTex = fasciaMap();
@@ -540,10 +585,27 @@ function makeSteam() {
     size: 0.30,
     opacity: 0.36,
     sizeAttenuation: true,
-    color: 0xeaf4f8,
-    color: "#d7e6ee",
-    sizeAttenuation: true,
+    color: 0xd7e6ee,
   });
+  // Drift runs in the vertex shader from one time uniform, so the CPU never
+  // touches the position buffer after the cloud is built.
+  mat.userData.clock = { value: 0 };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uSteamTime = mat.userData.clock;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nuniform float uSteamTime;",
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         float drift = uSteamTime;
+         transformed.x += mod(drift * 0.36 + position.y * 3.1, 2.9);
+         transformed.y += mod(drift * 0.20, 1.1);
+         transformed.z += sin(drift * 0.7 + position.y * 6.0) * 0.05;`,
+      );
+  };
   const points = new THREE.Points(geo, mat);
   points.visible = false;
   return { points, seeds, pos };
@@ -619,6 +681,10 @@ function proceduralSurfaceMaps({ size = 256, streak = 0.22, grain = 0.08 } = {})
   };
 }
 
+const PROBE_GOLD = new THREE.Color("#c4a574");
+const STEAM_COOL = new THREE.Color("#cfe3ea");
+const TOASTED = new THREE.Color("#6b3a18");
+
 export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "combi" }) {
   const host = useRef(null);
   const state = useRef(null);
@@ -626,7 +692,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
   useEffect(() => {
     const el = host.current;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.setSize(el.clientWidth || 760, el.clientHeight || 520);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
@@ -649,7 +715,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     // needs: panel seams, the shadow line under the coil bank and the crease
     // where the food meets the rack. Panels otherwise read as separate boxes.
     const composer = new EffectComposer(renderer);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     composer.setSize(viewW, viewH);
     const gtao = new GTAOPass(scene, camera, viewW, viewH);
     gtao.updateGtaoMaterial({
@@ -830,23 +896,20 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
       if (s) {
         const fan = s.frame?.fan ?? 0.4;
         s.cavity.blades.rotation.z += 0.035 + 0.18 * Math.min(fan / 1.3, 1);
-        const steamOn = s.frame?.steam ?? 0;
-        const showSteam = steamOn > 0.5;
-        s.steam.points.visible = showSteam;
+        const f = s.frame;
+        const steamOn = f?.steam ?? 0;
+        const showSteam = steamOn > 1e-3;
+        const pts = s.steam.points;
+        pts.visible = showSteam;
         s.cavity.jet.visible = showSteam;
-        // Probe window: the information action is an event in the process, so
-        // it gets a visible cue rather than only a caption. Inside 150-190 s
-        // the plume is tinted gold and the jet widens slightly.
-        const t = s.frame?.time ?? 0;
-        const inProbe = t >= 150 && t < 190;
+        const inProbe = f ? (f.time >= 150 && f.time < 190) : false;
         if (showSteam) {
-          const gold = new THREE.Color("#c4a574");
-          const cool = new THREE.Color("#cfe3ea");
-          s.steam.points.material.color.copy(inProbe ? gold : cool);
-          s.steam.points.material.opacity = inProbe
-            ? 0.55 + 0.30 * steamOn
-            : 0.22 + 0.42 * steamOn;
-          s.cavity.jet.scale.setScalar(inProbe ? 1.45 : 1.0);
+          pts.material.color.copy(inProbe ? PROBE_GOLD : STEAM_COOL);
+          pts.material.opacity = inProbe
+            ? 0.50 + 0.30 * steamOn
+            : 0.20 + 0.32 * steamOn;
+          s.cavity.jet.scale.setScalar(inProbe ? 1.35 : 1.0);
+          pts.material.userData.clock.value += inProbe ? 0.045 : 0.022;
         }
         if (showSteam) {
           s.steam.points.material.opacity = 0.22 + 0.42 * steamOn;
@@ -914,8 +977,7 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
         const outer = Math.max(0, 1 - u * 6);
         const mix = brown * outer * 0.55;
         if (mix > 0.001) {
-          const toasted = new THREE.Color("#6b3a18");
-          mesh.material.color.lerp(toasted, mix);
+          mesh.material.color.lerp(TOASTED, mix);
         }
       } else {
         mesh.material.color.copy(color);
@@ -928,7 +990,9 @@ export default function Scene({ frame, length = 0.03, doorOpen = true, cook = "c
     s.lampLight.intensity = 0.45 + 0.55 * frame.heat;
     s.cavity.vent.scale.set(1, 1, 0.55 + 1.2 * frame.exhaust);
     if (s.cavity.door) {
-      s.cavity.door.rotation.y = doorOpen ? -0.72 : 0;
+      const target = doorOpen ? s.cavity.door.userData.openAngle : 0;
+      const d = s.cavity.door;
+      d.rotation.y += (target - d.rotation.y) * 0.12;
     }
     if (s.cavity.knobs) {
       const cookAngle = { steam: 0.4, bake: 2.2, combi: 4.1 }[cook] || 4.1;

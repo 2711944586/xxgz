@@ -31,7 +31,7 @@ await page.waitForFunction(() => {
   return el && Number(el.max) > 100;
 });
 await page.waitForTimeout(2200);
-await page.evaluate(() => window.__actsCam?.set(-0.36, 0.27, 7.85));
+await page.evaluate(() => window.__actsCam?.set(0.46, 0.26, 8.05));
 await page.waitForTimeout(400);
 
 async function setIndex(v) {
@@ -63,9 +63,9 @@ await page.selectOption("#policy", "open");
 await setIndex(0);
 const doorBtn = page.getByRole("button", { name: /开门|关门/ });
 if ((await doorBtn.innerText()) === "开门") await doorBtn.click();
-await page.evaluate(() => window.__actsCam?.set(-0.28, 0.24, 8.15));
+await page.evaluate(() => window.__actsCam?.set(0.46, 0.26, 8.05));
 await shot("E_demo_open.png");
-await page.evaluate(() => window.__actsCam?.set(-0.36, 0.27, 7.85));
+await page.evaluate(() => window.__actsCam?.set(0.46, 0.26, 8.05));
 
 await page.selectOption("#policy", "dual");
 await page.selectOption("#compare", "open");
