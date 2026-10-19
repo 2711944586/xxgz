@@ -38,7 +38,10 @@ body {
   height: 100%;
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  /* Header stack (topbar, provenance, boundary drawer, stage nav, fascia) is
+     content-sized; only the workspace flexes and the timeline keeps its own
+     height. Declaring four fixed rows broke as soon as the header grew. */
+  grid-template-rows: repeat(5, auto) minmax(0, 1fr) auto;
   overflow: hidden;
 }
 
@@ -759,3 +762,53 @@ input[type="range"]::-webkit-slider-thumb {
   line-height: 1.6;
   color: var(--ink-faint, #7b8d96);
 }
+
+/* Stage navigation: the experiment as five ordered questions. */
+.stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line, #2b333a);
+  border-bottom: 1px solid var(--line, #2b333a);
+}
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px 9px;
+  text-align: left;
+  background: #12181c;
+  border: 0;
+  cursor: pointer;
+  color: var(--ink-faint, #6a7c86);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.stage:hover { background: #171f24; color: var(--ink-dim, #9fb3bd); }
+.stage.active {
+  background: #1a2429;
+  color: var(--ink, #dbe6ea);
+  box-shadow: inset 0 -2px 0 0 #c4a574;
+}
+.stage-no {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: #5f7079;
+}
+.stage.active .stage-no { color: #c4a574; }
+.stage-title { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.stage-q {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #66787f;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.stage.active .stage-q { color: #93a7b0; }
+@media (max-width: 900px) {
+  .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage-q { display: none; }
+}
+

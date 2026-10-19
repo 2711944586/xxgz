@@ -192,6 +192,27 @@ function Chart({ rows, compareRows, index, stopS }) {
   return <canvas ref={ref} className="chart" />;
 }
 
+// The five stages of the experiment, in the order a reader needs them.
+// Each states the question it answers, because a navigation label alone does
+// not tell a viewer why they should look there.
+const STAGES = [
+  { id: "overview", no: "01", title: "实验总览",
+    question: "这次仿真的工况、模型代际与最终判定是什么？",
+    targets: ["fascia", "verdict"] },
+  { id: "twin", no: "02", title: "数字孪生",
+    question: "腔体内部的热场、冷点与执行器此刻在做什么？",
+    targets: ["scene"] },
+  { id: "identify", no: "03", title: "信息辨识",
+    question: "探针窗如何把热阻从不可辨识变成可见？",
+    targets: ["events", "hud"] },
+  { id: "strategy", no: "04", title: "策略对照",
+    question: "四条策略在同一工况下的停机与能耗差多少？",
+    targets: ["controls", "fascia"] },
+  { id: "report", no: "05", title: "结果与边界",
+    question: "这些数字的来源、模型边界与可复现信息在哪？",
+    targets: ["boundaries", "export"] },
+];
+
 export default function App() {
   const [catalog, setCatalog] = useState([]);
   const [policy, setPolicy] = useState("dual");
@@ -202,6 +223,28 @@ export default function App() {
   const [playing, setPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(4);
   const [sectionView, setSectionView] = useState(false);
+  const [activeStage, setActiveStage] = useState("overview");
+  // Each stage points at existing DOM regions rather than duplicating content.
+  // The lookup must tolerate a target that has not mounted yet, otherwise the
+  // throw inside this effect cancels the state update and navigation dies.
+  const stageRefs = useRef({});
+  useEffect(() => {
+    const target = {
+      overview: "fascia",
+      twin: "scene",
+      identify: "events",
+      strategy: "controls",
+      report: "boundaries",
+    }[activeStage];
+    const el = target ? stageRefs.current[target] : null;
+    try {
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    } catch {
+      // Navigation is a convenience; never let it break the page.
+    }
+  }, [activeStage]);
   const [doorOpen, setDoorOpen] = useState(true);
   const [error, setError] = useState("");
   const [contract, setContract] = useState(null);
@@ -356,7 +399,7 @@ export default function App() {
       )}
 
       {contract && (
-        <details className="boundary-drawer">
+        <details className="boundary-drawer" ref={(el) => { stageRefs.current.boundaries = el; }}>
           <summary>
             <span className="bd-title">模型边界</span>
             <span className="bd-count">{contract.boundaries.length} 条</span>
@@ -379,7 +422,23 @@ export default function App() {
         </details>
       )}
 
-      <div className="fascia" aria-live="polite">
+      <nav className="stages" aria-label="实验阶段">
+        {STAGES.map((stage) => (
+          <button
+            key={stage.id}
+            type="button"
+            className={`stage ${activeStage === stage.id ? "active" : ""}`}
+            onClick={() => setActiveStage(stage.id)}
+            title={stage.question}
+          >
+            <span className="stage-no">{stage.no}</span>
+            <span className="stage-title">{stage.title}</span>
+            <span className="stage-q">{stage.question}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="fascia" aria-live="polite" ref={(el) => { stageRefs.current.fascia = el; }}>
         <div className="fascia-cell">
           <span>本帧</span>
           <b>{frame ? `${Math.round(frame.time)} s` : "—"}</b>
@@ -417,7 +476,7 @@ export default function App() {
       {error && <p className="err">{error}</p>}
 
       <main className="workspace">
-        <aside className="panel controls">
+        <aside className="panel controls" ref={(el) => { stageRefs.current.controls = el; }}>
           <p className="panel-label">01 工况</p>
           <label htmlFor="cook">产品模式</label>
           <select id="cook" value={cook} onChange={(e) => { setCook(e.target.value); setIndex(0); }}>
@@ -507,7 +566,7 @@ export default function App() {
               1680 s
             </button>
           </div>
-          <p className="panel-label">事件</p>
+          <p className="panel-label" ref={(el) => { stageRefs.current.events = el; }}>事件</p>
           <div className="events">
             <button type="button" className="chip-btn" onClick={() => jumpTo(0)}>起始</button>
             <button type="button" className="chip-btn" onClick={() => jumpTo(160)}>探针窗</button>
@@ -552,7 +611,7 @@ export default function App() {
           </p>
         </aside>
 
-        <section className="panel viewport">
+        <section className="panel viewport" ref={(el) => { stageRefs.current.scene = el; }}>
           <p className="panel-label" style={{ position: "absolute", zIndex: 2, left: 16, top: 10 }}>02 腔体</p>
           <Scene frame={frame} length={length} doorOpen={doorOpen} cook={cook} section={sectionView} />
           {frame && (
