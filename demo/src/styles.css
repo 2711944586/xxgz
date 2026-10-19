@@ -355,9 +355,15 @@ select + h2 { margin-top: 16px; }
 .picked b { color: var(--sand); font-family: var(--mono); }
 
 .rail-foot {
-  padding: 14px 16px 20px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 10px 14px 14px;
   display: grid;
   gap: 6px;
+  background: linear-gradient(180deg, rgba(8, 12, 15, 0.86), #080c0f 42%);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(6px);
 }
 .ghost-btn {
   padding: 8px 10px;
