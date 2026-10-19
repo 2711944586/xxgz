@@ -34,3 +34,10 @@ demo/_*.mjs
 demo/_*.png
 demo/server.log
 demo/preview.log
+demo/_*.cjs
+demo/_*.mjs
+demo/_*.png
+demo/server.log
+demo/preview.log
+demo/dev.log
+demo/*.log
