@@ -73,7 +73,7 @@ S0 在 \(30\,\mathrm{mm}\)、对偶、初温 \(5^\circ\mathrm{C}\)、含水 \(0.
 
 \begin{table*}[t]
 \centering
-\caption{S1：厚度与策略交叉。每格 \(n=1620\)}
+\caption{S1：厚度与策略交叉，每格 \(n=1620\)。同一厚度上比较策略才有效，跨厚度比较会把两条相反的效应混在一起}
 \label{tab:s1L}
 \setlength{\tabcolsep}{3.6pt}
 {\small
@@ -169,7 +169,7 @@ S0 在 \(30\,\mathrm{mm}\)、对偶、初温 \(5^\circ\mathrm{C}\)、含水 \(0.
 \begin{subfigure}[t]{0.46\textwidth}
 \centering
 \includegraphics[width=\linewidth]{C_under.png}
-\caption{S1：未达设计线的比例 \(P(e_{\alpha}<0)\)}
+\caption{S1：未达设计线的比例 \(P(e_{\alpha}<0)\)。开环在薄件上不足一成，到厚件升到全部；对偶把这条曲线整体压低}
 \label{fig:underbar}
 \end{subfigure}
 \end{figure*}
@@ -189,7 +189,7 @@ S1 全表的累计加热中位与停机偏差中位见图\ref{fig:renergy}：开
 \begin{subfigure}[t]{0.49\textwidth}
 \centering
 \includegraphics[width=\linewidth]{R_stop.png}
-\caption{停机时刻分布，竖线为中位}
+\caption{停机时刻分布，竖线为中位。开环的三堆对应三档菜单时刻，腔温比例全部堆在时域终点}
 \label{fig:rstop}
 \end{subfigure}
 \caption{能耗必须与精度连读：开环的低能耗来自提前切断，不是效率}
@@ -524,7 +524,7 @@ S1 每个格子只用 \(30\) 个种子估计中位。宽格子在 \(648\) 个因
 \begin{subfigure}[t]{0.62\textwidth}
 \centering
 \includegraphics[width=\linewidth]{T_l50.png}
-\caption{种子 7、\(50\,\mathrm{mm}\)、对偶：\(55\,\mathrm{min}\) 停在 \(e_{\alpha}=-0.782\)；\(70\,\mathrm{min}\) 走到上沿}
+\caption{种子 7、\(50\,\mathrm{mm}\)、对偶：\(55\,\mathrm{min}\) 与 \(70\,\mathrm{min}\) 两条时域的进度对比。\(55\,\mathrm{min}\) 停在 \(e_{\alpha}=-0.782\)，\(70\,\mathrm{min}\) 才越过设计线，说明厚件受限的是扩散时间而非辨识}
 \label{fig:l50}
 \end{subfigure}\hfill
 \begin{subfigure}[t]{0.36\textwidth}

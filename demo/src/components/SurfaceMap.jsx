@@ -11,7 +11,7 @@ export const SURFACE_METRICS = [
   { id: 0, label: "e_α 中位数", domain: [-0.85, 0.15], fmt: (v) => v.toFixed(2), unit: "" },
   { id: 1, label: "停机 / s", domain: [600, 3300], fmt: (v) => Math.round(v), unit: "s" },
   { id: 2, label: "能耗", domain: [700, 3400], fmt: (v) => Math.round(v), unit: "" },
-  { id: 3, label: "e_α 标准差", domain: [0, 0.06], fmt: (v) => v.toFixed(3), unit: "" },
+  { id: 3, label: "e_α 标准差", domain: [0, 0.27], fmt: (v) => v.toFixed(3), unit: "" },
 ];
 
 const HETERO_LABEL = ["均匀", "厚度抖动", "脂肪夹层"];
@@ -45,7 +45,7 @@ function axisLabel(kind, value) {
   return String(value);
 }
 
-export function SurfaceMap({ surfaces, policy, metric, surface, onSurface, onMetric, onPolicy }) {
+export function SurfaceMap({ surfaces, policy, metric, surface, onSurface, onMetric }) {
   const canvasRef = useRef(null);
   const stripRef = useRef(null);
   const [hover, setHover] = useState(null);

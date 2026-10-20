@@ -163,7 +163,7 @@ function buildDoor(materials, explodeTargets) {
   const door = new THREE.Group();
   door.position.set(-2.66, 1.32, 1.62);
   door.userData.basePos = door.position.clone();
-  door.userData.explode = V(-1.1, 0, 1.95);
+  door.userData.explode = V(-0.18, 0, 1.05);
   explodeTargets.push(door);
 
   const W = 5.06;
@@ -179,8 +179,10 @@ function buildDoor(materials, explodeTargets) {
   const faceW = W - 0.3;
   const faceH = H - 0.34;
   const railT = 0.15;
-  const xL = cx - faceW / 2 + railT / 2;
-  const xR = cx + faceW / 2 - railT / 2;
+  const panelL = (W - faceW) / 2;
+  const panelR = panelL + faceW;
+  const xL = panelL + railT / 2;
+  const xR = panelR - railT / 2;
   add(door, box(faceW, railT, 0.05, 0.008), materials.doorFace, V(cx, faceH / 2 - railT / 2, 0.045), null, "door.panel");
   add(door, box(faceW, railT, 0.05, 0.008), materials.doorFace, V(cx, -faceH / 2 + railT / 2, 0.045), null, "door.panel");
   add(door, box(railT, faceH, 0.05, 0.008), materials.doorFace, V(xL, 0, 0.045), null, "door.panel");
@@ -482,18 +484,26 @@ export function buildCavity() {
   const door = buildDoor(materials, explodeTargets);
   group.add(door);
   const heater = buildHeater(materials);
+  heater.userData.basePos = heater.position.clone();
+  heater.userData.explode = V(0, 0.62, 0);
   group.add(heater);
   const fan = buildFan(materials);
   group.add(fan);
   const steamLine = buildSteam(materials);
+  steamLine.userData.basePos = steamLine.position.clone();
+  steamLine.userData.explode = V(-0.75, 0, 0.3);
   group.add(steamLine);
   const vent = buildVent(materials);
   group.add(vent);
   const racks = buildRacks(materials);
+  racks.userData.basePos = racks.position.clone();
+  racks.userData.explode = V(0, -0.3, 0.34);
   group.add(racks);
   const sensors = buildSensors(materials);
+  sensors.userData.basePos = sensors.position.clone();
+  sensors.userData.explode = V(0, 0.3, 0.5);
   group.add(sensors);
-  explodeTargets.push(fan, racks.userData.tray);
+  explodeTargets.push(fan, racks.userData.tray, heater, steamLine, racks, sensors);
 
   const bay = new THREE.Group();
   add(bay, box(0.8, 0.42, 0.9, 0.03), materials.dark, V(-1.96, 0.4, -1.05), null, "bay", V(-0.48, 0, -0.6));

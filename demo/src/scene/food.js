@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { thermalColor, thermalCss } from "./palette.js";
+import { thermalColor } from "./palette.js";
 
 const N = 16;
 const WIDTH = 1.62;
@@ -131,8 +131,4 @@ export function updateFood(food, frame, lengthM) {
     needle.position.set(coldMark.position.x, 0.9, DEPTH * 0.5 + 0.16);
     needle.visible = false;
   }
-}
-
-export function thermalLegend() {
-  return Array.from({ length: 7 }, (_, i) => thermalCss(8 + (i / 6) * 167));
 }

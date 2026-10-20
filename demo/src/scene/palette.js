@@ -31,13 +31,6 @@ export function thermalCss(value, min = 8, max = 175) {
   return `rgb(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)})`;
 }
 
-export function cssStops(count = 8) {
-  return Array.from({ length: count }, (_, i) => {
-    const t = i / (count - 1);
-    return `${thermalCss(8 + t * 167)} ${(t * 100).toFixed(1)}%`;
-  }).join(", ");
-}
-
 function canvas2d(w, h) {
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -139,21 +132,6 @@ export function dimpleMaps({ size = 512, repeat = 16 } = {}) {
   };
 }
 
-export function enamelMaps({ size = 256, repeat = 2 } = {}) {
-  const rand = rng(778821);
-  const [canvas, ctx] = canvas2d(size, size);
-  const img = ctx.createImageData(size, size);
-  for (let i = 0; i < size * size; i += 1) {
-    const v = 120 + rand() * 22;
-    img.data[i * 4] = v;
-    img.data[i * 4 + 1] = v;
-    img.data[i * 4 + 2] = v;
-    img.data[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  return { roughnessMap: toTexture(canvas, repeat) };
-}
-
 export function steamSprite() {
   const [canvas, ctx] = canvas2d(128, 128);
   const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
@@ -211,10 +189,10 @@ export function rubber(color = "#171b1e") {
 
 export function glass() {
   return new THREE.MeshPhysicalMaterial({
-    color: "#aebbc2",
+    color: "#c3ced4",
     metalness: 0.0,
     roughness: 0.04,
-    transmission: 0.85,
+    transmission: 0.92,
     thickness: 0.06,
     ior: 1.52,
     transparent: true,
@@ -245,12 +223,3 @@ export function brass() {
   });
 }
 
-export function emissive(color, intensity = 1) {
-  return new THREE.MeshStandardMaterial({
-    color,
-    emissive: color,
-    emissiveIntensity: intensity,
-    roughness: 0.4,
-    metalness: 0.1,
-  });
-}

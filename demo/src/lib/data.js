@@ -1,21 +1,3 @@
-const QMAX = 65534;
-
-function toFloat(values, spec) {
-  return Float64Array.from(values, (q) => spec.offset + q * spec.scale);
-}
-
-function decodeRow(base, stride, manifest, index) {
-  const channels = manifest.channels;
-  const frame = {};
-  for (let c = 0; c < channels.length; c += 1) {
-    const spec = channels[c];
-    frame[spec.key] = channels[c].offset === undefined
-      ? 0
-      : spec.offset + base[index * stride + c] * spec.scale;
-  }
-  return frame;
-}
-
 export function decodeScenario(manifest, buffer, key) {
   const meta = manifest.scenarios.find((s) => s.key === key);
   if (!meta) throw new Error(`unknown scenario ${key}`);
@@ -66,27 +48,6 @@ export async function loadDemo() {
     throw new Error(`轨迹字节数不符：期望 ${expectedBytes}，实际 ${buffer.byteLength}`);
   }
   return { manifest, surfaces, contract, buffer };
-}
-
-export function surfaceAt(surfaces, kind, policy, rowIndex, colIndex) {
-  const grid = surfaces?.grids?.[kind];
-  if (!grid) return null;
-  const series = grid.series.find((s) => s.policy === policy);
-  if (!series) return null;
-  return series.rows[rowIndex]?.[colIndex] ?? null;
-}
-
-export function nearestIndex(axis, value) {
-  let best = 0;
-  let dist = Infinity;
-  axis.forEach((v, i) => {
-    const d = Math.abs(v - value);
-    if (d < dist) {
-      dist = d;
-      best = i;
-    }
-  });
-  return best;
 }
 
 export function eventsOf(manifest, scenario) {

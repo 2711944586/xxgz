@@ -56,7 +56,7 @@ export default function Scene({
     const h0 = el.clientHeight || 620;
     renderer.setSize(w0, h0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.22;
+    renderer.toneMappingExposure = 1.34;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -96,7 +96,7 @@ export default function Scene({
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
-    const hemi = new THREE.HemisphereLight(0xe8f0f5, 0x2a343b, 0.72);
+    const hemi = new THREE.HemisphereLight(0xeaf2f7, 0x313c44, 0.95);
     const key = new THREE.DirectionalLight(0xfff4e6, 1.55);
     key.position.set(4.6, 6.8, 5.2);
     key.castShadow = true;
@@ -259,6 +259,17 @@ export default function Scene({
 
       s.explodeAmt += ((L.explode ?? 0) - s.explodeAmt) * (1 - Math.exp(-6 * dt));
       const ex = s.explodeAmt;
+      // Pull the camera back as the stack separates, otherwise the outer
+      // panels leave the frame exactly when the reader wants to see them.
+      if (s.baseDist == null) s.baseDist = camera.position.distanceTo(controls.target);
+      const wanted = s.baseDist * (1 + 0.42 * ex);
+      if (!s.camGoal) {
+        const dir = camera.position.clone().sub(controls.target);
+        const dist = dir.length();
+        if (Math.abs(dist - wanted) > 0.004) {
+          camera.position.copy(controls.target).addScaledVector(dir.normalize(), wanted);
+        }
+      }
       s.cavity.explodeTargets.forEach((m) => {
         if (!m.userData.basePos || !m.userData.explode) return;
         m.position.copy(m.userData.basePos).addScaledVector(m.userData.explode, ex);

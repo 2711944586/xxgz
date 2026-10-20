@@ -926,108 +926,25 @@ select + h2 { margin-top: 16px; }
   * { transition: none !important; animation: none !important; }
 }
 
-/* ---------- narrow-screen repair pass 2 ----------
-   The first pass covered the outer grid but missed the inner ones: main.stage
-   is a grid whose single column is sized by its widest child (539.6 px), and
-   the two rails inside it inherit that width. Forcing minmax(0,1fr) on the
-   inner grids and min-width:0 on their items lets the content shrink instead
-   of pushing the page wider than the viewport. */
-@media (max-width: 900px) {
-  main.stage,
-  .stage,
-  .bench,
-  .rail,
-  .rail-left,
-  .rail-right,
-  .group {
-    display: block !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    float: none !important;
-  }
-  main.stage > *,
-  .rail > *,
-  .group > * {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box;
-  }
-  ul, ol, li, dl { min-width: 0 !important; max-width: 100% !important; }
-  button { max-width: 100% !important; white-space: normal !important; }
-  pre, code, table { max-width: 100% !important; overflow-x: auto !important; }
-}
-
-
-/* ---------- narrow-screen repair pass 3 ----------
-   Root cause found: .shell declares grid-template-rows but no
-   grid-template-columns, so the implicit column is sized by the widest child
-   (539.6 px) and every descendant inherits that width. Pinning the implicit
-   column to minmax(0,1fr) makes content shrink to the viewport instead. */
-.shell {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 @media (max-width: 900px) {
   .shell {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto auto auto auto !important;
-    height: auto !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    height: auto;
     min-height: 100dvh;
   }
   .top {
-    flex-wrap: wrap !important;
-    height: auto !important;
-    min-height: 70px;
+    height: auto;
+    min-height: 0;
+    flex-wrap: wrap;
     gap: 8px;
-    padding: 10px 12px !important;
+    padding: 10px 12px;
   }
-  .top > * { min-width: 0; max-width: 100%; }
-  .main, .stage, .bench, .rail, .group, section, aside, main {
-    display: block !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-  .main > *, .rail > *, .group > *, section > *, aside > *, main > * {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box;
-  }
-  * { min-width: 0; }
-  ul, ol, li, dl, dt, dd, p, span, b, button, select, input {
-    max-width: 100% !important;
-    word-break: break-word;
-  }
-  button, select { white-space: normal !important; }
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .rail, .rail-left, .rail-right, .group { min-width: 0; }
+  ul, ol, li, dl, dt, dd, p, span, b, button, select, input { min-width: 0; }
+  canvas, svg, img, video { max-width: 100%; }
 }
-
-
-/* ---------- narrow-screen repair pass 4: the last few overflow items ---------- */
-@media (max-width: 900px) {
-  /* canvas elements keep their backing-store width; let CSS scale them down */
-  canvas, svg, img, video {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  /* grids that still size to content */
-  [style*="grid-template-columns"], .grid, .row, .rowline {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-  /* anything positioned past the right edge */
-  .hud, .callout, .tooltip, .legend, .scalebar, .readout, .note, .hint {
-    max-width: calc(100vw - 24px) !important;
-    left: auto !important;
-    right: 12px !important;
-    transform: none !important;
-  }
-  pre, code { white-space: pre-wrap !important; }
-}
-
 
 @media (max-width: 760px) {
   .shell { grid-template-rows: auto auto auto auto; }

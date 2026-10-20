@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Scene, { VIEW_PRESETS } from "./Scene.jsx";
 import { TemperatureChart, ActuatorChart } from "./components/Charts.jsx";
 import { SurfaceMap } from "./components/SurfaceMap.jsx";
@@ -13,14 +13,6 @@ const PANES = [
   { id: "compare", label: "对照", hint: "五条策略的停机几何" },
   { id: "surface", label: "响应面", hint: "厚度与初温的连续曲面" },
 ];
-
-const POLICY_ORDER = ["dual", "mpc", "mpc_h", "pid", "open"];
-
-const CH_LABEL = {
-  tSurf: "表面", tCore: "冷点", tHat: "估计", alpha: "α", varR: "方差", rHat: "r̂",
-  heat: "加热", steam: "蒸汽", fan: "风机", exhaust: "排汽", water: "水位",
-  cavT: "腔温", cavH: "腔湿", mMean: "含水", heater: "管温", energy: "能耗",
-};
 
 function fmt(v, digits = 2) {
   if (v == null || Number.isNaN(v)) return "—";
@@ -142,13 +134,20 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (ev) => {
-      if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return;
-      if (ev.code === "Space") {
+      const el = ev.target;
+      const typing = el instanceof HTMLInputElement
+        && !["range", "checkbox", "radio", "button"].includes(el.type);
+      if (typing || el instanceof HTMLSelectElement) return;
+      // A focused slider keeps the arrow keys (its own stepping) and space
+      // (page scroll guard); every other shortcut still applies, so the page
+      // does not go dead after a drag.
+      const onRange = el instanceof HTMLInputElement;
+      if (ev.code === "Space" && !onRange) {
         ev.preventDefault();
         setPlaying((p) => !p);
-      } else if (ev.code === "ArrowRight") {
+      } else if (ev.code === "ArrowRight" && !onRange) {
         setIndex((i) => Math.min(rows.length - 1, i + (ev.shiftKey ? 10 : 1)));
-      } else if (ev.code === "ArrowLeft") {
+      } else if (ev.code === "ArrowLeft" && !onRange) {
         setIndex((i) => Math.max(0, i - (ev.shiftKey ? 10 : 1)));
       } else if (ev.key === "1") setPane("run");
       else if (ev.key === "2") setPane("twin");
@@ -401,7 +400,6 @@ export default function App() {
                 surface={surface}
                 onSurface={setSurface}
                 onMetric={setMetric}
-                onPolicy={setPolicy}
               />
             </div>
           )}

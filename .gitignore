@@ -41,3 +41,7 @@ demo/server.log
 demo/preview.log
 demo/dev.log
 demo/*.log
+_*.png
+_*.cjs
+_*.py
+!scripts/_*.py
