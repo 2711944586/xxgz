@@ -769,16 +769,19 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
     <>
       <section className="group">
         <h2>本帧</h2>
-        <dl className="readout">
-          <div><dt>表面温度</dt><dd>{fmt(frame.tSurf, 2)} °C</dd></div>
-          <div><dt>冷点温度</dt><dd>{fmt(frame.tCore, 2)} °C</dd></div>
-          <div><dt>冷点估计</dt><dd>{fmt(frame.tHat, 2)} °C</dd></div>
-          <div><dt>热力进度 α</dt><dd className={frame.alpha >= 0.85 ? "ok" : ""}>{fmt(frame.alpha, 3)}</dd></div>
-          <div><dt>褐变进度</dt><dd>{fmt(frame.alphaB, 3)}</dd></div>
-          <div><dt>热阻 / 方差</dt><dd>{fmt(frame.rHat, 2)} / {fmt(frame.varR, 3)}</dd></div>
-          <div><dt>平均含水</dt><dd>{fmt(frame.mMean, 3)}</dd></div>
-          <div><dt>结壳量</dt><dd>{fmt(frame.shell, 3)}</dd></div>
-          <div><dt>腔温 / 腔湿</dt><dd>{fmt(frame.cavT, 1)} °C / {fmt(frame.cavH, 2)}</dd></div>
+        <dl className="readout cols-2">
+          <div><dt>表面</dt><dd>{fmt(frame.tSurf, 1)} °C</dd></div>
+          <div><dt>冷点</dt><dd>{fmt(frame.tCore, 1)} °C</dd></div>
+          <div><dt>估计</dt><dd>{fmt(frame.tHat, 1)} °C</dd></div>
+          <div><dt>进度 α</dt><dd className={frame.alpha >= 0.85 ? "ok" : ""}>{fmt(frame.alpha, 3)}</dd></div>
+          <div><dt>褐变</dt><dd>{fmt(frame.alphaB, 3)}</dd></div>
+          <div><dt>结壳</dt><dd>{fmt(frame.shell, 3)}</dd></div>
+          <div><dt>热阻 r̂</dt><dd>{fmt(frame.rHat, 2)}</dd></div>
+          <div><dt>方差</dt><dd>{fmt(frame.varR, 3)}</dd></div>
+          <div><dt>含水</dt><dd>{fmt(frame.mMean, 3)}</dd></div>
+          <div><dt>腔温</dt><dd>{fmt(frame.cavT, 1)} °C</dd></div>
+          <div><dt>腔湿</dt><dd>{fmt(frame.cavH, 2)}</dd></div>
+          <div><dt>管温</dt><dd>{fmt(frame.heater, 1)} °C</dd></div>
         </dl>
         <h2>执行器</h2>
         <Meter label="加热" value={frame.heat} />
@@ -789,10 +792,6 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
         <div className="tiny-row">
           <span>请求 → 指令</span>
           <b>{fmt(frame.heatReq, 2)} → {fmt(frame.heat, 2)}</b>
-        </div>
-        <div className="tiny-row">
-          <span>加热器</span>
-          <b>{fmt(frame.heater, 1)} °C</b>
         </div>
       </section>
 
