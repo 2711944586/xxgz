@@ -9,7 +9,9 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { buildCavity } from "./scene/cavity.js";
 import { buildFood, updateFood } from "./scene/food.js";
 import { buildSteam, buildAirflow } from "./scene/steam.js";
-import { ANNOTATIONS, anchorVector, projectionOf } from "./scene/annotations.js";
+import {
+  ANNOTATIONS, EXPLODE_LABELS, anchorVector, layoutCallouts, projectionOf,
+} from "./scene/annotations.js";
 import { radialShadow } from "./scene/palette.js";
 import { studioEnvironment, floorTexture } from "./scene/environment.js";
 
@@ -35,6 +37,7 @@ export default function Scene({
   section = false,
   explode = 0,
   annotations = false,
+  explodeLabels = false,
   showSteam = true,
   showAirflow = true,
   cavityLightOn = true,
@@ -42,11 +45,12 @@ export default function Scene({
 }) {
   const host = useRef(null);
   const overlay = useRef(null);
+  const explodeOverlay = useRef(null);
   const state = useRef(null);
   const pickRef = useRef(onPickPart);
   pickRef.current = onPickPart;
   const live = useRef({});
-  live.current = { frame, lengthM, doorOpen, view, section, explode, annotations, showSteam, showAirflow, cavityLightOn };
+  live.current = { frame, lengthM, doorOpen, view, section, explode, annotations, explodeLabels, showSteam, showAirflow, cavityLightOn };
 
   useEffect(() => {
     const el = host.current;
@@ -321,6 +325,46 @@ export default function Scene({
       controls.update();
       s.composer.render();
 
+      const eLayer = explodeOverlay.current;
+      if (eLayer) {
+        const rect = el.getBoundingClientRect();
+        const show = L.explodeLabels && ex > 0.06 && rect.width > 0;
+        eLayer.style.opacity = show ? String(Math.min(1, (ex - 0.06) * 4)) : "0";
+        if (show) {
+          const anchors = s.cavity.parts;
+          const items = [];
+          for (const spec of EXPLODE_LABELS.items) {
+            const host2 = {
+              shellTop: anchors.shell, insulation: anchors.shell, liner: anchors.shell,
+              heaterAssy: anchors.heater, fanAssy: anchors.fan, steamAssy: anchors.steamLine,
+              racksAssy: anchors.racks, doorAssy: anchors.door,
+            }[spec.id];
+            if (!host2) continue;
+            const local = s.cavity.labelLocals?.[spec.id];
+            if (!local) continue;
+            const world = host2.localToWorld(local.clone());
+            const p = projectionOf(camera, world, rect.width, rect.height);
+            if (p.behind) continue;
+            items.push({ ...spec, x: p.x, y: p.y });
+          }
+          const placed = layoutCallouts(items, rect.width, { gap: 38 });
+          for (const it of placed) {
+            const node = eLayer.querySelector(`[data-ann="${it.id}"]`);
+            if (!node) continue;
+            node.style.transform = `translate(${it.cardX.toFixed(1)}px, ${it.cardY.toFixed(1)}px)`;
+            node.style.visibility = "visible";
+            node.dataset.side = it.side;
+            const lead = node.querySelector(".ann-lead");
+            if (lead) {
+              const dx = it.x - it.cardX;
+              const dy = it.y - it.cardY;
+              lead.style.width = `${Math.hypot(dx, dy).toFixed(1)}px`;
+              lead.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+            }
+          }
+        }
+      }
+
       const layer = overlay.current;
       if (layer) {
         const rect = el.getBoundingClientRect();
@@ -382,6 +426,17 @@ export default function Scene({
       <div className="ann-layer" ref={overlay}>
         {ANNOTATIONS.map((a) => (
           <div className="ann" data-ann={a.id} key={a.id}>
+            <span className="ann-lead" />
+            <span className="ann-card">
+              <b>{a.text}</b>
+              <i>{a.sub}</i>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="ann-layer explode-layer" ref={explodeOverlay}>
+        {EXPLODE_LABELS.items.map((a) => (
+          <div className="ann explode-ann" data-ann={a.id} key={a.id}>
             <span className="ann-lead" />
             <span className="ann-card">
               <b>{a.text}</b>

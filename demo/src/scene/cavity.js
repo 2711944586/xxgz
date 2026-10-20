@@ -93,6 +93,16 @@ function buildMaterials() {
   };
 }
 
+
+function attachAnchor(host, name, local) {
+  const o = new THREE.Object3D();
+  o.name = `anchor:${name}`;
+  o.position.copy(local);
+  host.add(o);
+  host.userData.anchor = o;
+  return o;
+}
+
 function buildShell(materials, explodeTargets) {
   const g = new THREE.Group();
   const { outer, insulation, liner } = materials;
@@ -106,6 +116,13 @@ function buildShell(materials, explodeTargets) {
     [box(0.2, 3.08, 3.26, 0.05), outer, V(2.52, 1.36, 0), "shell.right", V(1.55, 0, 0)],
   ];
   panels.forEach(([geo, mat, pos, part, exp]) => push(add(g, geo, mat, pos, null, part, exp)));
+  g.userData.panelAnchors = {
+    top: new THREE.Vector3(0, 2.8, 0),
+    bottom: new THREE.Vector3(0, -0.09, 0),
+    back: new THREE.Vector3(0, 1.36, -1.6),
+    left: new THREE.Vector3(-2.52, 1.36, 0),
+    right: new THREE.Vector3(2.52, 1.36, 0),
+  };
 
   [
     [box(5.18, 0.34, 0.14, 0.03), V(0, 2.72, 1.44), "shell.top", V(0, 0.95, 0)],
@@ -505,6 +522,12 @@ export function buildCavity() {
   group.add(sensors);
   explodeTargets.push(fan, racks.userData.tray, heater, steamLine, racks, sensors);
 
+  attachAnchor(heater, "heater", new THREE.Vector3(1.5, 0.12, 0.4));
+  attachAnchor(fan, "fan", new THREE.Vector3(0, 0.85, 0.2));
+  attachAnchor(steamLine, "steam", new THREE.Vector3(0.1, 0.9, 0.5));
+  attachAnchor(racks, "racks", new THREE.Vector3(1.15, 0.1, 0.55));
+  attachAnchor(door, "door", new THREE.Vector3(5.0, 1.4, 0.1));
+
   const bay = new THREE.Group();
   add(bay, box(0.8, 0.42, 0.9, 0.03), materials.dark, V(-1.96, 0.4, -1.05), null, "bay", V(-0.48, 0, -0.6));
   add(bay, box(0.72, 0.06, 0.8, 0.01), materials.chrome, V(-1.96, 0.62, -1.05), null, "bay");
@@ -525,9 +548,21 @@ export function buildCavity() {
     }
   });
 
+  const panelAnchors = shell.userData.panelAnchors;
+  const labelLocals = {
+    shellTop: new THREE.Vector3(0, 2.9, 0),
+    insulation: new THREE.Vector3(0, 2.64, 0.1),
+    liner: new THREE.Vector3(0, 2.42, 0.1),
+    heaterAssy: new THREE.Vector3(1.6, 0.16, 0.35),
+    fanAssy: new THREE.Vector3(0, 0.9, 0.24),
+    steamAssy: new THREE.Vector3(0.14, 0.95, 0.55),
+    racksAssy: new THREE.Vector3(1.2, 0.12, 0.6),
+    doorAssy: new THREE.Vector3(4.95, 1.42, 0.12),
+  };
+
   return {
     group, materials,
     parts: { shell, door, heater, fan, steamLine, vent, racks, sensors, bay },
-    explodeTargets, sectionPanels, topPanels,
+    explodeTargets, sectionPanels, topPanels, panelAnchors, labelLocals,
   };
 }

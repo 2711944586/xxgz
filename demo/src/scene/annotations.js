@@ -13,6 +13,20 @@ export const ANNOTATIONS = [
   { id: "humidity", anchor: [1.88, 1.62, 1.18], text: "腔体湿度探头", sub: "近排汽口" },
 ];
 
+export const EXPLODE_LABELS = {
+  id: "explode",
+  items: [
+    { id: "shellTop", text: "外壳顶板", sub: "深色钢板" },
+    { id: "insulation", text: "岩棉保温层", sub: "夹层隔热" },
+    { id: "liner", text: "拉丝不锈钢内衬", sub: "压花板" },
+    { id: "heaterAssy", text: "U 形加热管组", sub: "六根 + 反射板" },
+    { id: "fanAssy", text: "十叶风机", sub: "后壁离心" },
+    { id: "steamAssy", text: "蒸汽管路与水箱", sub: "左壁" },
+    { id: "racksAssy", text: "搁架与烤盘", sub: "四层" },
+    { id: "doorAssy", text: "门体", sub: "双层玻璃 + 钢框" },
+  ],
+};
+
 export function anchorVector(anchor) {
   return new THREE.Vector3(anchor[0], anchor[1], anchor[2]);
 }
@@ -24,4 +38,28 @@ export function projectionOf(camera, vector, width, height) {
     y: (-p.y * 0.5 + 0.5) * height,
     behind: p.z > 1,
   };
+}
+
+/* Lay callouts out in two columns ordered by projected height, so cards never
+   overlap and every leader stays a straight line back to its own part. */
+export function layoutCallouts(items, width, opts = {}) {
+  const gap = opts.gap ?? 42;
+  const edge = opts.edge ?? 10;
+  const split = opts.split ?? 0.5;
+  const sorted = [...items].sort((a, b) => a.y - b.y);
+  const lanes = { left: [], right: [] };
+  return sorted.map((item) => {
+    const side = item.x < width * split ? "left" : "right";
+    const lane = lanes[side];
+    let y = item.y;
+    const last = lane[lane.length - 1];
+    if (last != null && y - last < gap) y = last + gap;
+    lane.push(y);
+    return {
+      ...item,
+      side,
+      cardX: side === "left" ? Math.max(edge, item.x - 14) : Math.min(width - edge, item.x + 14),
+      cardY: y,
+    };
+  });
 }

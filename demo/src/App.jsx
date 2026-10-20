@@ -50,6 +50,8 @@ export default function App() {
   const [view, setView] = useState("home");
   const [section, setSection] = useState(false);
   const [explode, setExplode] = useState(0);
+  const [explodeLabels, setExplodeLabels] = useState(true);
+  const [autoExplode, setAutoExplode] = useState(false);
   const [annotations, setAnnotations] = useState(true);
   const [orphan, setOrphan] = useState(null);
   const [doorOpen, setDoorOpen] = useState(true);
@@ -123,6 +125,23 @@ export default function App() {
     }, frameMs);
     return () => window.clearInterval(id);
   }, [playing, rows.length, speed]);
+
+  useEffect(() => {
+    if (!autoExplode) return undefined;
+    let raf = 0;
+    const t0 = performance.now();
+    const DURATION = 2600;
+    const step = () => {
+      const t = Math.min(1, (performance.now() - t0) / DURATION);
+      // ease-in-out so the stack settles instead of snapping
+      const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+      setExplode(eased);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else setAutoExplode(false);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [autoExplode]);
 
   const seekTime = useCallback((seconds) => {
     if (!rows.length) return;
@@ -292,6 +311,8 @@ export default function App() {
               view={view} setView={setView}
               section={section} setSection={setSection}
               explode={explode} setExplode={setExplode}
+              explodeLabels={explodeLabels} setExplodeLabels={setExplodeLabels}
+              autoExplode={autoExplode} setAutoExplode={setAutoExplode}
               annotations={annotations} setAnnotations={setAnnotations}
               showSteam={showSteam} setShowSteam={setShowSteam}
               showAirflow={showAirflow} setShowAirflow={setShowAirflow}
@@ -353,6 +374,7 @@ export default function App() {
             view={view}
             section={section || pane === "compare"}
             explode={explode}
+            explodeLabels={explodeLabels}
             annotations={annotations && (pane === "twin" || pane === "run") && !isDoorClosed}
             showSteam={showSteam}
             showAirflow={showAirflow}
@@ -581,6 +603,7 @@ function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, set
 
 function TwinControls({
   view, setView, section, setSection, explode, setExplode, annotations, setAnnotations,
+  explodeLabels, setExplodeLabels, autoExplode, setAutoExplode,
   showSteam, setShowSteam, showAirflow, setShowAirflow, orphan, setOrphan, pickedPart,
   doorOpen, setDoorOpen,
 }) {
@@ -605,9 +628,23 @@ function TwinControls({
         <label className="slider-row">
           <span>爆炸分解</span>
           <input type="range" min={0} max={1} step={0.01} value={explode}
-            onChange={(e) => setExplode(Number(e.target.value))} />
+            onChange={(e) => { setAutoExplode(false); setExplode(Number(e.target.value)); }} />
           <b>{Math.round(explode * 100)}%</b>
         </label>
+        <div className="seg-row auto-row">
+          <button type="button" className={`seg ${autoExplode ? "on" : ""}`}
+            onClick={() => { setAutoExplode(true); setExplodeLabels(true); }}>
+            {autoExplode ? "分解中…" : "自动分解"}
+          </button>
+          <button type="button" className={`seg ${explode > 0.02 ? "" : "on"}`}
+            onClick={() => { setAutoExplode(false); setExplode(0); }}>
+            复位
+          </button>
+        </div>
+        <button type="button" className={`toggle ${explodeLabels ? "on" : ""}`} onClick={() => setExplodeLabels((v) => !v)}>
+          <span>分解标注</span>
+          <i>{explodeLabels ? "开" : "关"}</i>
+        </button>
         <button type="button" className={`toggle ${annotations ? "on" : ""}`} onClick={() => setAnnotations((v) => !v)}>
           <span>零件标注</span>
           <i>{annotations ? "开" : "关"}</i>
