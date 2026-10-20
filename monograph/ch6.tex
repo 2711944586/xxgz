@@ -25,59 +25,58 @@ T_i=T_s-(T_s-T_{\mathrm{cold}})\,u_i^{1.15},\qquad u_i=i/15
 
 底部曲线左轴为 \(0\)--\(180^\circ\mathrm{C}\)，右轴为进度 \(\alpha\in[0,1]\)，横轴为分钟；浅色竖带标出 \(150\)--\(190\,\mathrm{s}\) 探针窗。若打开对照策略，第二条冷点与进度以虚线叠在同一坐标上，用来直接看见开环菜单切断、腔温比例不停机、无探针提前停、对偶窗后方差下降这四件事。停机时刻取自当前轨迹的评分：\(30\,\mathrm{mm}\) 对偶组合约为 \(1864\,\mathrm{s}\)，\(50\,\mathrm{mm}\) 对偶组合为 \(3298\,\mathrm{s}\)，开环则落在菜单时间。门开关只改铰链开度，进入安全侧测量，不改已经写出的温度数组。
 
-图\ref{fig:demo}给出组合档、对偶策略、\(30\,\mathrm{mm}\) 的四帧，起始帧加热请求与指令重合为 \(1\)，蒸汽为基线 \(0.15\)，十六块薄片接近初温。探针窗约 \(160\,\mathrm{s}\)，蒸汽粒子从左侧喷嘴喷出，表面已经显著高于冷点，估计仍接近零。\(1680\,\mathrm{s}\) 品质段加热请求 \(0.476\)，冷点 \(70.21^\circ\mathrm{C}\)，进度 \(0.558\)，蒸汽回到基线。对照开环时，虚线在 \(1170\,\mathrm{s}\) 附近折平，冷点停在 \(16^\circ\mathrm{C}\) 量级。
+图\ref{fig:demo}给出组合档、对偶策略、\(30\,\mathrm{mm}\) 的三帧正面视角：门体与面板、关门后的玻璃窗、以及移开近侧壁板的剖切。三张都从同一位置拍摄，因此可以直接比较门与内胆的前后关系。探针窗内蒸汽粒子从左侧喷嘴喷出，表面已经显著高于冷点，而估计仍接近零；这正是稳态观测看不见内部热阻的直观原因。
 
 \begin{figure*}[t]
 \centering
-\begin{subfigure}[t]{0.48\textwidth}
+\begin{subfigure}[t]{0.32\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_section.png}
-\caption{剖面视图：门隐藏后可见加热管、喷嘴、后壁风机、烤架与十六块薄片。这是腔体内部几何的总览}
+\includegraphics[width=\linewidth]{02_twin_front.png}
+\caption{正面视角。门体、控制面板、三枚旋钮与腔门状态灯}
 \label{fig:demo1}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.48\textwidth}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.32\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_start.png}
-\caption{起始帧。色带接近初温，蒸汽为基线}
+\includegraphics[width=\linewidth]{03_twin_door_closed.png}
+\caption{腔门关闭。钢框与黑玻璃后面仍可见腔体内部与十六块薄片}
 \label{fig:demo2}
-\end{subfigure}
-
-\vspace{0.28em}
-\begin{subfigure}[t]{0.48\textwidth}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.32\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_probe.png}
-\caption{探针窗前半段。蒸汽从喷嘴喷出，在窗内转为金色}
+\includegraphics[width=\linewidth]{04_twin_section.png}
+\caption{剖切视图。近侧壁板移开，加热管、喷嘴、后壁风机与烤架可见}
 \label{fig:demo3}
 \end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.48\textwidth}
-\centering
-\includegraphics[width=\linewidth]{E_demo_compare.png}
-\caption{对照开环。虚线为菜单切断后的冷点与进度}
-\label{fig:democmp}
-\end{subfigure}
-\caption{组合档、对偶策略、肉糜 \(30\,\mathrm{mm}\)、种子 7。页面读取同一数值核写出的状态流}
+\caption{组合档、对偶策略、肉糜 \(30\,\mathrm{mm}\)、种子 7。三张均为正面视角，页面读取同一数值核写出的状态流}
 \label{fig:demo}
 \end{figure*}
+
+爆炸分解是唯一一张静态图无法承载的交互：九层零件沿各自的装配轴分离，静态图只能拍到其中一帧。图\ref{fig:demoexplode}把它做成可播放的动画——在 Acrobat、Okular 或 pdf.js 里逐层展开再复位，其他阅读器显示松开分解量的首帧。分解标注随零件移动，因此每一层都能对回外壳顶板、岩棉保温层、拉丝不锈钢内衬、U 形加热管组、十叶风机、蒸汽管路、搁架与门体。
+
+\begin{figure}[htbp]
+\centering
+\animategraphics[width=0.86\linewidth,loop,autoplay,controls]{12}{anim_explode/f}{000000}{000041}
+\caption{爆炸分解动画（42 帧）。九层零件沿装配轴分离并标注，随后复位。需要支持 JavaScript 的阅读器；不支持的阅读器显示首帧}
+\label{fig:demoexplode}
+\end{figure}
 
 页面不只有三维视图。图\ref{fig:demochain}是同一页上的机制链：五个环节依次回答"稳态观测为什么看不见热阻""探针窗里执行器做了什么""后验收缩了多少""哪些指令因此改变""最终是否满足停机判据"，每一步都列出该环节依赖的真实数字——探针前方差 \(0.640\)、窗后 \(0.224\)、收缩 \(2.86\) 倍、首次越线 \(1760\,\mathrm{s}\)。这些数字直接取自当前加载的轨迹，页面不重跑积分，也不补造数值。把同一条链的失效条件写在每一步下方，是为了让读者看见结论成立的前提，而不只是结论。
 
 \begin{figure*}[t]
 \centering
-\begin{subfigure}[t]{0.49\textwidth}
+\begin{subfigure}[t]{0.52\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_chain.png}
-\caption{机制链：五个环节各带真实数据。当前选中的是"停止判据"，显示进度、首次越线时刻与设计线}
+\includegraphics[width=\linewidth]{06_probe.png}
+\caption{探针栏。机制链五步各自带该环节依赖的真实数字：探针前方差 \(0.640\)、窗后 \(0.224\)、收缩 \(2.86\) 倍、首次越线 \(1760\,\mathrm{s}\)}
 \label{fig:demochain}
 \end{subfigure}\hfill
-\begin{subfigure}[t]{0.49\textwidth}
+\begin{subfigure}[t]{0.46\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_prov.png}
-\caption{顶部数据来源与模型边界。徽标声明"离线轨迹回放"与"数值核 display"，抽屉列出五条边界}
-\label{fig:demoprov}
+\includegraphics[width=\linewidth]{07_compare.png}
+\caption{对照栏。同工况五种策略的停机时刻、\(e_{\alpha}\) 与能耗排成一张表}
+\label{fig:democmp}
 \end{subfigure}
-\caption{页面的科研可信度层：机制链给出因果解释，来源徽标与边界抽屉给出使用条件}
+\caption{页面的解释层：机制链给出因果，对照栏把同一工况下的五种策略并排放}
 \label{fig:demometa}
 \end{figure*}
 
@@ -85,8 +84,8 @@ T_i=T_s-(T_s-T_{\mathrm{cold}})\,u_i^{1.15},\qquad u_i=i/15
 
 \begin{figure}[htbp]
 \centering
-\colimg{E_demo_stages.png}
-\caption{五栏导航。每栏标注它回答的问题，而不只是一个名称}
+\includegraphics[width=\linewidth]{08_surface.png}
+\caption{响应面栏。厚度对初温的连续曲面，着色为同格 \(e_{\alpha}\) 中位数；左侧给出截面、着色与策略三个开关，右侧给出该格的四十六个种子读数}
 \label{fig:demostages}
 \end{figure}
 
@@ -94,27 +93,19 @@ T_i=T_s-(T_s-T_{\mathrm{cold}})\,u_i^{1.15},\qquad u_i=i/15
 
 \begin{figure*}[t]
 \centering
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_open.png}
-\caption{门打开时的腔体。门板绕左侧铰链外摆，可见内胆、烤架与十六块薄片的排布}
+\includegraphics[width=\linewidth]{01_run.png}
+\caption{运行栏。顶部仪表带并排给出本帧时刻、冷点、进度、\(e_{\alpha}\)、停机与方差，底部为时序曲线}
 \label{fig:demoopen}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\includegraphics[width=\linewidth]{E_demo_stop.png}
-\caption{停机附近。\(1864\,\mathrm{s}\)，\(e_{\alpha}=+0.145\)}
+\includegraphics[width=\linewidth]{01_run_full.png}
+\caption{运行栏整页。左栏为产品档、策略、厚度与腔门，右栏为本帧读数和停机判定两盏灯}
 \label{fig:demostop}
 \end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.32\textwidth}
-\centering
-\includegraphics[width=\linewidth]{E_demo_thick.png}
-\caption{\(50\,\mathrm{mm}\) 时域终点。\(3298\,\mathrm{s}\)，\(e_{\alpha}=-0.782\)}
-\label{fig:demothick}
-\end{subfigure}
-\caption{开门全貌、\(30\,\mathrm{mm}\) 停机附近与 \(50\,\mathrm{mm}\) 时域终点}
+\caption{运行栏的两个层次：三维舞台与仪表带在页面上方，时序曲线与时间轴共用下方}
 \label{fig:demoextra}
 \end{figure*}
 

@@ -117,7 +117,12 @@
 \numberwithin{figure}{chapter}
 \numberwithin{table}{chapter}
 \allowdisplaybreaks
-\graphicspath{{../results/figures/paper/}{../results/figures/study/}{../results/figures/}{figures/}}
+\graphicspath{{../results/figures/paper/}{../results/figures/study/}{../results/figures/demo/}{../results/figures/}{figures/}}
+
+% Embedded animation for the interactive demo: PDF readers that support
+% JavaScript (Acrobat, Okular, pdf.js) play it in place; others show frame 1.
+\usepackage{animate}
+\usepackage{qrcode}
 \newcommand{\colimg}[1]{\includegraphics[width=\columnwidth]{#1}}
 \newcommand{\spanimg}[1]{\includegraphics[width=0.96\textwidth]{#1}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}

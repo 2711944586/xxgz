@@ -235,31 +235,9 @@ function buildDoor(materials, explodeTargets) {
   });
   add(door, box(0.07, 0.13, 0.05, 0.01), materials.chrome, V(W - 0.11, -0.62, -0.05), null, "door.striker");
 
-  const panel = new THREE.Group();
-  panel.position.set(cx, H / 2 + 0.02, 0.07);
-  add(panel, box(W - 0.2, 0.4, 0.13, 0.02), materials.panel, V(0, 0, 0), null, "fascia");
-  const display = add(panel, box(1.46, 0.23, 0.02, 0.008), materials.display,
-    V(-0.55, 0, 0.072), null, "fascia.display");
-  display.castShadow = false;
-
-  const knobs = [1.34, 1.71, 2.08].map((x) => {
-    const k = new THREE.Group();
-    k.position.set(x, 0.01, 0.085);
-    add(k, new THREE.CylinderGeometry(0.112, 0.118, 0.06, 32), materials.brass,
-      V(0, 0, 0), { x: Math.PI / 2, y: 0, z: 0 }, "fascia.knob");
-    add(k, new THREE.CylinderGeometry(0.072, 0.072, 0.04, 24), materials.chrome,
-      V(0, 0, 0.045), { x: Math.PI / 2, y: 0, z: 0 }, "fascia.knob");
-    const mark = add(k, box(0.011, 0.05, 0.012, 0.004), materials.led, V(0, 0.048, 0.062), null, "fascia.knob");
-    mark.castShadow = false;
-    panel.add(k);
-    return k;
-  });
-  add(panel, new THREE.CylinderGeometry(0.032, 0.032, 0.018, 16), materials.led,
-    V(2.32, 0.01, 0.075), { x: Math.PI / 2, y: 0, z: 0 }, "fascia.led");
-  door.add(panel);
-
-  door.userData.knobs = knobs;
-  door.userData.display = display;
+  // The control fascia used to hang on the door, which made the display swing
+  // out with the hinge. A real panel is fixed to the cabinet, so it now lives
+  // in buildCavity() as its own assembly and the door is just a door.
   return door;
 }
 

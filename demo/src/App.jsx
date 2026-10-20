@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Scene, { VIEW_PRESETS } from "./Scene.jsx";
 import { TemperatureChart, ActuatorChart } from "./components/Charts.jsx";
 import { SurfaceMap } from "./components/SurfaceMap.jsx";
@@ -36,14 +36,27 @@ function ColorBar() {
   );
 }
 
+const SHARED = (() => {
+  if (typeof window === "undefined") return {};
+  const q = new URLSearchParams(window.location.search);
+  const mm = Number(q.get("l"));
+  const frame = Number(q.get("i"));
+  return {
+    policy: q.get("p") || undefined,
+    compare: q.get("c") || undefined,
+    lengthMm: Number.isFinite(mm) && mm > 0 ? mm : undefined,
+    index: Number.isFinite(frame) && frame >= 0 ? frame : undefined,
+  };
+})();
+
 export default function App() {
   const [data, setData] = useState({ manifest: null, surfaces: null, contract: null, buffer: null });
   const [error, setError] = useState("");
-  const [policy, setPolicy] = useState("dual");
-  const [compare, setCompare] = useState("mpc");
+  const [policy, setPolicy] = useState(SHARED.policy || "dual");
+  const [compare, setCompare] = useState(SHARED.compare || "mpc");
   const [cook, setCook] = useState("combi");
-  const [lengthMm, setLengthMm] = useState(30);
-  const [index, setIndex] = useState(0);
+  const [lengthMm, setLengthMm] = useState(SHARED.lengthMm || 30);
+  const [index, setIndex] = useState(SHARED.index || 0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(3);
   const [pane, setPane] = useState("run");
@@ -70,12 +83,16 @@ export default function App() {
 
   const { manifest, surfaces, contract, buffer } = data;
 
+  // Seed from the manifest defaults, except for anything a shared link pinned:
+  // a restored policy/thickness must survive the manifest arriving.
+  const seededRef = useRef(false);
   useEffect(() => {
-    if (!manifest) return;
+    if (!manifest || seededRef.current) return;
+    seededRef.current = true;
     const d = manifest.defaults;
-    setPolicy(d.policy);
+    if (!SHARED.policy) setPolicy(d.policy);
+    if (!SHARED.lengthMm) setLengthMm(d.lengthMm);
     setCook(d.cook);
-    setLengthMm(d.lengthMm);
   }, [manifest]);
 
   const scenario = useMemo(
@@ -107,7 +124,21 @@ export default function App() {
     [manifest, scenario],
   );
 
-  useEffect(() => { setIndex(0); setPlaying(false); }, [scenario?.key]);
+  // Reset to the first frame when the scenario changes, but keep a frame that
+  // arrived in the URL so a shared link still reopens on the same instant.
+  const restoredRef = useRef(Boolean(SHARED.index));
+  useEffect(() => {
+    // The first run fires before the manifest arrives (key undefined); consuming
+    // the guard there would let the real scenario switch reset the shared frame.
+    if (!scenario?.key) return;
+    setPlaying(false);
+    if (restoredRef.current) {
+      restoredRef.current = false;
+      setIndex(Math.min(SHARED.index, rows.length - 1));
+      return;
+    }
+    setIndex(0);
+  }, [scenario?.key, rows.length]);
 
   useEffect(() => {
     if (!playing || !rows.length) return undefined;
@@ -199,11 +230,21 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const copyLink = () => {
+  const copyLink = async () => {
     const params = new URLSearchParams({ p: policy, c: cook, l: String(lengthMm), i: String(safeIndex) });
-    navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?${params}`);
-    setToast("链接已复制");
-    window.setTimeout(() => setToast(""), 1600);
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    // Put the state in the address bar as well as the clipboard, so the link is
+    // visible, shareable and reloadable even when the clipboard is blocked.
+    window.history.replaceState(null, "", `?${params}`);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    setToast(copied ? "链接已复制" : "链接已在地址栏，可手动复制");
+    window.setTimeout(() => setToast(""), 2200);
   };
 
   if (error) {
