@@ -67,7 +67,9 @@ u\leftarrow u\,\big(1-0.75\,\mathrm{clip}((T_h-230)/40,\,0,\,1)\big)
 
 界面换热系数 \(h=12+55\,u_{\mathrm{fan}}\)，环境温度 \(T_\infty=90+95\,u\)。潜热项
 \begin{equation}
-q_{\mathrm{lat}}=18000\,u_{\mathrm{st}}(1-a_w)-9000\,(1-u_{\mathrm{st}})\max(a_w-0.35,0)\,u_{\mathrm{fan}}.
+\resizebox{\columnwidth}{!}{$
+q_{\mathrm{lat}}=18000\,u_{\mathrm{st}}(1-a_w)-9000\,(1-u_{\mathrm{st}})\max(a_w-0.35,0)\,u_{\mathrm{fan}}
+$}
 \end{equation}
 进入第一控制体的通量是 \(h(T_\infty-T_0)+q_{\mathrm{lat}}+7000\,u\)。内部用二阶差分，对称面用一侧差分。更新后温度夹到 \([0,220]^\circ\mathrm{C}\)。
 
@@ -126,7 +128,10 @@ F\leftarrow F+\Delta t\cdot 10^{(T_{\mathrm{cold}}-70)/10}/60.
 \end{equation}
 \(\alpha_m=0.85\) 对应 \(F=-2\ln(0.15)\approx 3.79\,\mathrm{min}\)。这是设计线。表面褐变
 \begin{equation}
-\alpha_b\leftarrow\mathrm{clip}\Big(\alpha_b+\Delta t\cdot 2\times 10^{-4}\max(T_0-110,0)\max(0.55-m_0,0),\,0,\,1.5\Big).
+\resizebox{\columnwidth}{!}{$
+\alpha_b\leftarrow\mathrm{clip}\Big(\alpha_b+\Delta t\cdot 2\times 10^{-4}
+\max(T_0-110,0)\max(0.55-m_0,0),\,0,\,1.5\Big)
+$}
 \end{equation}
 结壳只在表面含水低于 0.45 时增长，速率 \(1.5\times 10^{-4}\,\mathrm{s}^{-1}\)，上限 1。它进入 \(r_{\mathrm{proxy}}\)，从而只影响“更新是否更接近参照”，不直接改导热场。规格里的路径 C 在这个核中没有完整的 \(S\to k_{\mathrm{eff}}\) 反馈，只有参照里的一项。
 
@@ -134,7 +139,11 @@ F\leftarrow F+\Delta t\cdot 10^{(T_{\mathrm{cold}}-70)/10}/60.
 
 第 \(s\) 步的单位噪声是
 \begin{equation}
-\xi=\mathrm{frac}\big(\sin(\sigma\cdot 12.9898+s\cdot 78.233)\cdot 43758.5453\big)\cdot 2-1,
+\label{eq:hash}
+\begin{aligned}
+\xi={}&\mathrm{frac}\Big(\sin\Big(\sigma\cdot 12.9898\\
+&\quad+s\cdot 78.233\Big)\cdot 43758.5453\Big)\cdot 2-1,
+\end{aligned}
 \end{equation}
 \(\sigma\) 为种子加策略编号的偏移。表面温度加 \(0.4\xi\)，含水加 \(0.004\xi\)。同一进程重复运行得到同一轨迹。能量是记录序列上加热指令之和乘以记录间隔。比较策略时使用这个定义下的数值。
 

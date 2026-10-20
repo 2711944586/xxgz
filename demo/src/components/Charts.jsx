@@ -63,7 +63,10 @@ export function TemperatureChart({
       const t0 = rows[0].time;
       const t1 = rows[rows.length - 1].time;
       const xOf = (t) => padL + ((t - t0) / (t1 - t0 || 1)) * pw;
-      const tempMax = 180;
+      let peak = 0;
+      for (const r of rows) peak = Math.max(peak, r.tSurf, r.tCore);
+      for (const r of compareRows || []) peak = Math.max(peak, r.tCore);
+      const tempMax = Math.ceil((peak + 10) / 40) * 40;
       const yT = (v) => padT + (1 - Math.min(v, tempMax) / tempMax) * ph;
       const yA = (v) => padT + (1 - Math.min(1, Math.max(0, v))) * ph;
 

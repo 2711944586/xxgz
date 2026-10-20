@@ -60,6 +60,7 @@ export default function App() {
   const [explode, setExplode] = useState(0);
   const [annotations, setAnnotations] = useState(true);
   const [orphan, setOrphan] = useState(null);
+  const [doorOpen, setDoorOpen] = useState(true);
   const [showSteam, setShowSteam] = useState(true);
   const [showAirflow, setShowAirflow] = useState(true);
   const [surface, setSurface] = useState("LT");
@@ -203,6 +204,8 @@ export default function App() {
   const compareMeta = manifest?.policies.find((p) => p.key === compare);
   const progress = rows.length > 1 ? safeIndex / (rows.length - 1) : 0;
   const stopS = scenario?.metrics.stopS;
+  const doorShown = doorOpen && !section && pane !== "surface";
+  const isDoorClosed = !doorShown;
 
   return (
     <div className="shell">
@@ -282,6 +285,7 @@ export default function App() {
               cook={cook} setCook={setCook}
               lengthMm={lengthMm} setLengthMm={setLengthMm}
               policyMeta={policyMeta}
+              doorOpen={doorOpen} setDoorOpen={setDoorOpen}
             />
           )}
           {pane === "twin" && (
@@ -293,6 +297,7 @@ export default function App() {
               showSteam={showSteam} setShowSteam={setShowSteam}
               showAirflow={showAirflow} setShowAirflow={setShowAirflow}
               orphan={orphan} setOrphan={setOrphan}
+              doorOpen={doorOpen} setDoorOpen={setDoorOpen}
               pickedPart={pickedPart}
             />
           )}
@@ -345,11 +350,11 @@ export default function App() {
           <Scene
             frame={frame}
             lengthM={lengthMm / 1000}
-            doorOpen={!section && pane !== "surface"}
+            doorOpen={doorShown}
             view={view}
             section={section || pane === "compare"}
             explode={explode}
-            annotations={annotations && (pane === "twin" || pane === "run")}
+            annotations={annotations && (pane === "twin" || pane === "run") && !isDoorClosed}
             showSteam={showSteam}
             showAirflow={showAirflow}
             cavityLightOn={orphan}
@@ -537,7 +542,7 @@ export default function App() {
 
 
 
-function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, setLengthMm, policyMeta }) {
+function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, setLengthMm, policyMeta, doorOpen, setDoorOpen }) {
   return (
     <>
       <section className="group">
@@ -565,7 +570,12 @@ function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, set
               onClick={() => setLengthMm(mm)}>{mm}</button>
           ))}
         </div>
-        <p className="rail-note">肉糜 · 初始 8 °C · 含水 0.72 · 种子 7。厚度改变切片的层数与几何，不改已经写出的数组。</p>
+        <h2>腔门</h2>
+        <div className="seg-row">
+          <button type="button" className={`seg ${doorOpen ? "on" : ""}`} onClick={() => setDoorOpen(true)}>开</button>
+          <button type="button" className={`seg ${doorOpen ? "" : "on"}`} onClick={() => setDoorOpen(false)}>关</button>
+        </div>
+        <p className="rail-note">肉糜 · 初始 8 °C · 含水 0.72 · 种子 7。厚度改变切片的层数与几何，不改已经写出的数组。门开合只改铰链与门互锁的显示，不改已经写出的数组。</p>
       </section>
     </>
   );
@@ -574,6 +584,7 @@ function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, set
 function TwinControls({
   view, setView, section, setSection, explode, setExplode, annotations, setAnnotations,
   showSteam, setShowSteam, showAirflow, setShowAirflow, orphan, setOrphan, pickedPart,
+  doorOpen, setDoorOpen,
 }) {
   return (
     <>
@@ -588,6 +599,10 @@ function TwinControls({
         <button type="button" className={`toggle ${section ? "on" : ""}`} onClick={() => setSection((s) => !s)}>
           <span>剖切视图</span>
           <i>{section ? "开" : "关"}</i>
+        </button>
+        <button type="button" className={`toggle ${doorOpen ? "on" : ""}`} onClick={() => setDoorOpen((v) => !v)}>
+          <span>腔门开合</span>
+          <i>{doorOpen ? "开" : "关"}</i>
         </button>
         <label className="slider-row">
           <span>爆炸分解</span>

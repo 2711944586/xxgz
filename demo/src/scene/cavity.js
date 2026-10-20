@@ -33,14 +33,17 @@ function buildMaterials() {
   const dimpled = dimpleMaps({ repeat: 18 });
   const shellGrain = brushedMaps({ streak: 0.05, grain: 0.13, repeat: 3 });
 
-  const outer = enamel("#1d2429");
+  const outer = enamel("#39444c");
+  outer.roughness = 0.62;
+  outer.clearcoat = 0.28;
+  outer.clearcoatRoughness = 0.5;
   outer.roughnessMap = shellGrain.roughnessMap;
   outer.normalMap = shellGrain.normalMap;
   outer.normalScale.set(0.02, 0.02);
-  outer.envMapIntensity = 0.8;
+  outer.envMapIntensity = 1.15;
 
-  const liner = steel("#8c979e", { metalness: 0.72, roughness: 0.44, maps: dimpled });
-  liner.envMapIntensity = 0.55;
+  const liner = steel("#a3aeb5", { metalness: 0.66, roughness: 0.42, maps: dimpled });
+  liner.envMapIntensity = 0.9;
   liner.normalScale.set(0.02, 0.02);
 
   const blade = new THREE.MeshPhysicalMaterial({
@@ -67,8 +70,8 @@ function buildMaterials() {
     ceramic: new THREE.MeshStandardMaterial({ color: "#d9d0c3", roughness: 0.68, metalness: 0.05 }),
     reflector: new THREE.MeshStandardMaterial({ color: "#c7d0d6", metalness: 0.9, roughness: 0.22 }),
     rubber: rubber(),
-    panel: enamel("#191f24"),
-    doorFace: steel("#48535b", { metalness: 0.72, roughness: 0.3, maps: brushed }),
+    panel: enamel("#242c33"),
+    doorFace: steel("#5b6870", { metalness: 0.7, roughness: 0.28, maps: brushed }),
     display: new THREE.MeshStandardMaterial({
       color: "#081014", emissive: "#5fd0e0", emissiveIntensity: 0.45,
       metalness: 0.2, roughness: 0.22,
@@ -96,11 +99,11 @@ function buildShell(materials, explodeTargets) {
   const push = (m) => { explodeTargets.push(m); return m; };
 
   const panels = [
-    [box(5.18, 0.2, 3.26, 0.05), outer, V(0, -0.09, 0), "shell.bottom", V(0, -0.92, 0)],
-    [box(5.18, 0.2, 3.26, 0.05), outer, V(0, 2.8, 0), "shell.top", V(0, 0.95, 0)],
-    [box(5.18, 3.08, 0.2, 0.05), outer, V(0, 1.36, -1.6), "shell.back", V(0, 0, -1.18)],
-    [box(0.2, 3.08, 3.26, 0.05), outer, V(-2.52, 1.36, 0), "shell.left", V(-1.18, 0, 0)],
-    [box(0.2, 3.08, 3.26, 0.05), outer, V(2.52, 1.36, 0), "shell.right", V(1.18, 0, 0)],
+    [box(5.18, 0.2, 3.26, 0.05), outer, V(0, -0.09, 0), "shell.bottom", V(0, -1.25, 0)],
+    [box(5.18, 0.2, 3.26, 0.05), outer, V(0, 2.8, 0), "shell.top", V(0, 1.5, 0)],
+    [box(5.18, 3.08, 0.2, 0.05), outer, V(0, 1.36, -1.6), "shell.back", V(0, 0, -1.6)],
+    [box(0.2, 3.08, 3.26, 0.05), outer, V(-2.52, 1.36, 0), "shell.left", V(-1.55, 0, 0)],
+    [box(0.2, 3.08, 3.26, 0.05), outer, V(2.52, 1.36, 0), "shell.right", V(1.55, 0, 0)],
   ];
   panels.forEach(([geo, mat, pos, part, exp]) => push(add(g, geo, mat, pos, null, part, exp)));
 
@@ -112,10 +115,10 @@ function buildShell(materials, explodeTargets) {
   ].forEach(([geo, pos, part, exp]) => push(add(g, geo, outer, pos, null, part, exp)));
 
   [
-    [box(0.1, 2.55, 2.7, 0.02), V(-2.33, 1.3, 0.02), "insulation.left", V(-0.52, 0, 0)],
-    [box(0.1, 2.55, 2.7, 0.02), V(2.33, 1.3, 0.02), "insulation.right", V(0.52, 0, 0)],
-    [box(4.7, 0.1, 2.7, 0.02), V(0, 2.62, 0.02), "insulation.top", V(0, 0.46, 0)],
-    [box(4.7, 2.55, 0.1, 0.02), V(0, 1.3, -1.42), "insulation.back", V(0, 0, -0.52)],
+    [box(0.1, 2.55, 2.7, 0.02), V(-2.33, 1.3, 0.02), "insulation.left", V(-0.8, 0, 0)],
+    [box(0.1, 2.55, 2.7, 0.02), V(2.33, 1.3, 0.02), "insulation.right", V(0.8, 0, 0)],
+    [box(4.7, 0.1, 2.7, 0.02), V(0, 2.62, 0.02), "insulation.top", V(0, 0.72, 0)],
+    [box(4.7, 2.55, 0.1, 0.02), V(0, 1.3, -1.42), "insulation.back", V(0, 0, -0.85)],
   ].forEach(([geo, pos, part, exp]) => {
     const m = add(g, geo, insulation, pos, null, part, exp);
     m.castShadow = false;
@@ -123,11 +126,11 @@ function buildShell(materials, explodeTargets) {
   });
 
   [
-    [box(4.5, 0.055, 2.7, 0.02), V(0, CAVITY.floor, 0.06), "liner.floor", V(0, -0.44, 0)],
-    [box(4.5, 0.055, 2.7, 0.02), V(0, CAVITY.ceil, 0.06), "liner.ceiling", V(0, 0.44, 0)],
-    [box(4.5, 2.48, 0.055, 0.02), V(0, 1.3, CAVITY.back), "liner.back", V(0, 0, -0.38)],
-    [box(0.055, 2.48, 2.7, 0.02), V(-CAVITY.halfX, 1.3, 0.06), "liner.left", V(-0.38, 0, 0)],
-    [box(0.055, 2.48, 2.7, 0.02), V(CAVITY.halfX, 1.3, 0.06), "liner.right", V(0.38, 0, 0)],
+    [box(4.5, 0.055, 2.7, 0.02), V(0, CAVITY.floor, 0.06), "liner.floor", V(0, -0.62, 0)],
+    [box(4.5, 0.055, 2.7, 0.02), V(0, CAVITY.ceil, 0.06), "liner.ceiling", V(0, 0.52, 0)],
+    [box(4.5, 2.48, 0.055, 0.02), V(0, 1.3, CAVITY.back), "liner.back", V(0, 0, -0.5)],
+    [box(0.055, 2.48, 2.7, 0.02), V(-CAVITY.halfX, 1.3, 0.06), "liner.left", V(-0.5, 0, 0)],
+    [box(0.055, 2.48, 2.7, 0.02), V(CAVITY.halfX, 1.3, 0.06), "liner.right", V(0.5, 0, 0)],
   ].forEach(([geo, pos, part, exp]) => {
     const m = add(g, geo, liner, pos, null, part, exp);
     m.castShadow = false;
@@ -160,7 +163,7 @@ function buildDoor(materials, explodeTargets) {
   const door = new THREE.Group();
   door.position.set(-2.66, 1.32, 1.62);
   door.userData.basePos = door.position.clone();
-  door.userData.explode = V(0, 0, 1.7);
+  door.userData.explode = V(-1.1, 0, 1.95);
   explodeTargets.push(door);
 
   const W = 5.06;
@@ -171,11 +174,23 @@ function buildDoor(materials, explodeTargets) {
   add(door, box(W, 0.13, 0.11, 0.016), materials.outer, V(cx, -H / 2 + 0.065, 0), null, "door.frame");
   add(door, box(0.13, H, 0.11, 0.016), materials.outer, V(0.065, 0, 0), null, "door.frame");
   add(door, box(0.13, H, 0.11, 0.016), materials.outer, V(W - 0.065, 0, 0), null, "door.frame");
-  add(door, box(W - 0.3, H - 0.34, 0.05, 0.01), materials.doorFace, V(cx, 0, 0.045), null, "door.panel");
+  // Steel frame: four rails around one large window. The opening is inset from
+  // the panel edge so the glazing never protrudes past the door silhouette.
+  const faceW = W - 0.3;
+  const faceH = H - 0.34;
+  const railT = 0.15;
+  const xL = cx - faceW / 2 + railT / 2;
+  const xR = cx + faceW / 2 - railT / 2;
+  add(door, box(faceW, railT, 0.05, 0.008), materials.doorFace, V(cx, faceH / 2 - railT / 2, 0.045), null, "door.panel");
+  add(door, box(faceW, railT, 0.05, 0.008), materials.doorFace, V(cx, -faceH / 2 + railT / 2, 0.045), null, "door.panel");
+  add(door, box(railT, faceH, 0.05, 0.008), materials.doorFace, V(xL, 0, 0.045), null, "door.panel");
+  add(door, box(railT, faceH, 0.05, 0.008), materials.doorFace, V(xR, 0, 0.045), null, "door.panel");
 
-  add(door, box(W - 0.42, H - 0.46, 0.016, 0.006), materials.glass, V(cx, 0, 0.08), null, "door.glass");
-  add(door, box(W - 0.5, H - 0.54, 0.012, 0.005), materials.glass, V(cx, 0, 0.02), null, "door.glass");
-  add(door, box(W - 0.28, H - 0.28, 0.01, 0.006), materials.glass, V(cx, 0, -0.04), null, "door.glass");
+  // Dark glass filling the frame opening, flush with the frame face.
+  const glassW = faceW - railT * 2 - 0.02;
+  const glassH = faceH - railT * 2 - 0.02;
+  add(door, box(glassW, glassH, 0.014, 0.006), materials.glass, V(cx, 0, 0.045), null, "door.glass");
+  add(door, box(glassW, glassH, 0.012, 0.005), materials.glass, V(cx, 0, 0.0), null, "door.glass");
 
   const gasket = (w, h, x, y) =>
     add(door, box(w, h, 0.05, 0.012), materials.rubber, V(x, y, -0.078), null, "door.seal");
@@ -264,7 +279,7 @@ function buildFan(materials) {
   const fan = new THREE.Group();
   fan.position.set(0.02, 1.4, -1.22);
   fan.userData.basePos = fan.position.clone();
-  fan.userData.explode = V(0, 0, -0.55);
+  fan.userData.explode = V(0, 0, -0.5);
 
   const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.05, 56), materials.fanPlate);
   plate.rotation.x = Math.PI / 2;
@@ -389,8 +404,10 @@ function buildVent(materials) {
   recess.castShadow = false;
   const louvres = [];
   for (let i = 0; i < 7; i += 1) {
-    louvres.push(add(g, box(0.52, 0.022, 0.07, 0.005), materials.louvre,
-      V(1.62, 2.38 - i * 0.062, Z + 0.04), { x: 0.55, y: 0, z: 0 }, "vent"));
+    const slat = add(g, box(0.52, 0.022, 0.07, 0.005), materials.louvre,
+      V(1.62, 2.38 - i * 0.062, Z + 0.04), { x: 0.55, y: 0, z: 0 }, "vent");
+    slat.userData.baseRotX = 0.55;
+    louvres.push(slat);
   }
   for (let i = 0; i < 2; i += 1) {
     add(g, box(0.016, 0.6, 0.03, 0.004), materials.brass,

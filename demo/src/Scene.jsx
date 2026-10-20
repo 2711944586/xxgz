@@ -56,15 +56,15 @@ export default function Scene({
     const h0 = el.clientHeight || 620;
     renderer.setSize(w0, h0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 1.22;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#070a0c");
-    scene.fog = new THREE.FogExp2("#070a0c", 0.03);
+    scene.background = new THREE.Color("#0e1419");
+    scene.fog = new THREE.FogExp2("#0e1419", 0.022);
     scene.environment = studioEnvironment(renderer);
 
     const camera = new THREE.PerspectiveCamera(32, w0 / h0, 0.1, 60);
@@ -96,9 +96,9 @@ export default function Scene({
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
-    const hemi = new THREE.HemisphereLight(0xdfe8ee, 0x1a2024, 0.34);
-    const key = new THREE.DirectionalLight(0xfff2e0, 1.15);
-    key.position.set(4.2, 6.2, 4.6);
+    const hemi = new THREE.HemisphereLight(0xe8f0f5, 0x2a343b, 0.72);
+    const key = new THREE.DirectionalLight(0xfff4e6, 1.55);
+    key.position.set(4.6, 6.8, 5.2);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.00035;
@@ -109,21 +109,23 @@ export default function Scene({
     key.shadow.camera.right = 4.8;
     key.shadow.camera.top = 5.2;
     key.shadow.camera.bottom = -3.4;
-    const fill = new THREE.DirectionalLight(0x8fb6c6, 0.34);
-    fill.position.set(-4.8, 2.0, 3.2);
-    const rim = new THREE.DirectionalLight(0x6ea8c0, 0.28);
-    rim.position.set(-1.5, 1.6, -5.0);
-    const cavityLight = new THREE.PointLight(0xffe8cc, 1.35, 5.2, 1.7);
+    const fill = new THREE.DirectionalLight(0xa9c9da, 0.95);
+    fill.position.set(-5.4, 2.6, 3.8);
+    const rim = new THREE.DirectionalLight(0x86bcd4, 0.72);
+    rim.position.set(-1.8, 2.0, -5.4);
+    const cavityLight = new THREE.PointLight(0xffe8cc, 0.85, 4.6, 1.9);
     cavityLight.position.set(0, 1.55, 0.45);
-    const cavityLight2 = new THREE.PointLight(0xfff4e2, 0.85, 3.4, 1.8);
+    const cavityLight2 = new THREE.PointLight(0xfff4e2, 0.4, 3.0, 2.0);
     cavityLight2.position.set(-1.2, 2.1, 0.65);
-    const cavityLight3 = new THREE.PointLight(0xfff0d8, 0.75, 3.2, 1.8);
+    const cavityLight3 = new THREE.PointLight(0xfff0d8, 0.35, 2.9, 2.0);
     cavityLight3.position.set(1.2, 2.05, 0.6);
     const heaterGlow = new THREE.PointLight(0xff6a24, 0.0, 3.4, 1.9);
     heaterGlow.position.set(0, 2.14, 0.2);
     const nozzleLight = new THREE.PointLight(0xbfe4f2, 0.0, 2.6, 1.9);
     nozzleLight.position.set(-1.5, 1.6, 0.2);
-    scene.add(hemi, key, fill, rim, cavityLight, cavityLight2, cavityLight3, heaterGlow, nozzleLight);
+    const bounce = new THREE.DirectionalLight(0x9fb4c0, 0.42);
+    bounce.position.set(0.6, -2.4, 5.4);
+    scene.add(hemi, key, fill, rim, bounce, cavityLight, cavityLight2, cavityLight3, heaterGlow, nozzleLight);
 
     const floor = new THREE.Mesh(
       new THREE.CircleGeometry(11, 64),
@@ -149,7 +151,7 @@ export default function Scene({
     scene.add(food);
     const steam = buildSteam(cavity.parts.steamLine.userData.tip.position);
     scene.add(steam.points);
-    const airflow = buildAirflow(new THREE.Vector3(1.86, 2.0, 1.34));
+    const airflow = buildAirflow(new THREE.Vector3(1.62, 2.16, -1.2));
     scene.add(airflow.group);
 
     const raycaster = new THREE.Raycaster();
@@ -269,15 +271,14 @@ export default function Scene({
       s.cavity.materials.coil.emissiveIntensity = 0.16 + 2.2 * heat;
       s.heaterGlow.intensity = 0.1 + 1.5 * heat;
       const lampScale = L.cavityLightOn === false ? 0.06 : 1;
-      s.cavityLight.intensity = (1.1 + 0.9 * heat) * lampScale;
-      s.cavityLight2.intensity = 0.85 * lampScale;
-      s.cavityLight3.intensity = 0.75 * lampScale;
-      s.key.intensity = 1.25 + 0.2 * heat;
+      s.cavityLight.intensity = (0.78 + 0.55 * heat) * lampScale;
+      s.cavityLight2.intensity = 0.4 * lampScale;
+      s.cavityLight3.intensity = 0.35 * lampScale;
+      s.key.intensity = 1.42 + 0.22 * heat;
       s.cavity.parts.fan.userData.blades.rotation.z += dt * (0.35 + 5.0 * Math.min(1, fanCmd / 1.3));
 
-      s.cavity.parts.vent.userData.louvres.forEach((m, i) => {
-        m.rotation.x = -0.9 * exhaust;
-        m.position.z = 1.28 - 0.02 * exhaust * (i % 3);
+      s.cavity.parts.vent.userData.louvres.forEach((m) => {
+        m.rotation.x = m.userData.baseRotX + 0.5 * exhaust;
       });
 
       s.nozzleLight.intensity = 0.18 + 1.5 * steamCmd;

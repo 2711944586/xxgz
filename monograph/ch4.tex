@@ -98,12 +98,15 @@ k=\sqrt{\frac{\omega}{2\alpha}}.
 
 (ii) 准稳态下 \(T_1=T_\infty-qR_{\mathrm{ext}}\)，且 \(q=(T_\infty-T_2)/(R_{\mathrm{int}}+R_{\mathrm{ext}})\)。
 对两个参数求偏导得
-\[
+\begin{equation}
+\label{eq:partials}
+\begin{aligned}
 \frac{\partial T_1}{\partial R_{\mathrm{int}}}
-=-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{int}}},\qquad
+&=-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{int}}},\\
 \frac{\partial T_1}{\partial R_{\mathrm{ext}}}
-=-q-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{ext}}}.
-\]
+&=-q-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{ext}}}.
+\end{aligned}
+\end{equation}
 当 \(q\neq0\) 时第二式含独立项 \(-q\)，两列不成比例，故满秩。
 \end{proof}
 
@@ -210,10 +213,12 @@ r_{\mathrm{proxy}}=\mathrm{clip}(\Delta T/8+1.2+2.5 S,\,0.8,\,20)
 \begin{proof}
 准稳态下 \(T_1=T_\infty-qR_{\mathrm{ext}}\)、\(q=(T_\infty-T_2)/(R_{\mathrm{int}}+R_{\mathrm{ext}})\)，
 两个偏导为
-\[
-\frac{\partial T_1}{\partial R_{\mathrm{int}}}=-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{int}}},\qquad
-\frac{\partial T_1}{\partial R_{\mathrm{ext}}}=-q-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{ext}}}.
-\]
+\begin{equation}
+\begin{aligned}
+\frac{\partial T_1}{\partial R_{\mathrm{int}}}&=-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{int}}},\\
+\frac{\partial T_1}{\partial R_{\mathrm{ext}}}&=-q-R_{\mathrm{ext}}\frac{\partial q}{\partial R_{\mathrm{ext}}}.
+\end{aligned}
+\end{equation}
 当 \(q\neq0\) 时第二式含独立项 \(-q\)，故两列不成比例，矩阵满秩。两列之比
 \(\partial T_1/\partial R_{\mathrm{int}}:\partial T_1/\partial R_{\mathrm{ext}}\)
 随 \(R_{\mathrm{ext}}\) 变化：在 \(R_{\mathrm{ext}}=1.0\) 处为 \(-1:3\)，
