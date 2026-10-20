@@ -263,16 +263,17 @@ export default function Scene({
 
       s.explodeAmt += ((L.explode ?? 0) - s.explodeAmt) * (1 - Math.exp(-6 * dt));
       const ex = s.explodeAmt;
-      // Pull the camera back as the stack separates, otherwise the outer
-      // panels leave the frame exactly when the reader wants to see them.
-      if (s.baseDist == null) s.baseDist = camera.position.distanceTo(controls.target);
-      const wanted = s.baseDist * (1 + 0.42 * ex);
-      if (!s.camGoal) {
+      // Exploding the stack needs extra room. Apply that as an offset on the
+      // wheel-zoom distance rather than overwriting it, so the wheel keeps
+      // working while the model is separated.
+      const dolly = 3.6 * ex;
+      if (Math.abs(dolly - (s.dollyApplied ?? 0)) > 0.004 && !s.camGoal) {
         const dir = camera.position.clone().sub(controls.target);
         const dist = dir.length();
-        if (Math.abs(dist - wanted) > 0.004) {
-          camera.position.copy(controls.target).addScaledVector(dir.normalize(), wanted);
-        }
+        const next = THREE.MathUtils.clamp(dist + dolly - (s.dollyApplied ?? 0),
+          controls.minDistance, controls.maxDistance);
+        camera.position.copy(controls.target).addScaledVector(dir.normalize(), next);
+        s.dollyApplied = dolly;
       }
       s.cavity.explodeTargets.forEach((m) => {
         if (!m.userData.basePos || !m.userData.explode) return;

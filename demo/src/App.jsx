@@ -53,7 +53,7 @@ export default function App() {
   const [explodeLabels, setExplodeLabels] = useState(true);
   const [autoExplode, setAutoExplode] = useState(false);
   const [annotations, setAnnotations] = useState(true);
-  const [orphan, setOrphan] = useState(null);
+  const [cavityLightOn, setCavityLightOn] = useState(true);
   const [doorOpen, setDoorOpen] = useState(true);
   const [showSteam, setShowSteam] = useState(true);
   const [showAirflow, setShowAirflow] = useState(true);
@@ -174,7 +174,7 @@ export default function App() {
       else if (ev.key === "4") setPane("compare");
       else if (ev.key === "5") setPane("surface");
       else if (ev.key.toLowerCase() === "s") setSection((s) => !s);
-      else if (ev.key.toLowerCase() === "d") setOrphan((d) => !d);
+      else if (ev.key.toLowerCase() === "d") setCavityLightOn((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -316,7 +316,7 @@ export default function App() {
               annotations={annotations} setAnnotations={setAnnotations}
               showSteam={showSteam} setShowSteam={setShowSteam}
               showAirflow={showAirflow} setShowAirflow={setShowAirflow}
-              orphan={orphan} setOrphan={setOrphan}
+              cavityLightOn={cavityLightOn} setCavityLightOn={setCavityLightOn}
               doorOpen={doorOpen} setDoorOpen={setDoorOpen}
               pickedPart={pickedPart}
             />
@@ -378,7 +378,7 @@ export default function App() {
             explodeLabels={explodeLabels && explode >= 0.06}
             showSteam={showSteam}
             showAirflow={showAirflow}
-            cavityLightOn={orphan}
+            cavityLightOn={cavityLightOn}
             onPickPart={(part) => setPickedPart(part)}
           />
           {pane !== "surface" && (
@@ -521,6 +521,8 @@ export default function App() {
                 compareRows={compareRows}
                 manifest={manifest}
                 frameIndex={safeIndex}
+                stopS={scenario?.metrics?.stopS ?? null}
+                probed={scenario?.metrics?.probed ?? false}
                 onSeek={(i) => { setPlaying(false); setIndex(i); }}
                 accentGlow={probing}
               />
@@ -537,6 +539,7 @@ export default function App() {
           <div className="chart-block narrow">
             {manifest && rows.length > 0 && (
               <ActuatorChart rows={rows} manifest={manifest} frameIndex={safeIndex}
+                probed={scenario?.metrics?.probed ?? false}
                 onSeek={(i) => { setPlaying(false); setIndex(i); }} />
             )}
             <div className="chart-legend">
@@ -577,7 +580,7 @@ function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, set
         <div className="policy-list">
           {(manifest?.policies || []).map((p) => (
             <button key={p.key} type="button" className={`policy ${policy === p.key ? "on" : ""}`}
-              onClick={() => setPolicy(p.key)}>
+              onClick={() => setPolicy(p.key)} title={p.note}>
               <b>{p.label}</b>
               <i>{p.note}</i>
             </button>
@@ -604,7 +607,7 @@ function RunControls({ manifest, policy, setPolicy, cook, setCook, lengthMm, set
 function TwinControls({
   view, setView, section, setSection, explode, setExplode, annotations, setAnnotations,
   explodeLabels, setExplodeLabels, autoExplode, setAutoExplode,
-  showSteam, setShowSteam, showAirflow, setShowAirflow, orphan, setOrphan, pickedPart,
+  showSteam, setShowSteam, showAirflow, setShowAirflow, cavityLightOn, setCavityLightOn, pickedPart,
   doorOpen, setDoorOpen,
 }) {
   return (
@@ -657,9 +660,10 @@ function TwinControls({
           <span>气流线</span>
           <i>{showAirflow ? "开" : "关"}</i>
         </button>
-        <button type="button" className={`toggle ${orphan ? "" : "on"}`} onClick={() => setOrphan((v) => !v)}>
+        <button type="button" className={`toggle ${cavityLightOn ? "on" : ""}`}
+          onClick={() => setCavityLightOn((v) => !v)}>
           <span>腔体照明</span>
-          <i>{orphan ? "关" : "开"}</i>
+          <i>{cavityLightOn ? "开" : "关"}</i>
         </button>
         <p className="rail-note">
           建模按家用蒸烤箱可见零件：外壳钢板、岩棉夹层、拉丝内衬、黄铜门框、双层门玻璃、六根 U 形加热管、十叶风机、蒸汽喷嘴、七片排汽百叶、四层搁架。
@@ -788,7 +792,6 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
         <Meter label="蒸汽" value={frame.steam} tone="steam" />
         <Meter label="风机" value={frame.fan / 1.3} tone="fan" />
         <Meter label="排汽" value={frame.exhaust} tone="vent" />
-        <Meter label="水位" value={frame.water} tone="water" />
         <div className="tiny-row">
           <span>请求 → 指令</span>
           <b>{fmt(frame.heatReq, 2)} → {fmt(frame.heat, 2)}</b>
@@ -797,14 +800,15 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
 
       <section className="group">
         <h2>停机判定</h2>
-        <dl className="readout tight">
-          <div><dt>停机时刻</dt><dd>{Math.round(m.stopS)} s</dd></div>
-          <div><dt>停机进度</dt><dd>{fmt(m.alphaAtStop, 3)}</dd></div>
+        <dl className="readout cols-2 tight">
+          <div><dt>停机</dt><dd>{Math.round(m.stopS)} s</dd></div>
+          <div><dt>冷点</dt><dd>{fmt(m.coreAtStop, 1)} °C</dd></div>
+          <div><dt>停机 α</dt><dd>{fmt(m.alphaAtStop, 3)}</dd></div>
           <div><dt>e<sub>α</sub></dt><dd className={m.eAlpha >= 0 ? "ok" : "warn"}>{m.eAlpha >= 0 ? "+" : ""}{fmt(m.eAlpha, 3)}</dd></div>
-          <div><dt>停机冷点</dt><dd>{fmt(m.coreAtStop, 1)} °C</dd></div>
           <div><dt>能量</dt><dd>{Math.round(m.energy)}</dd></div>
           <div><dt>终值方差</dt><dd>{fmt(m.finalVar, 3)}</dd></div>
           <div><dt>首次越线</dt><dd>{m.firstOver85 ? `${Math.round(m.firstOver85)} s` : "未越过"}</dd></div>
+          <div><dt>水位</dt><dd>{fmt(frame?.water, 2)}</dd></div>
         </dl>
         <div className="lamp-row">
           <div className={`lamp ${m.probed ? "ok" : ""}`}>
@@ -820,31 +824,6 @@ function RunInspector({ manifest, scenario, frame, compareFrame, compare, compar
         </div>
       </section>
 
-      <section className="group">
-        <h2>事件</h2>
-        <ul className="event-list">
-          {events.map((ev) => (
-            <li key={`${ev.kind}-${ev.time}`}>
-              <button type="button" onClick={() => onJump(ev)}>
-                <span className={`dot ${ev.kind}`} />
-                <span>{ev.label}</span>
-                <b>{Math.round(ev.time)} s</b>
-              </button>
-            </li>
-          ))}
-          {!events.length && <li className="muted">本条策略无探针窗。</li>}
-        </ul>
-        {compare !== "none" && compareFrame && (
-          <>
-            <h2>对照 · {compareMeta?.label}</h2>
-            <dl className="readout tight">
-              <div><dt>冷点</dt><dd>{fmt(compareFrame.tCore, 1)} °C</dd></div>
-              <div><dt>进度</dt><dd>{fmt(compareFrame.alpha, 3)}</dd></div>
-              <div><dt>方差</dt><dd>{fmt(compareFrame.varR, 3)}</dd></div>
-            </dl>
-          </>
-        )}
-      </section>
     </>
   );
 }

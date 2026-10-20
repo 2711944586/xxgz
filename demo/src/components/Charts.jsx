@@ -41,7 +41,7 @@ function niceTicks(min, max, count) {
 }
 
 export function TemperatureChart({
-  rows, compareRows, manifest, frameIndex, onSeek, accentGlow,
+  rows, compareRows, manifest, frameIndex, stopS, probed, onSeek, accentGlow,
 }) {
   const ref = useRef(null);
   const dragRef = useRef(false);
@@ -73,14 +73,16 @@ export function TemperatureChart({
       ctx.fillStyle = "#0e1418";
       ctx.fillRect(0, 0, w, h);
 
-      const [p0, p1] = manifest.probeWindow;
-      ctx.fillStyle = COL.probe;
-      ctx.fillRect(xOf(p0), padT, Math.max(xOf(p1) - xOf(p0), 1), ph);
-      ctx.fillStyle = "#a8905f";
-      ctx.font = FONT;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("探针窗", xOf(p0) + 4, padT + 3);
+      if (probed) {
+        const [p0, p1] = manifest.probeWindow;
+        ctx.fillStyle = COL.probe;
+        ctx.fillRect(xOf(p0), padT, Math.max(xOf(p1) - xOf(p0), 1), ph);
+        ctx.fillStyle = "#a8905f";
+        ctx.font = FONT;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText("探针窗", xOf(p0) + 4, padT + 3);
+      }
 
       ctx.strokeStyle = COL.gridSoft;
       ctx.lineWidth = 1;
@@ -132,8 +134,7 @@ export function TemperatureChart({
       ctx.textBaseline = "bottom";
       ctx.fillText("α 0.85", padL + 4, yA(manifest.designLine) - 2);
 
-      const stopS = rows[rows.length - 1].stopS;
-      if (stopS && stopS < t1 - 1) {
+      if (stopS != null && stopS < t1 - 1) {
         ctx.save();
         ctx.setLineDash([2, 3]);
         ctx.strokeStyle = COL.stop;
@@ -204,7 +205,7 @@ export function TemperatureChart({
     const ro = new ResizeObserver(() => paint());
     ro.observe(canvas);
     return () => ro.disconnect();
-  }, [rows, compareRows, manifest, frameIndex, accentGlow]);
+  }, [rows, compareRows, manifest, frameIndex, stopS, probed, accentGlow]);
 
   const seek = (ev) => {
     const canvas = ref.current;
@@ -247,7 +248,7 @@ const LANES = [
   { key: "exhaust", label: "排汽", color: "#8a7b5c" },
 ];
 
-export function ActuatorChart({ rows, manifest, frameIndex, onSeek }) {
+export function ActuatorChart({ rows, manifest, frameIndex, probed, onSeek }) {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -269,9 +270,11 @@ export function ActuatorChart({ rows, manifest, frameIndex, onSeek }) {
       ctx.fillStyle = "#0e1418";
       ctx.fillRect(0, 0, w, h);
 
-      const [p0, p1] = manifest.probeWindow;
-      ctx.fillStyle = COL.probe;
-      ctx.fillRect(xOf(p0), padT, Math.max(xOf(p1) - xOf(p0), 1), laneH * LANES.length);
+      if (probed) {
+        const [p0, p1] = manifest.probeWindow;
+        ctx.fillStyle = COL.probe;
+        ctx.fillRect(xOf(p0), padT, Math.max(xOf(p1) - xOf(p0), 1), laneH * LANES.length);
+      }
 
       LANES.forEach((lane, i) => {
         const top = padT + i * laneH;
@@ -315,7 +318,7 @@ export function ActuatorChart({ rows, manifest, frameIndex, onSeek }) {
     const ro = new ResizeObserver(() => paint());
     ro.observe(canvas);
     return () => ro.disconnect();
-  }, [rows, manifest, frameIndex]);
+  }, [rows, manifest, frameIndex, probed]);
 
   return (
     <canvas
