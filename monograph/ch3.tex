@@ -220,14 +220,25 @@ C_2\dot T_2
 
 \section{过程特征尺度与二维冷点的位置}
 
-厚度取 \(L=30\,\mathrm{mm}\)（全厚，与附录\ref{app:scales} 同一口径），Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\)，Biot 数 \(\mathrm{Bi}=hL/k\)。表\ref{tab:fobi}给出设计尺度，探针窗的 Fourier 数为 \(8.9\times 10^{-3}\)，远小于 \(1\)，冷点来不及跟上表面。探针段把 Biot 数从 \(1.50\) 升到 \(3.68\)，表面梯度更陡，内部更跟不上。这是两段探针要把外部热阻和内部热阻分开的尺度理由：第一段改相变符号，第二段改 \(R_{\mathrm{ext}}\)，内部节点在 \(40\,\mathrm{s}\) 里几乎不动。图\ref{fig:fobi}把 \(\mathrm{Fo}(t)\) 与 \(\mathrm{Bi}(u_{\mathrm{fan}})\) 画在核常数下；图\ref{fig:foband}把同一关系摊到 \((L,t)\) 平面上，家用时域线两侧的差别就是“薄件走完、厚件未走完”的全部内容。
+厚度取 \(L=30\,\mathrm{mm}\)（全厚，与附录\ref{app:scales} 同一口径），
+Fourier 数 \(\mathrm{Fo}=\alpha t/L^2\) 衡量导热走完了多少，Biot 数 \(\mathrm{Bi}=hL/k\)
+衡量表面换热相对内部导热有多强。这两个数决定了同一套执行量在薄件与厚件上的含义是否相同，
+因此值得在进入数值结果之前先看清它们的量级。
 
-\begin{figure*}[t]
-\centering
-\spanimg{X_fo_band.png}
-\caption{Fourier 数在厚度--时间平面上的分布。\(55\,\mathrm{min}\) 时域线上，\(15\,\mathrm{mm}\) 的 \(\mathrm{Fo}=2.93\)、\(30\,\mathrm{mm}\) 为 \(0.73\)、\(50\,\mathrm{mm}\) 为 \(0.26\)；三个端点标出对应的停机偏差中位}
-\label{fig:foband}
-\end{figure*}
+图\ref{fig:fobi}把两者分别摊开。左图是 \(\mathrm{Fo}\) 随时间的变化：\(15\,\mathrm{mm}\) 在
+二十几分钟就穿过 \(\mathrm{Fo}=1\)，\(50\,\mathrm{mm}\) 到五十五分钟才走到 \(0.26\)，
+三条曲线的分离就是"薄件走完、厚件未走完"的全部内容。中图是 \(\mathrm{Bi}\) 随风机指令的变化：
+风机从品质段的 \(0.4\) 抬到探针段的 \(1.3\)，\(\mathrm{Bi}\) 相应上升，表面梯度变陡，
+内部更跟不上。右图把探针窗那一刻的两个数并列：三种厚度上 \(\mathrm{Fo}\) 都在 \(10^{-2}\)
+量级，而 \(\mathrm{Bi}\) 都在 \(1\) 以上——\(\mathrm{Fo}\ll1\) 且 \(\mathrm{Bi}>1\)，
+正是"表面在动、内部不动"的尺度条件。
+
+这个尺度差是两段探针存在的理由。既然内部在四十秒里几乎不动，探针窗内能采集到的信息就只
+来自表面与近表面；把窗口切成长短两段、分别改相变符号与外部热阻，等于在同一个几乎静止的
+内部之上做两组不同的边界实验，两组结果的差别才归因于外部参数，而不是内部状态的变化。
+右图把同一关系收成三组具体数字：三种厚度在探针窗内的 \(\mathrm{Fo}\) 都在 \(10^{-2}\) 量级，\(\mathrm{Bi}\) 却都在 \(1\) 以上。这一组量级，就是两段探针之所以按"先改符号、再改热阻"来安排的尺度依据。
+
+
 
 \begin{table}[htbp]
 \centering
@@ -250,7 +261,7 @@ C_2\dot T_2
 
 \begin{figure*}[t]
 \centering
-\spanimg{S_fobi.png}
+\spanimg{X_fo_band.png}
 \caption{核常数下的 Fourier 数随时间、Biot 数随风机。探针窗落在 \(\mathrm{Fo}\ll 1\)、\(\mathrm{Bi}>1\) 的区域}
 \label{fig:fobi}
 \end{figure*}
