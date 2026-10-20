@@ -16,14 +16,14 @@ export const ANNOTATIONS = [
 export const EXPLODE_LABELS = {
   id: "explode",
   items: [
-    { id: "shellTop", text: "外壳顶板", sub: "深色钢板" },
-    { id: "insulation", text: "岩棉保温层", sub: "夹层隔热" },
-    { id: "liner", text: "拉丝不锈钢内衬", sub: "压花板" },
-    { id: "heaterAssy", text: "U 形加热管组", sub: "六根 + 反射板" },
-    { id: "fanAssy", text: "十叶风机", sub: "后壁离心" },
-    { id: "steamAssy", text: "蒸汽管路与水箱", sub: "左壁" },
-    { id: "racksAssy", text: "搁架与烤盘", sub: "四层" },
-    { id: "doorAssy", text: "门体", sub: "双层玻璃 + 钢框" },
+    { id: "shellTop", text: "外壳顶板", sub: "深色钢板", side: "right" },
+    { id: "insulation", text: "岩棉保温层", sub: "夹层隔热", side: "right" },
+    { id: "liner", text: "拉丝不锈钢内衬", sub: "压花板", side: "right" },
+    { id: "heaterAssy", text: "U 形加热管组", sub: "六根 + 反射板", side: "right" },
+    { id: "fanAssy", text: "十叶风机", sub: "后壁离心", side: "right" },
+    { id: "steamAssy", text: "蒸汽管路与水箱", sub: "左壁", side: "left" },
+    { id: "racksAssy", text: "搁架与烤盘", sub: "四层", side: "left" },
+    { id: "doorAssy", text: "门体", sub: "双层玻璃 + 钢框", side: "left" },
   ],
 };
 
@@ -49,7 +49,7 @@ export function layoutCallouts(items, width, opts = {}) {
   const sorted = [...items].sort((a, b) => a.y - b.y);
   const lanes = { left: [], right: [] };
   return sorted.map((item) => {
-    const side = item.x < width * split ? "left" : "right";
+    const side = item.side || (item.x < width * split ? "left" : "right");
     const lane = lanes[side];
     let y = item.y;
     const last = lane[lane.length - 1];

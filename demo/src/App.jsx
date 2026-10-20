@@ -374,8 +374,8 @@ export default function App() {
             view={view}
             section={section || pane === "compare"}
             explode={explode}
-            explodeLabels={explodeLabels}
-            annotations={annotations && (pane === "twin" || pane === "run") && !isDoorClosed}
+            annotations={annotations && (pane === "twin" || pane === "run") && !isDoorClosed && explode < 0.06}
+            explodeLabels={explodeLabels && explode >= 0.06}
             showSteam={showSteam}
             showAirflow={showAirflow}
             cavityLightOn={orphan}
