@@ -3,6 +3,9 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import {
   brass, brushedMaps, chrome, dimpleMaps, enamel, glass, rubber, steel,
 } from "./palette.js";
+import {
+  buildConsoleBoard, buildConsolePanel, buildThermostatBulb,
+} from "./console.js";
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -500,6 +503,34 @@ export function buildCavity() {
   group.add(sensors);
   explodeTargets.push(fan, racks.userData.tray, heater, steamLine, racks, sensors);
 
+  // Control hardware. The fascia is fixed to the cabinet front above the door
+  // (it used to ride on the door); the control board lives inside the fascia
+  // shell directly behind the display and separates forward with it. Its front
+  // face sits just proud of the door plane, like a real control box.
+  const consolePanel = buildConsolePanel(materials);
+  consolePanel.group.position.set(0, 2.75, 1.67);
+  consolePanel.group.userData.basePos = consolePanel.group.position.clone();
+  consolePanel.group.userData.explode = V(0, 0.70, 0.58);
+  consolePanel.group.userData.dialKnobs = consolePanel.parts.knobs;
+  group.add(consolePanel.group);
+
+  const consoleBoard = buildConsoleBoard();
+  consoleBoard.group.position.set(0, 0.0, -0.06);
+  consoleBoard.group.userData.basePos = consoleBoard.group.position.clone();
+  // Drops out from under the fascia and forward, so the exploded front view
+  // shows the printed face above and the board below, not one behind the other.
+  consoleBoard.group.userData.explode = V(0, -0.44, 0.10);
+  consolePanel.group.add(consoleBoard.group);
+
+  // Both separate: the fascia goes forward/up, the board slides back out of it.
+  explodeTargets.push(consolePanel.group, consoleBoard.group);
+
+  // Thermostat bulb, clamped to the right end of the heater support; it rides
+  // with the heater so the capillary stays short in the exploded view.
+  const bulb = buildThermostatBulb();
+  bulb.position.set(1.88, 2.34, 0.58);
+  heater.add(bulb);
+
   attachAnchor(heater, "heater", new THREE.Vector3(1.5, 0.12, 0.4));
   attachAnchor(fan, "fan", new THREE.Vector3(0, 0.85, 0.2));
   attachAnchor(steamLine, "steam", new THREE.Vector3(0.1, 0.9, 0.5));
@@ -536,11 +567,17 @@ export function buildCavity() {
     steamAssy: new THREE.Vector3(0.14, 0.95, 0.55),
     racksAssy: new THREE.Vector3(1.2, 0.12, 0.6),
     doorAssy: new THREE.Vector3(4.95, 1.42, 0.12),
+    consoleAssy: new THREE.Vector3(1.34, 0.02, 0.17),
+    boardAssy: new THREE.Vector3(-0.30, 0.02, 0.16),
   };
 
   return {
     group, materials,
-    parts: { shell, door, heater, fan, steamLine, vent, racks, sensors, bay },
+    parts: {
+      shell, door, heater, fan, steamLine, vent, racks, sensors, bay,
+      consolePanel: consolePanel.group, consoleBoard: consoleBoard.group, bulb,
+    },
+    console: { display: consolePanel.display },
     explodeTargets, sectionPanels, topPanels, panelAnchors, labelLocals,
   };
 }

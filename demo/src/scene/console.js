@@ -12,20 +12,26 @@ import { brass, chrome, steel } from "./palette.js";
  *                 knows: cavity air temperature, dial positions, water level
  *                 and the clock. It never shows the cold spot, which is the
  *                 point chapter 1 makes.
- *   consoleBoard  the board directly behind the fascia: relays, transformer,
- *                 terminal strip, microcontroller, and the capillary
- *                 thermostat whose bulb is clamped to the heating assembly.
+ *   consoleBoard  relays, transformer, terminal strip, microcontroller and the
+ *                 capillary thermostat that switches the heater, mounted in
+ *                 the front-top compartment directly behind the fascia.
  *
- * Both separate in the exploded view and are labelled there.
+ * Both separate in the exploded view and are labelled there. A section view
+ * lifts the top panels and exposes the board over the cavity ceiling.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-/* Fascia: 4.70 m x 0.30 m at 300 px/m, so a legend lands under the part it
-   names instead of near it. */
-export const FASCIA = { w: 4.70, h: 0.30, depth: 0.17 };
+/* Fascia module: 4.86 m x 0.30 m, 0.26 m deep. It is bolted onto the cabinet
+   front above the door, standing proud of the door plane by about the depth of
+   a real control box, and the control board fits inside it, right behind the
+   display. The print texture is produced at 300 px/m so a legend sits directly
+   under the part it names. */
+export const FASCIA = { w: 4.86, h: 0.30, depth: 0.26 };
 
 const PPM = 300;
+const KNOB_X = [1.34, 1.71, 2.08];
+const SCREEN = { cx: -0.55, w: 1.46, h: 0.1825 };
 
 function box(w, h, d, r = 0.012) {
   return new RoundedBoxGeometry(w, h, d, 2, r);
@@ -54,7 +60,7 @@ function printTexture() {
   const H = Math.round(FASCIA.h * PPM);
   const [c, ctx] = canvas2d(W, H);
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#252d34");
+  g.addColorStop(0, "#262e35");
   g.addColorStop(0.62, "#1b2227");
   g.addColorStop(1, "#151b1f");
   ctx.fillStyle = g;
@@ -67,55 +73,47 @@ function printTexture() {
   const px = (x) => W / 2 + x * PPM;
   const py = (y) => H / 2 - y * PPM;
 
-  // display well: exactly the screen mesh, with a 2 mm printed margin
-  const well = { x0: px(-2.03), x1: px(-0.33), y0: py(0.112), y1: py(-0.112) };
+  // display well, 2 mm printed margin around the screen mesh
+  const x0 = px(SCREEN.cx - SCREEN.w / 2 - 0.012);
+  const x1 = px(SCREEN.cx + SCREEN.w / 2 + 0.012);
+  const y0 = py(SCREEN.h / 2 + 0.012);
+  const y1 = py(-SCREEN.h / 2 - 0.012);
   ctx.fillStyle = "#05090c";
-  ctx.fillRect(well.x0, well.y0, well.x1 - well.x0, well.y1 - well.y0);
-  ctx.strokeStyle = "rgba(120, 150, 164, 0.24)";
+  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.strokeStyle = "rgba(120, 150, 164, 0.26)";
   ctx.lineWidth = 1;
-  ctx.strokeRect(well.x0 + 0.5, well.y0 + 0.5, well.x1 - well.x0 - 1, well.y1 - well.y0 - 1);
+  ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
 
-  // dial legends
-  const legend = (x, name) => {
+  // dial legends above each knob, and their range captions below
+  const legend = (x, name, range) => {
     ctx.textAlign = "center";
-    ctx.font = "500 17px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
+    ctx.font = "500 15px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
     ctx.fillStyle = "rgba(214, 228, 236, 0.9)";
-    ctx.fillText(name, px(x), py(0.083));
-    ctx.fillStyle = "rgba(224, 120, 60, 0.55)";
-    ctx.fillRect(px(x) - 13, py(0.062), 26, 1.5);
+    ctx.fillText(name, px(x), py(0.104));
+    ctx.font = "500 11px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
+    ctx.fillStyle = "rgba(140, 172, 188, 0.6)";
+    ctx.fillText(range, px(x), py(-0.112));
   };
-  legend(0.97, "加热");
-  legend(1.29, "蒸汽");
-  legend(1.61, "风机");
-
-  // dial range captions, below the knobs
-  const caption = (x, text) => {
-    ctx.textAlign = "center";
-    ctx.font = "500 12px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-    ctx.fillStyle = "rgba(140, 172, 188, 0.58)";
-    ctx.fillText(text, px(x), py(-0.118));
-  };
-  caption(0.97, "1–3 档");
-  caption(1.29, "0–100 %");
-  caption(1.61, "0–3 档");
+  legend(KNOB_X[0], "加热", "1–3 档");
+  legend(KNOB_X[1], "蒸汽", "0–100 %");
+  legend(KNOB_X[2], "风机", "0–3 档");
 
   const lamp = (x, color, label) => {
     ctx.beginPath();
-    ctx.arc(px(x), py(-0.042), 5, 0, Math.PI * 2);
+    ctx.arc(px(x), py(-0.075), 4, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.font = "500 12px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-    ctx.fillStyle = "rgba(180, 200, 212, 0.6)";
+    ctx.font = "500 10px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
+    ctx.fillStyle = "rgba(180, 200, 212, 0.55)";
     ctx.textAlign = "center";
-    ctx.fillText(label, px(x), py(-0.105));
+    ctx.fillText(label, px(x), py(-0.118));
   };
-  lamp(1.90, "#5fe0b0", "电源");
-  lamp(2.08, "#e0b45f", "门锁");
+  lamp(2.34, "#5fe0b0", "电源");
 
   ctx.textAlign = "left";
   ctx.font = "500 11px 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(122, 150, 164, 0.46)";
-  ctx.fillText("ACTS-MCDT", well.x0, py(-0.128));
+  ctx.fillStyle = "rgba(122, 150, 164, 0.44)";
+  ctx.fillText("ACTS-MCDT", px(-2.30), py(-0.108));
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -123,7 +121,7 @@ function printTexture() {
   return tex;
 }
 
-/* Live display: 800 x 100, matching a 1.70 m x 0.212 m panel at ~470 px/m. */
+/* Live display: 800 x 100 matches a 1.46 m x 0.1825 m panel at ~548 px/m. */
 function displaySurface() {
   const canvas = document.createElement("canvas");
   canvas.width = 800;
@@ -131,7 +129,7 @@ function displaySurface() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
-  return { canvas, ctx: canvas.getContext("2d"), tex, stamp: null };
+  return { canvas, ctx: canvas.getContext("2d"), tex, stamp: null, meta: null };
 }
 
 const CJK = "'Microsoft YaHei', 'Noto Sans SC', 'PingFang SC', sans-serif";
@@ -206,7 +204,7 @@ function drawDisplay(state, frame, meta) {
   ctx.fillStyle = "rgba(140, 210, 220, 0.62)";
   ctx.fillText(`α ${alpha.toFixed(3)}`, 786, 40);
 
-  // progress strip with the design-line tick
+  // progress strip with the design-line tick at alpha = 0.85
   ctx.fillStyle = "rgba(80, 190, 205, 0.16)";
   ctx.fillRect(560, 78, 226, 6);
   ctx.fillStyle = "rgba(224, 120, 60, 0.8)";
@@ -236,87 +234,92 @@ export function buildConsolePanel(materials) {
   const panel = new THREE.Group();
   panel.name = "consolePanel";
 
-  add(panel, box(w, h, depth, 0.016), materials.panel, V(0, 0, 0), null, "console.panel");
+  // Chassis: an open box bolted to the cabinet front, deep enough to hold the
+  // control board. The fascia is a separate front plate, so a section view can
+  // take the plate off and look straight at the board.
+  const chassis = new THREE.Group();
+  panel.add(chassis);
+  add(chassis, box(w, h, 0.014, 0.004), materials.panel, V(0, 0, -depth / 2), null, "console.chassis");
+  add(chassis, box(w, 0.014, depth, 0.004), materials.panel, V(0, h / 2, 0), null, "console.chassis");
+  add(chassis, box(w, 0.014, depth, 0.004), materials.panel, V(0, -h / 2, 0), null, "console.chassis");
+  add(chassis, box(0.014, h, depth, 0.004), materials.panel, V(-w / 2, 0, 0), null, "console.chassis");
+  add(chassis, box(0.014, h, depth, 0.004), materials.panel, V(w / 2, 0, 0), null, "console.chassis");
+
+  const front = new THREE.Group();
+  panel.add(front);
+
+  // fascia plate with silk-screen on its front face
+  add(front, box(w - 0.02, h - 0.012, 0.020, 0.010), materials.panel, V(0, 0, depth / 2 - 0.011), null, "console.panel");
   const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(w - 0.04, h - 0.015),
+    new THREE.PlaneGeometry(w - 0.04, h - 0.026),
     new THREE.MeshStandardMaterial({ map: printTexture(), roughness: 0.56, metalness: 0.24 }),
   );
-  face.position.set(0, 0, depth / 2 + 0.0015);
+  face.position.set(0, 0, depth / 2 - 0.0005);
   face.userData.part = "console.panel";
-  panel.add(face);
+  front.add(face);
 
-  // display well, live panel, cover glass
-  add(panel, box(1.80, 0.235, 0.04, 0.008),
+  // display well, live panel and cover glass. The well is a shallow recess and
+  // its front face stays behind the screen, or it would hide the readout.
+  add(front, box(SCREEN.w + 0.05, SCREEN.h + 0.05, 0.026, 0.008),
     new THREE.MeshStandardMaterial({ color: "#04080b", roughness: 0.34, metalness: 0.44 }),
-    V(-1.18, 0.0, depth / 2 - 0.005), null, "console.bezel");
+    V(SCREEN.cx, 0, depth / 2 - 0.024), null, "console.bezel");
   const display = displaySurface();
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.70, 0.212),
+    new THREE.PlaneGeometry(SCREEN.w, SCREEN.h),
     new THREE.MeshBasicMaterial({ map: display.tex, toneMapped: false }),
   );
-  screen.position.set(-1.18, 0.0, depth / 2 + 0.014);
+  screen.position.set(SCREEN.cx, 0, depth / 2 + 0.003);
   screen.userData.part = "console.screen";
-  panel.add(screen);
+  front.add(screen);
   const cover = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.70, 0.212),
+    new THREE.PlaneGeometry(SCREEN.w, SCREEN.h),
     new THREE.MeshPhysicalMaterial({
       color: "#dcecf2", roughness: 0.05, metalness: 0.0, transparent: true,
       opacity: 0.07, envMapIntensity: 1.8, side: THREE.DoubleSide,
     }),
   );
-  cover.position.set(-1.18, 0.0, depth / 2 + 0.0155);
+  cover.position.set(SCREEN.cx, 0, depth / 2 + 0.0045);
   cover.userData.part = "console.screen";
-  panel.add(cover);
+  front.add(cover);
 
   // three dials: brass skirt, chrome cap, index mark, steel shaft back
-  const knobs = [0.97, 1.29, 1.61].map((x) => {
+  const knobs = KNOB_X.map((x) => {
     const k = new THREE.Group();
-    k.position.set(x, -0.045, depth / 2 + 0.032);
-    add(k, new THREE.CylinderGeometry(0.062, 0.068, 0.050, 32), brass(),
+    k.position.set(x, -0.015, depth / 2 + 0.016);
+    add(k, new THREE.CylinderGeometry(0.056, 0.062, 0.048, 32), brass(),
       V(0, 0, 0), { x: Math.PI / 2, y: 0, z: 0 }, "console.knob");
-    add(k, new THREE.CylinderGeometry(0.040, 0.040, 0.034, 24), chrome(),
-      V(0, 0, 0.038), { x: Math.PI / 2, y: 0, z: 0 }, "console.knob");
-    const mark = add(k, box(0.008, 0.030, 0.009, 0.002), materials.led,
-      V(0, 0.028, 0.052), null, "console.knob");
+    add(k, new THREE.CylinderGeometry(0.036, 0.036, 0.032, 24), chrome(),
+      V(0, 0, 0.036), { x: Math.PI / 2, y: 0, z: 0 }, "console.knob");
+    const mark = add(k, box(0.007, 0.028, 0.008, 0.002), materials.led,
+      V(0, 0.026, 0.050), null, "console.knob");
     mark.castShadow = false;
-    add(k, new THREE.CylinderGeometry(0.014, 0.014, 0.18, 14), chrome(),
-      V(0, 0, -0.10), { x: Math.PI / 2, y: 0, z: 0 }, "console.knob");
-    panel.add(k);
+    add(k, new THREE.CylinderGeometry(0.013, 0.013, 0.19, 14), chrome(),
+      V(0, 0, -0.105), { x: Math.PI / 2, y: 0, z: 0 }, "console.knob");
+    front.add(k);
     return k;
   });
 
-  // status lamps
-  const lamp = (x, mat) => {
-    const m = add(panel, new THREE.CylinderGeometry(0.016, 0.016, 0.016, 16), mat,
-      V(x, -0.045, depth / 2 + 0.005), { x: Math.PI / 2, y: 0, z: 0 }, "console.led");
-    m.castShadow = false;
-    return m;
-  };
-  const powerLed = lamp(1.90, materials.led);
-  const lockLed = lamp(2.08, new THREE.MeshStandardMaterial({
-    color: "#8a5a2a", emissive: "#c07a2a", emissiveIntensity: 0.8,
-  }));
-
-  // ribbon from the display down to the board
-  const ribbon = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-      V(-1.58, -0.10, -0.02),
-      V(-1.24, -0.13, -0.05),
-      V(-0.86, -0.12, -0.06),
-      V(-0.48, -0.08, -0.06),
-    ]), 40, 0.020, 6, false),
-    new THREE.MeshStandardMaterial({ color: "#6f5335", roughness: 0.74, metalness: 0.05 }),
-  );
-  ribbon.scale.set(1, 0.5, 1);
-  ribbon.userData.part = "console.ribbon";
-  panel.add(ribbon);
+  const powerLed = add(front, new THREE.CylinderGeometry(0.014, 0.014, 0.015, 16), materials.led,
+    V(2.34, -0.055, depth / 2 + 0.008), { x: Math.PI / 2, y: 0, z: 0 }, "console.led");
+  powerLed.castShadow = false;
 
   const anchor = new THREE.Object3D();
   anchor.name = "anchor:console";
-  anchor.position.set(1.30, 0.0, depth / 2 + 0.05);
+  anchor.position.set(KNOB_X[1], 0.02, depth / 2 + 0.05);
   panel.add(anchor);
+  // A centre anchor for QA/capture framing: the group bbox also contains the
+  // control board, which moves separately in the exploded view.
+  const centre = new THREE.Object3D();
+  centre.name = "anchor:panel";
+  centre.position.set(0, 0.0, depth / 2);
+  panel.add(centre);
 
-  return { group: panel, display, parts: { knobs, powerLed, lockLed, face, screen }, anchor };
+  return {
+    group: panel,
+    display,
+    parts: { knobs, powerLed, face, screen, front, chassis },
+    anchor,
+  };
 }
 
 /* ------------------------------------------------------------------ board */
@@ -326,99 +329,99 @@ export function buildConsoleBoard() {
   const board = new THREE.Group();
   board.name = "consoleBoard";
 
-  // shallow tray fixed to the cabinet roof, open toward the fascia
-  add(board, box(1.66, 0.016, 0.36, 0.004), m.tray, V(0, -0.10, -0.02), null, "ctrl.tray");
-  add(board, box(1.66, 0.20, 0.012, 0.004), m.tray, V(0, 0.0, -0.19), null, "ctrl.tray");
+  // open chassis that mounts inside the fascia shell, open toward the front
+  add(board, box(1.70, 0.012, 0.20, 0.003), m.tray, V(0, -0.100, 0.01), null, "ctrl.tray");
+  add(board, box(1.70, 0.20, 0.012, 0.003), m.tray, V(0, 0.0, -0.100), null, "ctrl.tray");
+  add(board, box(0.012, 0.20, 0.20, 0.003), m.tray, V(-0.85, 0.0, 0.01), null, "ctrl.tray");
+  add(board, box(0.012, 0.20, 0.20, 0.003), m.tray, V(0.85, 0.0, 0.01), null, "ctrl.tray");
 
   const pcb = new THREE.Group();
-  pcb.position.set(0, 0.0, 0.0);
   board.add(pcb);
-  add(pcb, box(1.46, 0.24, 0.012, 0.003), m.pcb, V(0, 0, 0), null, "ctrl.board");
+  add(pcb, box(1.52, 0.22, 0.012, 0.003), m.pcb, V(0, 0.005, -0.01), null, "ctrl.board");
 
-  // power relays with drivers
-  [-0.54, -0.38].forEach((x) => {
-    add(pcb, box(0.12, 0.09, 0.09, 0.008), m.relay, V(x, 0.02, 0.055), null, "ctrl.relay");
-    add(pcb, box(0.025, 0.014, 0.025, 0.003), m.ceramic, V(x, -0.055, 0.042), null, "ctrl.relay");
+  // power relays with their driver pads
+  [-0.56, -0.40].forEach((x) => {
+    add(pcb, box(0.115, 0.085, 0.085, 0.008), m.relay, V(x, 0.022, 0.052), null, "ctrl.relay");
+    add(pcb, box(0.024, 0.013, 0.024, 0.003), m.ceramic, V(x, -0.055, 0.038), null, "ctrl.relay");
   });
   // mains transformer
-  add(pcb, box(0.17, 0.15, 0.10, 0.008), steel("#3a434a", { metalness: 0.5, roughness: 0.55 }),
-    V(-0.13, 0.0, 0.062), null, "ctrl.transformer");
-  add(pcb, box(0.13, 0.03, 0.08, 0.004), brass(), V(-0.13, 0.09, 0.062), null, "ctrl.transformer");
+  add(pcb, box(0.165, 0.145, 0.095, 0.008), steel("#3a434a", { metalness: 0.5, roughness: 0.55 }),
+    V(-0.14, 0.0, 0.058), null, "ctrl.transformer");
+  add(pcb, box(0.125, 0.028, 0.075, 0.004), brass(), V(-0.14, 0.086, 0.058), null, "ctrl.transformer");
   // terminal strip
-  add(pcb, box(0.62, 0.055, 0.06, 0.005), m.plastic, V(0.02, -0.105, 0.04), null, "ctrl.terminal");
+  add(pcb, box(0.60, 0.05, 0.058, 0.005), m.plastic, V(0.02, -0.100, 0.036), null, "ctrl.terminal");
   for (let i = 0; i < 8; i += 1) {
-    add(pcb, new THREE.CylinderGeometry(0.009, 0.009, 0.016, 10), brass(),
-      V(-0.24 + i * 0.075, -0.105, 0.074), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.terminal");
+    add(pcb, new THREE.CylinderGeometry(0.0085, 0.0085, 0.015, 10), brass(),
+      V(-0.23 + i * 0.072, -0.100, 0.068), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.terminal");
   }
-  // capacitors, microcontroller, heat sink, fuse
-  [-0.34, -0.30].forEach((x) => {
-    add(pcb, new THREE.CylinderGeometry(0.022, 0.022, 0.08, 16), m.plastic,
-      V(x, 0.03, 0.048), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.capacitor");
+  // capacitors, microcontroller, heat sink, fuse holder
+  [-0.35, -0.31].forEach((x) => {
+    add(pcb, new THREE.CylinderGeometry(0.021, 0.021, 0.075, 16), m.plastic,
+      V(x, 0.032, 0.046), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.capacitor");
   });
-  add(pcb, box(0.11, 0.028, 0.075, 0.003), m.plastic, V(0.06, 0.062, 0.046), null, "ctrl.mcu");
-  add(pcb, box(0.06, 0.011, 0.046, 0.002), m.ceramic, V(0.06, 0.081, 0.046), null, "ctrl.mcu");
-  add(pcb, box(0.075, 0.14, 0.05, 0.004), m.sink, V(0.24, 0.0, 0.05), null, "ctrl.heatsink");
-  add(pcb, box(0.08, 0.05, 0.04, 0.005), m.plastic, V(0.62, 0.0, 0.05), null, "ctrl.fuse");
+  add(pcb, box(0.105, 0.026, 0.072, 0.003), m.plastic, V(0.06, 0.062, 0.044), null, "ctrl.mcu");
+  add(pcb, box(0.058, 0.010, 0.044, 0.002), m.ceramic, V(0.06, 0.080, 0.044), null, "ctrl.mcu");
+  add(pcb, box(0.07, 0.135, 0.048, 0.004), m.sink, V(0.245, 0.0, 0.048), null, "ctrl.heatsink");
+  add(pcb, box(0.075, 0.048, 0.038, 0.005), m.plastic, V(0.63, 0.0, 0.046), null, "ctrl.fuse");
 
-  // thermostat body on the board
+  // thermostat: body on the board, spindle forward, bulb on a pigtail below
   const stat = new THREE.Group();
-  stat.position.set(0.48, 0.02, 0.0);
+  stat.position.set(0.47, 0.028, -0.050);
   pcb.add(stat);
-  add(stat, box(0.13, 0.13, 0.10, 0.012), steel("#c9d2d7", { metalness: 0.7, roughness: 0.34 }),
+  add(stat, box(0.125, 0.125, 0.095, 0.012), steel("#c9d2d7", { metalness: 0.7, roughness: 0.34 }),
     V(0, 0, 0), null, "ctrl.thermostat");
-  add(stat, box(0.085, 0.085, 0.035, 0.006), brass(), V(0, 0, 0.068), null, "ctrl.thermostat");
-  add(stat, new THREE.CylinderGeometry(0.016, 0.016, 0.14, 16), chrome(),
-    V(0, 0, 0.145), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.thermostat");
+  add(stat, box(0.082, 0.082, 0.028, 0.006), brass(), V(0, 0, 0.062), null, "ctrl.thermostat");
+  add(stat, new THREE.CylinderGeometry(0.015, 0.015, 0.07, 16), chrome(),
+    V(0, 0, 0.108), { x: Math.PI / 2, y: 0, z: 0 }, "ctrl.thermostat");
 
-  // capillary coil beside the thermostat
-  const coil = [];
-  for (let i = 0; i <= 90; i += 1) {
-    const k = i / 90;
-    const a = k * Math.PI * 6.0;
-    coil.push(new THREE.Vector3(
-      0.20 + Math.cos(a) * 0.055,
-      -0.03 + Math.sin(a) * 0.010,
-      0.055 + Math.sin(a) * 0.055,
+  const pigtail = [];
+  for (let i = 0; i <= 74; i += 1) {
+    const k = i / 74;
+    const a = k * Math.PI * 5.0;
+    pigtail.push(new THREE.Vector3(
+      0.30 + Math.cos(a) * 0.048,
+      -0.055 - k * 0.012,
+      0.035 + Math.sin(a) * 0.048,
     ));
   }
-  const coilMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coil), 200, 0.006, 7, false),
+  const coil = new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pigtail), 160, 0.0055, 7, false),
     m.copper,
   );
-  coilMesh.userData.part = "ctrl.capillary";
-  coilMesh.castShadow = true;
-  pcb.add(coilMesh);
+  coil.userData.part = "ctrl.capillary";
+  coil.castShadow = true;
+  pcb.add(coil);
 
   const anchor = new THREE.Object3D();
   anchor.name = "anchor:controller";
-  anchor.position.set(0.10, 0.06, 0.06);
+  anchor.position.set(0.10, 0.08, 0.02);
   board.add(anchor);
 
-  return { group: board, anchor, parts: { pcb, stat, coil: coilMesh } };
+  return { group: board, anchor, parts: { pcb, stat, coil } };
 }
 
-/* The capillary bulb, clamped to the heater support; parented to the heater so
-   it travels with it in the exploded view. */
+/* The capillary bulb clamped to the heater support. Built as its own group so
+   it can ride with the heating assembly in the exploded view, with the copper
+   run climbing from the heater up behind the fascia where the thermostat is. */
 export function buildThermostatBulb() {
   const m = electronics();
   const g = new THREE.Group();
   g.name = "thermostatBulb";
-  add(g, new THREE.CylinderGeometry(0.015, 0.015, 0.18, 12), m.copper,
+  add(g, new THREE.CylinderGeometry(0.014, 0.014, 0.17, 12), m.copper,
     V(0, 0, 0), { x: 0, y: 0, z: Math.PI / 2 }, "ctrl.bulb");
-  add(g, box(0.05, 0.09, 0.05, 0.008), steel("#9aa6ad", { metalness: 0.8, roughness: 0.3 }),
+  add(g, box(0.048, 0.085, 0.048, 0.008), steel("#9aa6ad", { metalness: 0.8, roughness: 0.3 }),
     V(0, 0, 0), null, "ctrl.bulb");
-  add(g, box(0.04, 0.028, 0.04, 0.004), m.ceramic, V(0.11, 0.0, 0.0), null, "ctrl.bulb");
-
-  // the run from the bulb back over the ceiling to the control tray
+  add(g, box(0.036, 0.026, 0.036, 0.004), m.ceramic, V(-0.098, 0.0, 0.0), null, "ctrl.bulb");
+  // run from the bulb back over the ceiling to the control fascia
   const run = [
-    V(0.11, 0.0, 0.0),
-    V(0.26, 0.06, -0.18),
-    V(0.30, 0.13, -0.52),
-    V(0.24, 0.16, -0.92),
-    V(0.20, 0.17, -1.22),
+    V(-0.14, 0.0, 0.0),
+    V(-0.30, 0.06, 0.10),
+    V(-0.58, 0.16, 0.30),
+    V(-0.84, 0.26, 0.56),
+    V(-0.98, 0.33, 0.86),
   ];
   const tube = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(run), 64, 0.0055, 6, false),
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(run), 80, 0.0048, 6, false),
     m.copper,
   );
   tube.userData.part = "ctrl.capillary";

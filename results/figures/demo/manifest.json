@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-20T09:31:52.973Z",
+ "generated": "2026-10-20T13:59:47.314Z",
  "url": "http://127.0.0.1:4180/index.html",
  "viewport": {
   "width": 1600,
@@ -55,7 +55,25 @@
   {
    "name": "05_twin_explode",
    "file": "results\\figures\\demo\\05_twin_explode.png",
-   "note": "自动分解 100%：九层沿装配轴分离并标注",
+   "note": "自动分解 100%：十层沿装配轴分离并标注",
+   "px": [
+    2040,
+    1126
+   ]
+  },
+  {
+   "name": "09_console",
+   "file": "results\\figures\\demo\\09_console.png",
+   "note": "数显面板：腔温读数、三旋钮、丝印档位与状态灯",
+   "px": [
+    2040,
+    1126
+   ]
+  },
+  {
+   "name": "10_board",
+   "file": "results\\figures\\demo\\10_board.png",
+   "note": "温控主板：继电器、变压器、端子排与毛细管温控器",
    "px": [
     2040,
     1126

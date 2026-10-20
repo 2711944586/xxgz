@@ -45,3 +45,16 @@ _*.png
 _*.cjs
 _*.py
 !scripts/_*.py
+
+# QA / probe output (capture scripts write here, never ship it)
+demo/src/_probe/
+demo/src/_public/
+scripts/_probe-*.cjs
+
+# Animate test compiles
+_pdf/
+
+# Demo capture intermediates: the frames are 40 MB and regenerate from the
+# stills/animation step, so only the encoded results are tracked.
+results/figures/demo/_frames/
+results/figures/demo/*.mp4

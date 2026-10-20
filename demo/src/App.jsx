@@ -420,6 +420,8 @@ export default function App() {
             showSteam={showSteam}
             showAirflow={showAirflow}
             cavityLightOn={cavityLightOn}
+            modeLabel={manifest?.modeLabel?.[frame?.mode ?? 0] || ""}
+            cookLabel={manifest?.cooks.find((c) => c.key === cook)?.label || ""}
             onPickPart={(part) => setPickedPart(part)}
           />
           {pane !== "surface" && (
@@ -895,6 +897,25 @@ const PART_LABEL = {
   "frame": "腔口门框",
   "seal": "密封条",
   "bay": "电控舱",
+  "console.panel": "数显面板",
+  "console.knob": "旋钮",
+  "console.led": "状态灯",
+  "console.screen": "显示屏",
+  "console.bezel": "屏框",
+  "console.chassis": "面板壳",
+  "console.ribbon": "排线",
+  "ctrl.board": "温控主板",
+  "ctrl.tray": "主板支架",
+  "ctrl.relay": "功率继电器",
+  "ctrl.transformer": "电源变压器",
+  "ctrl.terminal": "接线端子排",
+  "ctrl.capacitor": "滤波电容",
+  "ctrl.mcu": "控制芯片",
+  "ctrl.heatsink": "散热片",
+  "ctrl.fuse": "保险丝座",
+  "ctrl.thermostat": "毛细管温控器",
+  "ctrl.capillary": "毛细管",
+  "ctrl.bulb": "测温包",
   "fascia": "控制面板",
   "fascia.knob": "旋钮",
   "fascia.led": "指示灯",
@@ -937,6 +958,15 @@ const PART_INFO = {
   "steam.nozzle": ["双锥蒸汽喷嘴", "左壁直喷。窗内蒸汽升到 1.0，窗外回到基线 0.15。"],
   "vent": ["排汽百叶", "七片百叶，开度跟排汽指令走，改变腔体湿度。"],
   "tray": ["烤盘与烤架", "搪瓷烤盘接住冷凝水，四层搁架改变辐射份额。"],
+  "console.screen": ["数显屏", "只显示腔温、三枚旋钮的位置、水位与用时。冷点不在这一屏上，这正是第一章说的那道缝。"],
+  "console.panel": ["面板与丝印", "深色拉丝面板，旋钮下方是加热、蒸汽、风机的档位标记；面板本身不进入积分器。"],
+  "console.knob": ["三枚旋钮", "从左到右对应加热档、蒸汽开度、风机档。旋钮角跟当前帧的 heat、steam、fan 一起转。"],
+  "ctrl.thermostat": ["毛细管温控器", "充液感温包接到加热管支架上，管温升到设定值即断开加热回路，是机械式的一级超温保护。"],
+  "ctrl.capillary": ["毛细管", "温控器的感温包与本体之间的细铜管，充液受热膨胀推动膜片动作。"],
+  "ctrl.bulb": ["测温包", "夹在加热管右端支架上的铜包，读的是管壁温度而不是腔温，更不是冷点。"],
+  "ctrl.relay": ["功率继电器", "加热管与蒸汽发生器的通断开关，线圈由主板驱动。"],
+  "ctrl.board": ["温控主板", "继电器、变压器、端子排与控制芯片都在这块板上；它执行指令，不估计冷点。"],
+  "ctrl.transformer": ["电源变压器", "把 230 V 降到控制板与显示用的低压。"],
   "sensor.coldSpot": ["冷点标记", "十六层温度场里最低的那一层。"],
   "sensor.doorSwitch": ["门互锁", "门开即把加热和蒸汽固定在零，属于安全回路。"],
   "sensor.waterFloat": ["水位浮子", "水位低于 0.05 触发干烧保护。"],
@@ -986,6 +1016,9 @@ function TwinInspector({ manifest, frame, scenario, pickedPart, onPickPart }) {
           <li>左侧管路、水量阀、双锥喷嘴</li>
           <li>七片排汽百叶，随排汽指令转动</li>
           <li>四层搁架与搪瓷烤盘</li>
+          <li>顶部数显面板：腔温、三旋钮、水位与用时</li>
+          <li>面板内温控主板：继电器、变压器、端子排</li>
+          <li>毛细管温控器，感温包夹在加热管支架上</li>
           <li>五处传感器、门互锁、水位浮子</li>
         </ul>
       </section>

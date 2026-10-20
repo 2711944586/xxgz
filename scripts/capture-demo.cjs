@@ -135,9 +135,21 @@ async function main() {
   await clickText(".auto-row .seg", "自动分解");
   await page.waitForTimeout(3600);
   await front();
-  await snap("05_twin_explode", { note: "自动分解 100%：九层沿装配轴分离并标注" });
+  await snap("05_twin_explode", { note: "自动分解 100%：十层沿装配轴分离并标注" });
+  // Two close-ups taken while the stack is still open, so the fascia and the
+  // board behind it are each unobstructed. Callouts are switched off first:
+  // at this distance they cover the very parts the close-ups exist to show.
+  await clickText(".toggle", "分解标注");
+  await page.evaluate(() => window.__sceneFocus && window.__sceneFocus("anchor:panel", 5.0, 0.06, 0.0));
+  await page.waitForTimeout(1000);
+  await snap("09_console", { note: "数显面板：腔温读数、三旋钮、丝印档位与状态灯" });
+  await page.evaluate(() => window.__sceneFocus && window.__sceneFocus("anchor:controller", 2.3, 0.16, 0.0));
+  await page.waitForTimeout(1000);
+  await snap("10_board", { note: "温控主板：继电器、变压器、端子排与毛细管温控器" });
+  await clickText(".toggle", "分解标注");
   await clickText(".auto-row .seg", "复位");
   await page.waitForTimeout(1800);
+  await front();
 
   await press("3");
   await page.waitForTimeout(900);

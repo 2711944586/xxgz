@@ -58,7 +58,9 @@ acts-mcdt/
 ├── demo/                   浏览器实验台（Vite + React + Three.js）
 │   ├── public/data/        traces.bin（75 条轨迹、31050 帧、16 层温度场）
 │   │                       surfaces.json（7628 格参数面）manifest.json（通道与缩放）
-│   └── public/dataset.json 数据契约：模式、代际、指纹、模型边界
+│   ├── public/dataset.json 数据契约：模式、代际、指纹、模型边界
+│   └── src/scene/          三维零件：外壳/门体/加热/风机/蒸汽/搁架/传感器
+│                           console.js 数显面板与温控主板（屏上读数接同一帧日志）
 ├── src/acts_mcdt/          数值核
 │   ├── physics.py          rollout()，两套代际开关
 │   ├── estimator.py        两节点辨识 + 双状态 EKF
@@ -67,7 +69,8 @@ acts-mcdt/
 ├── tests/                  命题测试 + 代际契约测试
 ├── scripts/                战役、绘图、Word 导出、日志校验
 ├── results/logs/           正文数字以这里为准；MANIFEST.json 记录代际
-└── results/figures/paper/  正文插图（47 张，与正文引用一一对应）
+├── results/figures/paper/  正文插图（47 张，与正文引用一一对应）
+└── results/figures/demo/   演示页截图与爆炸动画（capture-demo.cjs 生成）
 ```
 
 ## 编译与导出
@@ -83,6 +86,8 @@ Word 由 `scripts/build_docx.py` 从 LaTeX 导出：正文双栏（每栏 \(87.5
 页面分五栏：运行、孪生、探针、对照、响应面。回放覆盖五种策略 × 三种档位 × 五种厚度；每帧带 31 个核通道与 16 层厚度温度场，三维食物按场着色。响应面另用 `baseline` 代际的 48 种子逐格聚合，与回放不混读。
 
 页面操作：拖拽旋转、滚轮缩放、点击零件看说明；`Space` 播放/暂停，`←/→` 步进（`Shift` 十帧），`1`–`5` 切栏，`S` 剖切。导出的 CSV 含 31 列与 16 层温度。
+
+孪生栏的零件包含数显面板与温控主板：面板屏上只显示腔温、加热/蒸汽/风机三个指令、水位、用时与进度，**不显示冷点**；爆炸分解把它们作为两层单独拆出并标注。图案与动画由 `node scripts/capture-demo.cjs` 生成到 `results/figures/demo/`，再用 `python scripts/make_media.py` 编码成 PDF/Word 可播放的序列；两脚本需要本地已启动演示服务（默认 `http://127.0.0.1:4180`）。
 
 ## 已知边界
 

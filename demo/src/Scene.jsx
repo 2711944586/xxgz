@@ -7,6 +7,7 @@ import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { buildCavity } from "./scene/cavity.js";
+import { updateConsole } from "./scene/console.js";
 import { buildFood, updateFood } from "./scene/food.js";
 import { buildSteam, buildAirflow } from "./scene/steam.js";
 import {
@@ -41,6 +42,8 @@ export default function Scene({
   showSteam = true,
   showAirflow = true,
   cavityLightOn = true,
+  modeLabel = "",
+  cookLabel = "",
   onPickPart,
 }) {
   const host = useRef(null);
@@ -50,7 +53,10 @@ export default function Scene({
   const pickRef = useRef(onPickPart);
   pickRef.current = onPickPart;
   const live = useRef({});
-  live.current = { frame, lengthM, doorOpen, view, section, explode, annotations, explodeLabels, showSteam, showAirflow, cavityLightOn };
+  live.current = {
+    frame, lengthM, doorOpen, view, section, explode, annotations, explodeLabels,
+    showSteam, showAirflow, cavityLightOn, modeLabel, cookLabel,
+  };
 
   useEffect(() => {
     const el = host.current;
@@ -207,6 +213,36 @@ export default function Scene({
         const hits = raycaster.intersectObjects(scene.children, true);
         return hits.slice(0, 4).map((h) => ({ part: h.object.userData.part || h.object.name || h.object.type, d: +h.distance.toFixed(2) }));
       };
+      // Read-only hook for the capture/QA scripts: lets a probe look up any
+      // named part and project it to screen space without guessing pixel
+      // coordinates from a screenshot.
+      window.__sceneProbe = (name) => {
+        const node = scene.getObjectByName(name);
+        if (!node) return null;
+        const box = new THREE.Box3().setFromObject(node);
+        const centre = box.getCenter(new THREE.Vector3());
+        const rect = el.getBoundingClientRect();
+        const p = projectionOf(camera, centre, rect.width, rect.height);
+        return {
+          name,
+          world: centre.toArray().map((v) => +v.toFixed(3)),
+          screen: { x: Math.round(p.x), y: Math.round(p.y), behind: p.behind },
+          size: box.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(3)),
+        };
+      };
+      // Focus the orbit camera on a named part; only used by the QA scripts.
+      window.__sceneFocus = (name, dist = 1.6, dy = 0, dz = 0) => {
+        const node = scene.getObjectByName(name);
+        if (!node) return null;
+        const box = new THREE.Box3().setFromObject(node);
+        const centre = box.isEmpty()
+          ? node.getWorldPosition(new THREE.Vector3())
+          : box.getCenter(new THREE.Vector3());
+        camera.position.set(centre.x, centre.y + dy, centre.z + dist + dz);
+        controls.target.copy(centre);
+        controls.update();
+        return centre.toArray().map((v) => +v.toFixed(3));
+      };
     }
     state.current = {
       renderer, composer, scene, camera, controls, gtao, bloom, cavity, food,
@@ -309,9 +345,22 @@ export default function Scene({
       water.position.y = 0.27 - 0.075 * (1 - level);
 
       const knobs = door.userData.knobs;
-      knobs[0].rotation.z = -heat * 2.5;
-      knobs[1].rotation.z = -steamCmd * 2.5;
-      knobs[2].rotation.z = -(fanCmd / 1.3) * 2.5;
+      if (knobs) {
+        knobs[0].rotation.z = -heat * 2.5;
+        knobs[1].rotation.z = -steamCmd * 2.5;
+        knobs[2].rotation.z = -(fanCmd / 1.3) * 2.5;
+      }
+
+      // The fascia dials track the same three actuators, and its screen reads
+      // the same frame the HUD does: cavity temperature, dial positions, water.
+      s.cavity.parts.consolePanel.userData.dialKnobs?.forEach((k, i) => {
+        const v = i === 0 ? heat : i === 1 ? steamCmd : fanCmd / 1.3;
+        k.rotation.z = -Math.min(1, Math.max(0, v)) * 2.4;
+      });
+      updateConsole(s.cavity.console.display, f, {
+        modeLabel: L.modeLabel,
+        cookLabel: L.cookLabel,
+      });
 
       updateFood(s.food, f, L.lengthM);
 
@@ -339,6 +388,7 @@ export default function Scene({
               shellTop: anchors.shell, insulation: anchors.shell, liner: anchors.shell,
               heaterAssy: anchors.heater, fanAssy: anchors.fan, steamAssy: anchors.steamLine,
               racksAssy: anchors.racks, doorAssy: anchors.door,
+              consoleAssy: anchors.consolePanel, boardAssy: anchors.consoleBoard,
             }[spec.id];
             if (!host2) continue;
             const local = s.cavity.labelLocals?.[spec.id];
@@ -348,7 +398,7 @@ export default function Scene({
             if (p.behind) continue;
             items.push({ ...spec, x: p.x, y: p.y });
           }
-          const placed = layoutCallouts(items, rect.width, { gap: 38 });
+          const placed = layoutCallouts(items, rect.width, { gap: 38, height: rect.height });
           for (const it of placed) {
             const node = eLayer.querySelector(`[data-ann="${it.id}"]`);
             if (!node) continue;
