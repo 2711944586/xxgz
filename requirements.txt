@@ -3,16 +3,15 @@ numpy>=1.26
 matplotlib>=3.8
 pandas>=2.0          # restyle_figures.py reads the demo CSV
 openpyxl>=3.1        # external/gab-fit.xlsx
-Pillow>=10.0         # cover and watermark rendering
+Pillow>=10.0         # cover and watermark rendering, figure size checks
 pymupdf>=1.24        # PDF page checks in the build scripts
+pytest>=8.0          # repository tests
 
-# Optional: src/acts_mcdt/fast.py (the legacy wide-grid kernel).
-numba>=0.59
-
-# Optional: scripts/run_extensions.py trains the two-node surrogate.
-torch>=2.2
-
-# Word export: scripts/build_docx.py drives Microsoft Word through COM to
-# refresh the table of contents and page numbers. Windows + Word only.
+# Word export: scripts/build_docx.py
+#   - pandoc converts the flattened LaTeX to DOCX (must be on PATH)
+#   - python-docx does the native OOXML post-processing
+#   - pywin32/Word refreshes the TOC and bakes page numbers (Windows + Word)
 python-docx>=1.1
-pywin32>=306
+pywin32>=306; sys_platform == "win32"
+
+# PDF export: XeLaTeX (MiKTeX or TeX Live) with ctex/xeCJK, on PATH.

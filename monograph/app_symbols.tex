@@ -49,7 +49,7 @@
 \begin{table}[htbp]
 \centering
 \caption{信息与安全符号}
-\label{tab:app-sym}
+\label{tab:app-sym-info}
 {\footnotesize\setlength{\tabcolsep}{2pt}
 \begin{tabular}{@{}l p{4.2cm}@{}}
 
@@ -82,7 +82,7 @@
 \begin{table}[htbp]
 \centering
 \caption{数值核常数}
-\label{tab:app-sym}
+\label{tab:app-sym-const}
 {\footnotesize\setlength{\tabcolsep}{2pt}
 \begin{tabular}{@{}l p{1.5cm} l p{2.4cm}@{}}
 
@@ -114,7 +114,7 @@
 \begin{table}[htbp]
 \centering
 \caption{摘要日志的列}
-\label{tab:app-sym}
+\label{tab:app-sym-log}
 {\footnotesize\setlength{\tabcolsep}{2pt}
 \begin{tabular}{@{}l p{4.2cm}@{}}
 
@@ -132,7 +132,7 @@
 \texttt{policy} & open、pid、mpc、dual \\
 \texttt{stop\_s} & 策略自己决定的停机时刻，单位秒 \\
 \texttt{e\_alpha} & 该时刻真值 \(\alpha_m-0.85\) \\
-\texttt{energy} & 加热指令沿记录点求和再乘记录间隔 \\
+\texttt{energy} & 累计加热指令指标：加热指令沿记录点求和再乘记录间隔，不等同于电表读数 \\
 \texttt{var\_r} & 轨迹终点的方差 \\
 \texttt{alpha\_b} & 终点表面褐变进度 \\
 \texttt{augmented} & 恒为 false \\

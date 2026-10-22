@@ -25,8 +25,8 @@ BOOK = ROOT / "monograph"
 SUBMIT_DIR = ROOT / "submit"
 SUBMIT_PDF = SUBMIT_DIR / "20241334庄颂信息2402.pdf"
 SUBMIT_DOCX = SUBMIT_DIR / "20241334庄颂信息2402.docx"
-LOCAL_DOCX = BOOK / "ACTS-MCDT.docx"
-PDF = BOOK / "ACTS-MCDT.pdf"
+BUILD = ROOT / "build"
+PDF = BUILD / "ACTS-MCDT.pdf"
 COVER = BOOK / "figures" / "cover.png"
 BACK = BOOK / "figures" / "back.png"
 BG = BOOK / "figures" / "bg.png"
@@ -62,7 +62,7 @@ BODY_CHAPTERS = [
     "多尺度热质耦合机理与降阶状态建模",
     "内部热阻不可辨识性、对偶探针与安全屏障",
     "多维数值仿真、网格收敛与因子消融",
-    "三维数字孪生交互系统与总结展望",
+    "三维交互系统与总结展望",
 ]
 APPENDIX_CHAPTERS = [
     "符号、单位与日志字段",
@@ -196,12 +196,62 @@ def convert_bibliography(tex: str) -> str:
 
 
 def convert_tabularx(tex: str) -> str:
-    def repl(match: re.Match[str]) -> str:
-        spec = match.group(1).replace("X", "p{5.4cm}")
-        return r"\begin{tabular}{" + spec + "}"
+    """把 tabularx / 自定义列类型转成 pandoc 能识别的 tabular。
 
-    tex = re.sub(r"\\begin\{tabularx\}\{[^}]*\}\{([^}]*)\}", repl, tex)
-    return tex.replace(r"\end{tabularx}", r"\end{tabular}")
+    preamble 里 Y 定义为 >{\\raggedright\\arraybackslash}X（tabularx 的弹性列），
+    pandoc 不认 Y 也不认 X，遇到会整表丢弃，因此这里统一换成定宽 p 列。
+    列宽参数可能含嵌套花括号（p{3.2cm}），所以用括号配对扫描而不是正则。
+    """
+
+    def grab_spec(s: str, start: int) -> tuple[str, int] | None:
+        """从 start 起（应为 '{'）读一个配平的 {...}，返回 (内容, 结束位置)。"""
+        if start >= len(s) or s[start] != "{":
+            return None
+        depth = 0
+        i = start
+        while i < len(s):
+            if s[i] == "{":
+                depth += 1
+            elif s[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return s[start + 1 : i], i + 1
+            i += 1
+        return None
+
+    def fix_spec(spec: str) -> str:
+        return spec.replace("Y", "p{6.2cm}").replace("X", "p{5.4cm}")
+
+    out: list[str] = []
+    i = 0
+    while True:
+        j = tex.find(r"\begin{tabularx}", i)
+        if j < 0:
+            out.append(tex[i:])
+            break
+        out.append(tex[i:j])
+        k = j + len(r"\begin{tabularx}")
+        width = grab_spec(tex, k)
+        if width is None:
+            out.append(tex[j:k])
+            i = k
+            continue
+        spec_res = grab_spec(tex, width[1])
+        if spec_res is None:
+            out.append(tex[j:k])
+            i = k
+            continue
+        out.append(r"\begin{tabular}{" + fix_spec(spec_res[0]) + "}")
+        i = spec_res[1]
+
+    tex = "".join(out).replace(r"\end{tabularx}", r"\end{tabular}")
+
+    # 普通 tabular 里可能直接写了 Y
+    def fix_plain(match: re.Match[str]) -> str:
+        spec = match.group(1)
+        return r"\begin{tabular}{" + fix_spec(spec) + "}" if "Y" in spec else match.group(0)
+
+    return re.sub(r"\\begin\{tabular\}\{([^{}]*)\}", fix_plain, tex)
 
 
 def collect_labels(tex: str) -> tuple[dict[str, str], set[str]]:
@@ -316,6 +366,12 @@ def strip_layout(tex: str) -> str:
     tex = re.sub(r"\\(?:one|two)column\b", "", tex)
     tex = re.sub(r"\\colimg\{([^}]+)\}", r"\\includegraphics[width=\\columnwidth]{\1}", tex)
     tex = re.sub(r"\\spanimg\{([^}]+)\}", r"\\includegraphics[width=0.96\\textwidth]{\1}", tex)
+    # animategraphics -> 静态首帧图，pandoc 不认该宏，且 Word 不支持 PDF 帧序列
+    tex = re.sub(
+        r"\\animategraphics(?:\[[^\]]*\])?\{[^}]*\}\{[^}]*\}\{[^}]*\}\{[^}]*\}",
+        r"\\includegraphics[width=0.86\\linewidth]{05_twin_explode.png}",
+        tex,
+    )
     tex = tex.replace(r"\begin{figure*}", r"\begin{figure}")
     tex = tex.replace(r"\end{figure*}", r"\end{figure}")
     tex = tex.replace(r"\begin{table*}", r"\begin{table}")
@@ -326,10 +382,70 @@ def strip_layout(tex: str) -> str:
     tex = tex.replace(r"\operatorname{ess\,inf}", r"\mathrm{ess\,inf}")
     tex = tex.replace(r"\operatorname*{arg\,min}", r"\mathrm{arg\,min}")
     tex = tex.replace(r"\operatorname*{arg\,max}", r"\mathrm{arg\,max}")
+    # 温度单位：LaTeX 的 ^\circ 有三个渲染问题——
+    #   1. 表格单元格里被 pandoc 拆成「数字 / ∘ / C」三个 run，∘ 上标后叠到数字上；
+    #   2. 留在 OMML 公式里时 Word 显示成 "75° C"；
+    #   3. 加空格的 "75 °C" 在 Word 里被拉成 "75 ° C"（三个字符三个 run）。
+    # 结论：写成紧排的 "75°C"，并把只含「数值 + 单位」的短行内公式降级为纯文本。
+    tex = re.sub(r"\^\s*\{?\s*\\circ\s*\}?\s*\\mathrm\{C\}", "°C", tex)
+    tex = re.sub(r"\^\s*\{?\s*\\circ\s*\}?\s*C\b", "°C", tex)
+    tex = re.sub(r"\s*°\s*C", "°C", tex)
+
+    # 形如 \(26°C\)、\(0.5°C\)、\(-7.9°C\) 的纯数值加单位，正文里当普通文字更稳
+    tex = re.sub(r"\\\(\s*([-−]?\d+(?:\.\d+)?)\s*°C\s*\\\)", r"\1°C", tex)
+    # \resizebox 是纯排版宏，pandoc 会把它当普通文本吐出来；剥掉外壳只留内容
+    tex = unwrap_resizebox(tex)
+    # 所有 \ref 已换成数字，残留的 \label 必须清掉，否则 pandoc 会原样输出成 [ch:xxx]
+    tex = strip_labels(tex)
     tex = convert_subfigures(tex)
     tex = re.sub(r"\\begin\{subfigure\}(\[[^\]]*\])?\{[^}]*\}", r"\\begin{minipage}{0.48\\textwidth}", tex)
     tex = tex.replace(r"\end{subfigure}", r"\end{minipage}")
     return tex
+
+
+def unwrap_resizebox(tex: str) -> str:
+    """把 \\resizebox{W}{H}{CONTENT} 换成 CONTENT，防止源码泄漏进 Word。"""
+    out: list[str] = []
+    i = 0
+    token = r"\resizebox"
+    while True:
+        pos = tex.find(token, i)
+        if pos < 0:
+            out.append(tex[i:])
+            break
+        out.append(tex[i:pos])
+        j = pos + len(token)
+        args: list[str] = []
+        ok = True
+        for _ in range(3):
+            while j < len(tex) and tex[j] in " \t\n":
+                j += 1
+            if j >= len(tex) or tex[j] != "{":
+                ok = False
+                break
+            depth = 1
+            j += 1
+            start = j
+            while j < len(tex) and depth:
+                if tex[j] == "{":
+                    depth += 1
+                elif tex[j] == "}":
+                    depth -= 1
+                j += 1
+            args.append(tex[start : j - 1])
+        if not ok or len(args) < 3:
+            out.append(token)
+            i = pos + len(token)
+            continue
+        content = args[2]
+        # 源文件写成 \resizebox{W}{!}{$ ... $}，外层已处 equation/\[ \] 环境，
+        # 内层再包一层 $ 会让 pandoc 产出字面 "$$$ ... $$$"，必须剥掉。
+        stripped = content.strip()
+        if stripped.startswith("$") and stripped.endswith("$") and not stripped.startswith("$$"):
+            content = stripped[1:-1]
+        out.append(content)
+        i = j
+    return "".join(out)
 
 
 def extract_macro_arg(text: str, command: str) -> str | None:
@@ -381,24 +497,38 @@ def convert_subfigures(tex: str) -> str:
             return match.group(0)
         tail = body[subs[-1].end() :]
         outer_cap = extract_macro_arg(tail, "caption")
+        outer_label = extract_macro_arg(tail, "label")
         chunks: list[str] = []
+        collected: list[tuple[str, str | None, str | None]] = []
         for sub in subs:
             inner = sub.group(1)
             image = extract_macro_arg(inner, "includegraphics")
             caption = extract_macro_arg(inner, "caption")
+            label = extract_macro_arg(inner, "label")
             if not image:
                 continue
-            chunks.append(r"\begin{center}")
-            chunks.append(rf"\includegraphics[width=0.48\textwidth]{{{image}}}")
-            chunks.append(r"\end{center}")
-            if caption:
-                chunks.append(r"\begin{center}")
-                chunks.append(r"{\small " + caption + "}")
-                chunks.append(r"\end{center}")
-        if outer_cap:
+            collected.append((image.strip(), caption, label))
+        if not collected:
+            return match.group(0)
+        # 一个 \begin{figure} 里放多张 \includegraphics 时，pandoc 会把同一个
+        # \caption 复制到**每一张**图片上，于是同一句图注被输出多次、Word 端
+        # 也就给它编了多个图号。正确做法是每张子图各成一个独立 figure：
+        #   - 子图本身所在的 figure 只有图片 + 斜体子图注（不带 \caption）
+        #   - 最后一张图所在 figure 带外层整图注
+        # 这样一条 figure 对应一个 \caption，编号才能与 PDF 一一对上。
+        chunks: list[str] = []
+        for idx, (image, caption, _label) in enumerate(collected):
+            is_last = idx == len(collected) - 1
             chunks.append(r"\begin{figure}[h]")
             chunks.append(r"\centering")
-            chunks.append(rf"\caption{{{outer_cap}}}")
+            chunks.append(rf"\includegraphics[width=0.48\textwidth]{{{image}}}")
+            if caption:
+                chunks.append(r"\noindent{\small\emph{" + caption.strip() + r"}}")
+            if is_last:
+                if outer_cap:
+                    chunks.append(rf"\caption{{{outer_cap.strip()}}}")
+                if outer_label:
+                    chunks.append(rf"\label{{{outer_label.strip()}}}")
             chunks.append(r"\end{figure}")
         return "\n".join(chunks) + "\n"
 
@@ -1476,12 +1606,38 @@ def number_captions(doc: Document) -> None:
             continue
         if current is None:
             continue
+        # 子图注（\par 后紧跟的小字说明）不参与编号：它们在外层图注之前，
+        # 由 convert_subfigures 输出成 {\small ...} 段落，样式同样是 Image Caption。
         if name == "Image Caption" and text and not text.startswith("图"):
+            if is_subfigure_caption(paragraph, doc):
+                continue
             fig += 1
             prepend_run(paragraph, f"图 {current}.{fig}  ", HEI, 10.5, True)
         elif name == "Table Caption" and text and not text.startswith("表"):
             tab += 1
             prepend_run(paragraph, f"表 {current}.{tab}  ", HEI, 10.5, True)
+
+
+def is_subfigure_caption(paragraph, doc: Document) -> bool:
+    """判断该 Image Caption 段落是否为子图注（不应参与「图 x.y」编号）。
+
+    convert_subfigures 把多子图 figure 展开成：
+        图1 段, 子图注1, 图2 段, 子图注2, ..., 外层整图注
+    所以**子图注**的特征是「紧跟其后的段落仍是一条 Image Caption」；
+    而外层整图注是这组里的最后一条，其后接的是正文。
+
+    注意不能用「前一段是否含图」来判断：单图 figure 的图注同样紧跟图段，
+    那样会把正常的图注全部误判成子图注、导致整章图号丢失。
+    """
+    nxt = paragraph._p.getnext()
+    if nxt is None:
+        return False
+    ppr = nxt.find(qn("w:pPr"))
+    if ppr is not None:
+        style = ppr.find(qn("w:pStyle"))
+        if style is not None and style.get(qn("w:val")) in {"171", "ImageCaption"}:
+            return True
+    return False
 
 
 def toc_run_props(east: str, size_pt: float, bold: bool) -> OxmlElement:
@@ -1838,15 +1994,45 @@ def math_run_style(run) -> str:
 
 
 def merge_roman_math_runs(doc: Document) -> None:
+    """把 OMML 里被 pandoc 拆碎的连续同款 run 合并。
+
+    pandoc 会把 ``75\\,^\\circ\\mathrm{C}`` 拆成 ["75", "\\u2009", "°", "C"] 四个 run。
+    Word 在每个 run 边界插一点间距，于是正文里读起来像 "75 ° C"（度与 C 之间
+    有明显缝）。这里把相邻、同字体的 run 合并成一个。
+
+    允许合并的条件：两个 run 的 m:rPr 完全一致（都是普通体、或都是斜体）。
+    这样既不破坏真正的上下标/斜体切换，又能消除 `°`/`C` 这类纯排版分裂。
+    """
+    def style_key(run):
+        rpr = run.find(f"{{{MATH_NS}}}rPr")
+        if rpr is None:
+            return ""
+        # 只关心会影响渲染方向的字符样式（普通体 vs 斜体）
+        sty = rpr.find(f"{{{MATH_NS}}}sty")
+        val = sty.get(f"{{{MATH_NS}}}val") if sty is not None else ""
+        return "roman" if val in ("p", "b") else "italic"
+
+    def run_text(run):
+        t = run.find(f"{{{MATH_NS}}}t")
+        return "" if t is None else (t.text or "")
+
     for omath in doc.element.body.iter(f"{{{MATH_NS}}}oMath"):
-        children = list(omath)
         index = 0
-        while index < len(children) - 1:
+        while True:
+            children = list(omath)
+            if index >= len(children) - 1:
+                break
             left, right = children[index], children[index + 1]
             if left.tag != f"{{{MATH_NS}}}r" or right.tag != f"{{{MATH_NS}}}r":
                 index += 1
                 continue
-            if math_run_style(left) != "p" or math_run_style(right) != "p":
+            lt, rt = run_text(left), run_text(right)
+            # 允许两种情况合并：
+            #   (a) 两段样式相同（纯排版分裂）
+            #   (b) 任一侧是单字符（"°"、"C" 这类被拆开的单位）
+            same_style = style_key(left) == style_key(right)
+            single = len(lt.strip()) <= 1 or len(rt.strip()) <= 1
+            if not (same_style or single):
                 index += 1
                 continue
             left_t = left.find(f"{{{MATH_NS}}}t")
@@ -1856,7 +2042,12 @@ def merge_roman_math_runs(doc: Document) -> None:
                 continue
             left_t.text = (left_t.text or "") + (right_t.text or "")
             omath.remove(right)
-            children.pop(index + 1)
+
+    # 合并后顺手把"数字 + 细空格 + °C"里的细空格去掉，避免 26 °C 看起来像两段
+    for t in doc.element.body.iter(f"{{{MATH_NS}}}t"):
+        if t.text and "°C" in t.text:
+            t.text = t.text.replace("\u2009°C", "°C").replace("\u2005°C", "°C")
+            t.text = re.sub(r"(\d)\s+°C", r"\1°C", t.text)
 
 
 def wrap_display_math(doc: Document) -> None:
@@ -2282,6 +2473,7 @@ def run_pandoc(tex_path: Path, docx_path: Path, reference: Path, media: Path) ->
             str(BOOK / "figures"),
             str(ROOT / "results" / "figures" / "paper"),
             str(ROOT / "results" / "figures" / "study"),
+            str(ROOT / "results" / "figures" / "demo"),
             str(ROOT / "results" / "figures"),
         ]
     )
@@ -2452,6 +2644,49 @@ def bake_toc_pages(docx_path: Path, work: Path) -> None:
     print(f"TOC pages baked: {len(filled)} entries, {numbers[0]}–{numbers[-1]} ({sample})")
 
 
+def scrub_metadata_tex(docx_path: Path) -> None:
+    """Strip residual LaTeX from invisible metadata (image alt text, table captions).
+
+    pandoc copies the figure/table caption source into ``wp:docPr/@descr`` and
+    ``w:tblCaption/@w:val``. Those strings are not rendered, but they still show
+    up in screen readers and in "edit alt text", and they carry raw
+    ``\\mathrm{...}`` fragments. Replace them with the same text minus math markup.
+    """
+    with ZipFile(docx_path) as archive:
+        xml = archive.read("word/document.xml").decode("utf-8")
+
+    def clean(text: str) -> str:
+        # \(\mathrm{mm}\) -> mm ; \mathrm{C} -> C ; wrappers -> plain text
+        s = re.sub(r"\\mathrm\{([^{}]*)\}", r"\1", text)
+        s = re.sub(r"\\text\{([^{}]*)\}", r"\1", s)
+        s = re.sub(r"\\[a-zA-Z]+\{([^{}]*)\}", r"\1", s)
+        s = s.replace(r"\(", "").replace(r"\)", "")
+        s = s.replace(r"\[", "").replace(r"\]", "")
+        s = s.replace("\\,", " ").replace("\\ ", " ")
+        s = s.replace("$", "")
+        return re.sub(r"\s+", " ", s).strip()
+
+    def fix_attr(match: re.Match[str]) -> str:
+        attr, value = match.group(1), match.group(2)
+        if "\\" not in value and "$" not in value:
+            return match.group(0)
+        return f'{attr}="{clean(value)}"'
+
+    # wp:docPr/@descr and @title carry the figure source caption
+    patched = re.sub(r'\b(descr|title)="([^"]*)"', fix_attr, xml)
+    # w:tblCaption/@w:val carries the table source caption
+    patched = re.sub(
+        r'(<w:tblCaption w:val=")([^"]*)(")',
+        lambda m: m.group(1)
+        + (clean(m.group(2)) if ("\\" in m.group(2) or "$" in m.group(2)) else m.group(2))
+        + m.group(3),
+        patched,
+    )
+    if patched != xml:
+        rewrite_zip_entry(docx_path, "word/document.xml", patched)
+        print("scrubbed LaTeX from alt text / table captions")
+
+
 def verify_native(docx_path: Path) -> None:
     with ZipFile(docx_path) as archive:
         xml = archive.read("word/document.xml").decode("utf-8")
@@ -2474,6 +2709,13 @@ def verify_native(docx_path: Path) -> None:
         raise SystemExit("docx lost heading bookmarks")
     if "目　录" not in xml:
         raise SystemExit("docx lost TOC title")
+    # Hard gate: no raw LaTeX may survive in the *visible* text nodes.
+    visible = "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", xml))
+    for token in ("\\", "$", "resizebox", "columnwidth", "animategraphics", "[ch:"):
+        if token in visible:
+            raise SystemExit(f"raw LaTeX leaked into visible text: {token!r}")
+    if visible.count("image") > 3:
+        raise SystemExit("literal 'image' placeholders survived in body text")
     pages = extract_toc_pages(xml)
     marks = re.findall(r'w:anchor="(_Toc\d+)"', xml)
     missing = [mark for mark in marks if mark not in pages]
@@ -2531,19 +2773,23 @@ def build() -> None:
         setup_headers(doc, watermark)
 
         SUBMIT_DIR.mkdir(exist_ok=True)
+        BUILD.mkdir(exist_ok=True)
         if PDF.exists():
             try:
                 SUBMIT_PDF.write_bytes(PDF.read_bytes())
+                print("wrote", SUBMIT_PDF)
             except PermissionError:
                 print(f"warning: {SUBMIT_PDF.name} is open in another process; "
                       "skipped the PDF copy. Close the viewer and re-run, or copy "
-                      "monograph/ACTS-MCDT.pdf over it by hand.")
+                      "build/ACTS-MCDT.pdf over it by hand.")
+        else:
+            print(f"warning: {PDF} not found; run scripts/build_pdf.ps1 first to "
+                  "produce the PDF, then re-run this script to copy it into submit/.")
         doc.save(SUBMIT_DOCX)
         bake_toc_pages(SUBMIT_DOCX, work)
-        shutil.copy2(SUBMIT_DOCX, LOCAL_DOCX)
+        scrub_metadata_tex(SUBMIT_DOCX)
         verify_native(SUBMIT_DOCX)
         print("wrote", SUBMIT_DOCX)
-        print("wrote", LOCAL_DOCX)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

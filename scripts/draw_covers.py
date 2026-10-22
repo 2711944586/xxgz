@@ -14,9 +14,9 @@ W = int(round(210 / 25.4 * DPI))  # 3307
 H = int(round(297 / 25.4 * DPI))  # 4677
 
 JOBS = (
-    ("_src_cover.png", "cover.png"),
-    ("_src_back.png", "back.png"),
-    ("_src_bg.png", "bg.png"),
+    ("src/cover_src.png", "cover.png"),
+    ("src/back_src.png", "back.png"),
+    ("src/bg_src.png", "bg.png"),
 )
 
 

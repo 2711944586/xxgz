@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Optional: src/acts_mcdt/fast.py (legacy wide-grid kernel).
+numba>=0.59
+
+# Optional: scripts/run_extensions.py trains the two-node surrogate.
+torch>=2.2

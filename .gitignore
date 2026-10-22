@@ -3,58 +3,59 @@
 *.pyc
 *.nbc
 *.nbi
+.pytest_cache/
 
 # Demo build
 demo/node_modules/
 demo/dist/
 
-# LaTeX scratch
+# LaTeX build products
+# monograph/ holds sources only; everything xelatex emits goes to build/.
 monograph/*.aux
 monograph/*.log
 monograph/*.out
 monograph/*.toc
 monograph/*.synctex.gz
-monograph/_page_images/
-monograph/_preview/
-monograph/_qa/
-monograph/_docx_work/
-monograph/book.pdf
+monograph/*.fdb_latexmk
+monograph/*.fls
+monograph/*.xdv
+monograph/ACTS-MCDT.pdf
 monograph/ACTS-MCDT.docx
-*.fdb_latexmk
-*.fls
-*.xdv
+monograph/book.pdf
+build/
+monograph/$build/
+monograph/_backup_*/
+_toc_backup/
+archive/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# demo scratch
+# Demo scratch
 demo/_*.cjs
 demo/_*.mjs
 demo/_*.png
-demo/server.log
-demo/preview.log
-demo/_*.cjs
-demo/_*.mjs
-demo/_*.png
-demo/server.log
-demo/preview.log
-demo/dev.log
 demo/*.log
+
+# Root-level scratch scripts and images (never ship)
 _*.png
 _*.cjs
 _*.py
+_*.json
 !scripts/_*.py
+!scripts/_polish_*.json
 
 # QA / probe output (capture scripts write here, never ship it)
 demo/src/_probe/
 demo/src/_public/
 scripts/_probe-*.cjs
-
-# Animate test compiles
 _pdf/
 
-# Demo capture intermediates: the frames are 40 MB and regenerate from the
+# Demo capture intermediates: the frames are ~40 MB and regenerate from the
 # stills/animation step, so only the encoded results are tracked.
 results/figures/demo/_frames/
 results/figures/demo/*.mp4
+
+# Local Word pagination checks (generated from the submitted DOCX)
+results/word_qa/

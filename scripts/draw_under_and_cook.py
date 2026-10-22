@@ -1,10 +1,14 @@
-"""Fix the three figure-legibility defects visible on page 38.
+"""Draw the two ch5 distribution figures: C_under and C_cook.
 
-1. C_under drew 95% bootstrap intervals but they are invisible at this size,
-   and the capsize is too small; widen the visual encoding and drop the bar
-   chart in favour of a dot-with-interval so the intervals actually read.
-2. C_cook had its legend sitting on top of the curves.
-3. R_energy had a corner note colliding with the open-loop marker.
+This is the canonical producer for both files:
+
+* ``C_under`` — 未达设计线比例。95% bootstrap 区间在这个尺寸上原本看不见，
+  画成点＋区间而不是柱状图，区间才读得出来。
+* ``C_cook`` — 档位与策略的交叉。图例原本压在曲线上，这里让出空间。
+
+Historical note: the file was originally named ``fix_figs.py`` when it was a
+one-off legibility patch; the two figures still ship in the paper, so it stays
+as their only producer.
 """
 import re
 import sys
